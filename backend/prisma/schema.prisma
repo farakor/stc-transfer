@@ -1,0 +1,151 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum VehicleType {
+  SEDAN
+  PREMIUM
+  MINIVAN
+  MICROBUS
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  BUSY
+  MAINTENANCE
+}
+
+enum DriverStatus {
+  AVAILABLE
+  BUSY
+  OFFLINE
+}
+
+enum RouteType {
+  FIXED
+  CUSTOM
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  telegram_id   String   @unique
+  first_name    String?
+  last_name     String?
+  username      String?
+  language_code String   @default("ru")
+  phone         String?
+  name          String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now())
+
+  // Relations
+  bookings    Booking[]
+
+  @@map("User")
+}
+
+model Vehicle {
+  id          Int           @id @default(autoincrement())
+  type        VehicleType
+  name        String
+  capacity    Int
+  price_per_km Decimal      @db.Decimal(10, 2)
+  image_url   String?
+  description String?
+  features    String[]
+  status      VehicleStatus @default(AVAILABLE)
+  brand       String?
+  model       String?
+  license_plate String?
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @default(now())
+
+  // Relations
+  bookings    Booking[]
+  driver      Driver?
+
+  @@map("Vehicle")
+}
+
+model Route {
+  id         Int     @id @default(autoincrement())
+  from_city  String
+  to_city    String
+  distance   Int
+  duration   Int
+  base_price Decimal @db.Decimal(10, 2)
+  is_popular Boolean @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+
+  // Relations
+  bookings   Booking[]
+
+  @@map("Route")
+}
+
+model Driver {
+  id         Int          @id @default(autoincrement())
+  name       String
+  phone      String
+  license    String
+  status     DriverStatus @default(AVAILABLE)
+  vehicle_id Int?         @unique
+  created_at DateTime     @default(now())
+  updated_at DateTime     @default(now())
+
+  // Relations
+  vehicle    Vehicle? @relation(fields: [vehicle_id], references: [id])
+  bookings   Booking[]
+
+  @@map("Driver")
+}
+
+model Booking {
+  id               String   @id @default(cuid())
+  user_id          Int
+  vehicle_id       Int?
+  route_id         Int?
+  driver_id        Int?
+  passenger_count  Int
+  total_price      Decimal  @db.Decimal(10, 2)
+  pickup_location  String?
+  dropoff_location String?
+  pickup_time      DateTime?
+  status           BookingStatus @default(PENDING)
+  notes            String?
+  from_location    String
+  to_location      String
+  route_type       RouteType?
+  distance_km      Float?
+  price            Decimal  @db.Decimal(10, 2)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @default(now())
+
+  // Relations
+  user             User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  vehicle          Vehicle? @relation(fields: [vehicle_id], references: [id])
+  route            Route?   @relation(fields: [route_id], references: [id])
+  driver           Driver?  @relation(fields: [driver_id], references: [id])
+
+  @@map("Booking")
+}
+
+// Упрощенная схема для тестирования
