@@ -19,7 +19,7 @@ export function useBookingDetail(id: string | null) {
     queryFn: () => BookingService.getBookingById(id!),
     enabled: !!id,
     staleTime: 30 * 1000,
-    cacheTime: 5 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   })
 }
 
@@ -32,7 +32,7 @@ export function useUserBookings(limit?: number) {
     queryFn: () => BookingService.getUserBookings(user?.id || 0, limit),
     enabled: !!user?.id,
     staleTime: 30 * 1000,
-    cacheTime: 2 * 60 * 1000,
+    gcTime: 2 * 60 * 1000,
   })
 }
 
@@ -99,7 +99,7 @@ export function useActiveBookings() {
     queryKey: bookingKeys.active(),
     queryFn: BookingService.getActiveBookings,
     staleTime: 30 * 1000,
-    cacheTime: 2 * 60 * 1000,
+    gcTime: 2 * 60 * 1000,
   })
 }
 
@@ -109,6 +109,6 @@ export function useBookingStats(period?: 'day' | 'week' | 'month') {
     queryKey: bookingKeys.stats(period),
     queryFn: () => BookingService.getBookingStats(period),
     staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   })
 }
