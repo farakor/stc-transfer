@@ -104,39 +104,58 @@ export class VehicleController {
         vehicleTypes = [
           {
             type: 'SEDAN',
-            name: 'Hongqi EHS 5',
-            description: 'Комфортный седан для поездок до 3 пассажиров',
+            name: 'Электромобиль Hongqi EHS 5',
+            description: 'Комфортный электромобиль для поездок до 3 пассажиров',
             capacity: 3,
-            features: ['Кондиционер', 'Wi-Fi', 'USB зарядка'],
+            baggageCapacity: 2,
+            features: ['Кондиционер', 'Wi-Fi', 'USB зарядка', 'Экологичный'],
             imageUrl: null,
-            pricePerKm: 1500
+            pricePerKm: 1500,
+            basePrice: 20000
           },
           {
             type: 'PREMIUM',
-            name: 'Hongqi EHS 9',
-            description: 'Премиум седан класса люкс для VIP поездок',
+            name: 'Электромобиль Hongqi EHS 9',
+            description: 'Премиум электромобиль класса люкс для VIP поездок',
             capacity: 3,
-            features: ['Кожаные сиденья', 'Панорамная крыша', 'Премиум аудио', 'Wi-Fi'],
+            baggageCapacity: 2,
+            features: ['Кожаные сиденья', 'Панорамная крыша', 'Премиум аудио', 'Wi-Fi', 'Экологичный'],
             imageUrl: null,
-            pricePerKm: 3000
+            pricePerKm: 3000,
+            basePrice: 20000
           },
           {
             type: 'MINIVAN',
-            name: 'KIA Carnival',
+            name: 'Kia Carnival',
             description: 'Просторный минивэн для группы до 5 человек',
             capacity: 5,
+            baggageCapacity: 4,
             features: ['Климат-контроль', 'USB зарядка', 'Просторный салон'],
             imageUrl: null,
-            pricePerKm: 2000
+            pricePerKm: 2000,
+            basePrice: 20000
           },
           {
             type: 'MICROBUS',
             name: 'Mercedes-Benz Sprinter',
             description: 'Микроавтобус для больших групп до 16 человек',
             capacity: 16,
+            baggageCapacity: 10,
             features: ['Кондиционер', 'Большой багажник', 'Удобные сиденья'],
             imageUrl: null,
-            pricePerKm: 2500
+            pricePerKm: 2500,
+            basePrice: 20000
+          },
+          {
+            type: 'BUS',
+            name: 'Автобус Higer',
+            description: 'Комфортабельный автобус для больших групп до 30 человек',
+            capacity: 30,
+            baggageCapacity: 15,
+            features: ['Кондиционер', 'Удобные сиденья', 'Большой багажник', 'Микрофон'],
+            imageUrl: null,
+            pricePerKm: 3000,
+            basePrice: 20000
           }
         ]
       }

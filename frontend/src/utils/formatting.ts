@@ -56,6 +56,8 @@ export function getVehicleTypeName(type: VehicleType): string {
       return 'Минивэн'
     case VehicleType.MICROBUS:
       return 'Микроавтобус'
+    case VehicleType.BUS:
+      return 'Автобус'
     default:
       return 'Неизвестно'
   }
@@ -72,6 +74,8 @@ export function getVehicleTypeDescription(type: VehicleType): string {
       return 'Просторный минивэн для семей и групп'
     case VehicleType.MICROBUS:
       return 'Большой автобус для групповых поездок'
+    case VehicleType.BUS:
+      return 'Комфортабельный автобус для больших групп'
     default:
       return ''
   }
@@ -87,6 +91,8 @@ export function getVehicleTypeIcon(type: VehicleType): string {
     case VehicleType.MINIVAN:
       return '🚐'
     case VehicleType.MICROBUS:
+      return '🚌'
+    case VehicleType.BUS:
       return '🚌'
     default:
       return '🚗'
@@ -109,6 +115,8 @@ export function getVehicleImage(brand?: string, model?: string): string | null {
       return new URL('../assets/carnival-kia-black-30.png', import.meta.url).href
     case 'mercedes-benz_sprinter':
       return new URL('../assets/mercedes-benz-sprinter.png', import.meta.url).href
+    case 'higer_bus':
+      return new URL('../assets/higer-bus.png', import.meta.url).href
     default:
       return null
   }
@@ -136,6 +144,8 @@ export function getRepresentativeVehicle(type: VehicleType): { brand: string, mo
       return { brand: 'KIA', model: 'Carnival' }
     case VehicleType.MICROBUS:
       return { brand: 'Mercedes-Benz', model: 'Sprinter' }
+    case VehicleType.BUS:
+      return { brand: 'Higer', model: 'Bus' }
     default:
       return { brand: '', model: '' }
   }
