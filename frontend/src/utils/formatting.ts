@@ -103,9 +103,28 @@ export function getVehicleTypeIcon(type: VehicleType): string {
 export function getVehicleImage(brand?: string, model?: string): string | null {
   if (!brand || !model) return null
 
-  // Проверяем конкретные модели для которых есть изображения
-  const brandModel = `${brand.toLowerCase()}_${model.toLowerCase().replace(/\s+/g, '')}`
+  // Обрабатываем полные названия транспорта
+  const fullName = `${brand} ${model}`.toLowerCase()
+  
+  // Проверяем полные названия
+  if (fullName.includes('hongqi ehs 5') || fullName.includes('hongqi ehs5')) {
+    return new URL('../assets/eqm5_black.png', import.meta.url).href
+  }
+  if (fullName.includes('hongqi ehs 9') || fullName.includes('hongqi ehs9')) {
+    return new URL('../assets/ehs9.png', import.meta.url).href
+  }
+  if (fullName.includes('kia carnival')) {
+    return new URL('../assets/carnival-kia-black-30.png', import.meta.url).href
+  }
+  if (fullName.includes('mercedes') && fullName.includes('sprinter')) {
+    return new URL('../assets/mercedes-benz-sprinter.png', import.meta.url).href
+  }
+  if (fullName.includes('higer') || fullName.includes('автобус higer')) {
+    return new URL('../assets/higer-bus.png', import.meta.url).href
+  }
 
+  // Fallback к старому методу для совместимости
+  const brandModel = `${brand.toLowerCase()}_${model.toLowerCase().replace(/\s+/g, '')}`
   switch (brandModel) {
     case 'hongqi_ehs5':
       return new URL('../assets/eqm5_black.png', import.meta.url).href
