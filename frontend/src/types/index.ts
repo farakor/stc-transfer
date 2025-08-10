@@ -14,7 +14,8 @@ export enum VehicleType {
   SEDAN = 'SEDAN',
   PREMIUM = 'PREMIUM',
   MINIVAN = 'MINIVAN',
-  MICROBUS = 'MICROBUS'
+  MICROBUS = 'MICROBUS',
+  BUS = 'BUS'
 }
 
 export enum VehicleStatus {
@@ -60,7 +61,8 @@ export interface Driver {
 // Route types
 export enum RouteType {
   FIXED = 'FIXED',
-  PER_KM = 'PER_KM'
+  PER_KM = 'PER_KM',
+  HOURLY = 'HOURLY'
 }
 
 export interface Route {
@@ -205,6 +207,7 @@ export interface PriceCalculation {
   basePrice: number
   distance?: number
   pricePerKm?: number
+  hours?: number // для почасовой оплаты
   waitingPrice?: number
   totalPrice: number
   currency: string

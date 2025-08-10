@@ -93,6 +93,60 @@ export function getVehicleTypeIcon(type: VehicleType): string {
   }
 }
 
+// Получить изображение автомобиля по бренду и модели (возвращает null если нет изображения)
+export function getVehicleImage(brand?: string, model?: string): string | null {
+  if (!brand || !model) return null
+
+  // Проверяем конкретные модели для которых есть изображения
+  const brandModel = `${brand.toLowerCase()}_${model.toLowerCase().replace(/\s+/g, '')}`
+
+  switch (brandModel) {
+    case 'hongqi_ehs5':
+      return new URL('../assets/eqm5_black.png', import.meta.url).href
+    case 'hongqi_ehs9':
+      return new URL('../assets/ehs9.png', import.meta.url).href
+    case 'kia_carnival':
+      return new URL('../assets/carnival-kia-black-30.png', import.meta.url).href
+    case 'mercedes-benz_sprinter':
+      return new URL('../assets/mercedes-benz-sprinter.png', import.meta.url).href
+    default:
+      return null
+  }
+}
+
+// Получить компонент иконки или изображения для автомобиля
+export function getVehicleDisplayElement(type: VehicleType, brand?: string, model?: string): { type: 'emoji' | 'image', content: string } {
+  const image = getVehicleImage(brand, model)
+
+  if (image) {
+    return { type: 'image', content: image }
+  }
+
+  return { type: 'emoji', content: getVehicleTypeIcon(type) }
+}
+
+// Получить представительную модель для типа автомобиля
+export function getRepresentativeVehicle(type: VehicleType): { brand: string, model: string } {
+  switch (type) {
+    case VehicleType.SEDAN:
+      return { brand: 'Hongqi', model: 'EHS 5' }
+    case VehicleType.PREMIUM:
+      return { brand: 'Hongqi', model: 'EHS 9' }
+    case VehicleType.MINIVAN:
+      return { brand: 'KIA', model: 'Carnival' }
+    case VehicleType.MICROBUS:
+      return { brand: 'Mercedes-Benz', model: 'Sprinter' }
+    default:
+      return { brand: '', model: '' }
+  }
+}
+
+// Получить полное название автомобиля для типа
+export function getVehicleModelName(type: VehicleType): string {
+  const vehicle = getRepresentativeVehicle(type)
+  return vehicle.brand && vehicle.model ? `${vehicle.brand} ${vehicle.model}` : getVehicleTypeName(type)
+}
+
 // Получить цвет для статуса заказа
 export function getBookingStatusColor(status: string): string {
   switch (status) {

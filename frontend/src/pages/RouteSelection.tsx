@@ -2,14 +2,55 @@ import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAppStore } from '@/services/store'
-import { usePopularDestinations, useCalculatePrice } from '@/hooks/useRoutes'
+import { useCalculatePrice } from '@/hooks/useRoutes'
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
 import { ProgressBar } from '@/components/ProgressBar'
-import { LoadingScreen } from '@/components/LoadingScreen'
 import { NotificationToast } from '@/components/NotificationToast'
-import { formatPrice } from '@/utils/formatting'
 
 const BOOKING_STEPS = ['Язык', 'Транспорт', 'Маршрут', 'Данные', 'Подтверждение']
+
+// Локации для поля "Откуда" (только отели и достопримечательности в городе)
+const FROM_LOCATIONS = [
+  'Hilton Samarkand Regency',
+  'Silk Road by Minyoun',
+  'Savitsky Plaza',
+  'Lia! by Minyoun Stars of Ulugbek',
+  'Hilton Garden Inn Samarkand Afrosiyob',
+  'Hilton Garden Inn Samarkand Sogd',
+  'Wellness Park Hotel Bactria',
+  'Wellness Park Hotel Turon',
+  'Конгресс центр',
+  'Айван',
+  'Вечный Город',
+  'Фонтан',
+  'Другое'
+]
+
+// Локации для поля "Куда" (все направления)
+const TO_LOCATIONS = [
+  'Hilton Samarkand Regency',
+  'Silk Road by Minyoun',
+  'Savitsky Plaza',
+  'Lia! by Minyoun Stars of Ulugbek',
+  'Hilton Garden Inn Samarkand Afrosiyob',
+  'Hilton Garden Inn Samarkand Sogd',
+  'Wellness Park Hotel Bactria',
+  'Wellness Park Hotel Turon',
+  'Конгресс центр',
+  'Айван',
+  'Вечный Город',
+  'Фонтан',
+  'Аэропорт',
+  'Железнодорожный вокзал',
+  'Поездка по Самарканду',
+  'Экскурсия по Самарканду',
+  'Поездка в Шахрисабз',
+  'Поездка в Нурату',
+  'Поездка в Бухару',
+  'Поездка в Ташкент',
+  'Поездка в Хиву',
+  'Другое'
+]
 
 export function RouteSelection() {
   const navigate = useNavigate()
@@ -28,9 +69,29 @@ export function RouteSelection() {
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
   const [isCalculating, setIsCalculating] = useState(false)
+  const [showCustomFromInput, setShowCustomFromInput] = useState(false)
+  const [showCustomToInput, setShowCustomToInput] = useState(false)
+  const [customFromLocation, setCustomFromLocation] = useState('')
+  const [customToLocation, setCustomToLocation] = useState('')
 
-  const { data: popularDestinations, isLoading } = usePopularDestinations()
   const calculatePriceMutation = useCalculatePrice()
+
+  // Функция для проверки доступности направления в зависимости от типа транспорта
+  const isDestinationAvailable = (destination: string, vehicleType: string | null): boolean => {
+    if (!vehicleType) return true
+
+    // Правила отключения направлений
+    const restrictions: Record<string, string[]> = {
+      'MICROBUS': ['Поездка в Шахрисабз', 'Поездка в Нурату', 'Поездка в Хиву'], // Mercedes-Benz Sprinter
+      'SEDAN': ['Поездка в Шахрисабз', 'Поездка в Нурату', 'Поездка в Бухару', 'Поездка в Ташкент', 'Поездка в Хиву'], // Hongqi EHS 5
+      'PREMIUM': ['Поездка в Шахрисабз', 'Поездка в Нурату', 'Поездка в Бухару', 'Поездка в Ташкент', 'Поездка в Хиву'], // Hongqi EHS 9
+      'MINIVAN': ['Поездка в Хиву'], // Kia Carnival
+      'BUS': [] // Автобус Higer - без ограничений
+    }
+
+    const restrictedDestinations = restrictions[vehicleType] || []
+    return !restrictedDestinations.includes(destination)
+  }
 
   // Redirect if no vehicle selected
   useEffect(() => {
@@ -39,11 +100,36 @@ export function RouteSelection() {
     }
   }, [selectedVehicleType, navigate])
 
+  // Очистить место назначения если оно стало недоступным при смене транспорта
+  useEffect(() => {
+    if (toLocation && selectedVehicleType && !isDestinationAvailable(toLocation, selectedVehicleType)) {
+      setToLocation('')
+      setShowCustomToInput(false)
+      setCustomToLocation('')
+
+      // Показать уведомление пользователю
+      setNotificationMessage(`Направление "${toLocation}" недоступно для выбранного транспорта`)
+      setShowNotification(true)
+    }
+  }, [selectedVehicleType, toLocation, setToLocation])
+
   const handleLocationChange = (type: 'from' | 'to', value: string) => {
     if (type === 'from') {
-      setFromLocation(value)
+      if (value === 'Другое') {
+        setShowCustomFromInput(true)
+        setFromLocation('')
+      } else {
+        setShowCustomFromInput(false)
+        setFromLocation(value)
+      }
     } else {
-      setToLocation(value)
+      if (value === 'Другое') {
+        setShowCustomToInput(true)
+        setToLocation('')
+      } else {
+        setShowCustomToInput(false)
+        setToLocation(value)
+      }
     }
 
     // Haptic feedback
@@ -52,18 +138,17 @@ export function RouteSelection() {
     }
   }
 
-  const handlePopularDestinationSelect = (destination: any) => {
-    if (!fromLocation) {
-      setFromLocation(destination.fromLocation || 'Самарканд')
-      setToLocation(destination.toLocation)
+  const handleCustomLocationChange = (type: 'from' | 'to', value: string) => {
+    if (type === 'from') {
+      setCustomFromLocation(value)
+      setFromLocation(value)
     } else {
-      setToLocation(destination.toLocation)
-    }
-
-    if (webApp?.HapticFeedback) {
-      webApp.HapticFeedback.selectionChanged()
+      setCustomToLocation(value)
+      setToLocation(value)
     }
   }
+
+
 
   const handleCalculatePrice = async () => {
     if (!fromLocation || !toLocation || !selectedVehicleType) {
@@ -100,9 +185,7 @@ export function RouteSelection() {
     }
   }
 
-  if (isLoading) {
-    return <LoadingScreen />
-  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 px-4 py-8">
@@ -149,25 +232,64 @@ export function RouteSelection() {
           {/* From Location */}
           <div className="mb-4">
             <label className="label">Откуда</label>
-            <input
-              type="text"
-              value={fromLocation}
+            <select
+              value={showCustomFromInput ? 'Другое' : fromLocation}
               onChange={(e) => handleLocationChange('from', e.target.value)}
-              placeholder="Введите адрес отправления"
               className="input"
-            />
+            >
+              <option value="">Выберите место отправления</option>
+              {FROM_LOCATIONS.map((location) => (
+                <option key={location} value={location}>
+                  {location}
+                </option>
+              ))}
+            </select>
+            {showCustomFromInput && (
+              <input
+                type="text"
+                value={customFromLocation}
+                onChange={(e) => handleCustomLocationChange('from', e.target.value)}
+                placeholder="Введите адрес отправления"
+                className="input mt-2"
+              />
+            )}
           </div>
 
           {/* To Location */}
           <div className="mb-6">
             <label className="label">Куда</label>
-            <input
-              type="text"
-              value={toLocation}
+            <select
+              value={showCustomToInput ? 'Другое' : toLocation}
               onChange={(e) => handleLocationChange('to', e.target.value)}
-              placeholder="Введите адрес назначения"
               className="input"
-            />
+            >
+              <option value="">Выберите место назначения</option>
+              {TO_LOCATIONS.map((location) => {
+                const isAvailable = isDestinationAvailable(location, selectedVehicleType)
+                return (
+                  <option
+                    key={location}
+                    value={location}
+                    disabled={!isAvailable}
+                    style={{
+                      color: isAvailable ? 'inherit' : '#999',
+                      backgroundColor: isAvailable ? 'inherit' : '#f5f5f5'
+                    }}
+                  >
+                    {location} {!isAvailable ? '(недоступно)' : ''}
+                  </option>
+                )
+              })}
+            </select>
+            {showCustomToInput && (
+              <input
+                type="text"
+                value={customToLocation}
+                onChange={(e) => handleCustomLocationChange('to', e.target.value)}
+                placeholder="Введите адрес назначения"
+                className="input mt-2"
+              />
+            )}
           </div>
 
           {/* Calculate Price Button */}
@@ -186,48 +308,6 @@ export function RouteSelection() {
             )}
           </button>
         </motion.div>
-
-        {/* Popular Destinations */}
-        {popularDestinations && popularDestinations.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-          >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Популярные направления
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {popularDestinations.map((destination, index) => (
-                <motion.button
-                  key={destination.id}
-                  onClick={() => handlePopularDestinationSelect(destination)}
-                  className="p-3 bg-white rounded-xl shadow-card border border-gray-100 hover:shadow-card-hover transition-all duration-200 text-left"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.7 + index * 0.05 }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg">{destination.icon}</span>
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900 text-sm">
-                        {destination.name}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {destination.type === 'airport' && 'Аэропорт'}
-                        {destination.type === 'station' && 'Вокзал'}
-                        {destination.type === 'landmark' && 'Достопримечательность'}
-                        {destination.type === 'city' && 'Город'}
-                      </div>
-                    </div>
-                  </div>
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
-        )}
 
         {/* Back Button */}
         <motion.div

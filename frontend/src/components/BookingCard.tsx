@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion'
-import { Booking } from '@/types'
+import { Booking, VehicleType } from '@/types'
 import {
   formatDateTime,
   formatPrice,
   getBookingStatusColor,
-  getBookingStatusName,
-  getVehicleTypeIcon
+  getBookingStatusName
 } from '@/utils/formatting'
+import { VehicleIcon } from '@/components/VehicleIcon'
 
 interface BookingCardProps {
   booking: Booking
@@ -32,9 +32,12 @@ export function BookingCard({ booking, onClick, className }: BookingCardProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
-          <span className="text-lg">
-            {getVehicleTypeIcon(booking.vehicle?.type || 'SEDAN')}
-          </span>
+          <VehicleIcon
+            type={booking.vehicle?.type || VehicleType.SEDAN}
+            brand={booking.vehicle?.brand}
+            model={booking.vehicle?.model}
+            size="md"
+          />
           <span className="text-xs text-gray-500">
             ID: {booking.id.slice(-8).toUpperCase()}
           </span>

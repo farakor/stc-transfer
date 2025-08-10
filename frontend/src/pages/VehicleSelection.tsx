@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useVehicleTypes } from '@/hooks/useVehicles'
 import { useAppStore } from '@/services/store'
 import { VehicleType } from '@/types'
-import { formatPrice, getVehicleTypeIcon } from '@/utils/formatting'
+import { formatPrice } from '@/utils/formatting'
 import { LoadingScreen } from '@/components/LoadingScreen'
+import { VehicleIcon } from '@/components/VehicleIcon'
 
 export function VehicleSelection() {
   const navigate = useNavigate()
@@ -91,8 +92,13 @@ export function VehicleSelection() {
               <div className="flex items-center space-x-4">
                 {/* Vehicle Icon */}
                 <div className="flex-shrink-0">
-                  <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-accent-500 rounded-2xl flex items-center justify-center text-2xl">
-                    {getVehicleTypeIcon(vehicle.type)}
+                  <div className="w-32 h-32 flex items-center justify-center">
+                    <VehicleIcon
+                      type={vehicle.type}
+                      brand={vehicle.name?.split(' ')[0]}
+                      model={vehicle.name?.split(' ').slice(1).join(' ')}
+                      size="xl"
+                    />
                   </div>
                 </div>
 

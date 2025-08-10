@@ -1,50 +1,61 @@
 import { VehicleType } from '@prisma/client'
 
-// Временные данные для тестирования
+// Временные данные для тестирования (согласно новому прайс-листу)
 const MOCK_VEHICLES = [
   {
     id: 1,
     type: 'SEDAN' as VehicleType,
-    name: 'Sedan',
-    capacity: 4,
-    price_per_km: '5000', // UZS per km
+    name: 'Электромобиль Hongqi EHS 5',
+    capacity: 3,
+    price_per_km: '1500', // UZS per km
     status: 'AVAILABLE',
-    brand: 'Chevrolet',
-    model: 'Lacetti',
-    license_plate: '01A123BC'
+    brand: 'Hongqi',
+    model: 'EHS 5',
+    license_plate: 'EHS5001'
   },
   {
     id: 2,
     type: 'PREMIUM' as VehicleType,
-    name: 'Premium',
-    capacity: 4,
-    price_per_km: '8000', // UZS per km
+    name: 'Электромобиль Hongqi EHS 9',
+    capacity: 3,
+    price_per_km: '3000', // UZS per km
     status: 'AVAILABLE',
-    brand: 'Mercedes',
-    model: 'E-Class',
-    license_plate: '01A456DE'
+    brand: 'Hongqi',
+    model: 'EHS 9',
+    license_plate: 'EHS9001'
   },
   {
     id: 3,
     type: 'MINIVAN' as VehicleType,
-    name: 'Minivan',
-    capacity: 7,
-    price_per_km: '6000', // UZS per km
+    name: 'Kia Carnival',
+    capacity: 5,
+    price_per_km: '2000', // UZS per km
     status: 'AVAILABLE',
-    brand: 'Toyota',
-    model: 'Alphard',
-    license_plate: '01A789FG'
+    brand: 'KIA',
+    model: 'Carnival',
+    license_plate: 'CARN001'
   },
   {
     id: 4,
     type: 'MICROBUS' as VehicleType,
-    name: 'Microbus',
-    capacity: 12,
-    price_per_km: '7000', // UZS per km
+    name: 'Mercedes-Benz Sprinter',
+    capacity: 16,
+    price_per_km: '2500', // UZS per km
     status: 'AVAILABLE',
-    brand: 'Mercedes',
+    brand: 'Mercedes-Benz',
     model: 'Sprinter',
-    license_plate: '01A012HI'
+    license_plate: 'SPRT001'
+  },
+  {
+    id: 5,
+    type: 'BUS' as VehicleType,
+    name: 'Автобус Higer',
+    capacity: 30,
+    price_per_km: '3000', // UZS per km
+    status: 'AVAILABLE',
+    brand: 'Higer',
+    model: 'Bus',
+    license_plate: 'HIGER001'
   }
 ]
 

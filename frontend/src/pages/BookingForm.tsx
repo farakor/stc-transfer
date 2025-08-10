@@ -7,7 +7,8 @@ import { useCreateBooking } from '@/hooks/useBookings'
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
 import { ProgressBar } from '@/components/ProgressBar'
 import { NotificationToast } from '@/components/NotificationToast'
-import { formatPrice, getVehicleTypeIcon, getVehicleTypeName } from '@/utils/formatting'
+import { formatPrice, getVehicleTypeName, getRepresentativeVehicle, getVehicleModelName } from '@/utils/formatting'
+import { VehicleIcon } from '@/components/VehicleIcon'
 
 const BOOKING_STEPS = ['Язык', 'Транспорт', 'Маршрут', 'Данные', 'Подтверждение']
 
@@ -161,12 +162,15 @@ export function BookingForm() {
 
           {/* Vehicle Type */}
           <div className="flex items-center space-x-3 mb-4 p-3 bg-gray-50 rounded-lg">
-            <span className="text-2xl">
-              {getVehicleTypeIcon(selectedVehicleType)}
-            </span>
+            <VehicleIcon
+              type={selectedVehicleType!}
+              brand={getRepresentativeVehicle(selectedVehicleType!).brand}
+              model={getRepresentativeVehicle(selectedVehicleType!).model}
+              size="lg"
+            />
             <div>
               <div className="font-medium text-gray-900">
-                {getVehicleTypeName(selectedVehicleType)}
+                {getVehicleModelName(selectedVehicleType!)}
               </div>
               <div className="text-sm text-gray-600">
                 Выбранный транспорт

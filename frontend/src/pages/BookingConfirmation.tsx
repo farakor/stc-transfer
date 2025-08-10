@@ -8,11 +8,12 @@ import { NotificationToast } from '@/components/NotificationToast'
 import {
   formatPrice,
   formatDateTime,
-  getVehicleTypeIcon,
   getVehicleTypeName,
   getBookingStatusName,
-  getBookingStatusColor
+  getBookingStatusColor,
+  getVehicleModelName
 } from '@/utils/formatting'
+import { VehicleIcon } from '@/components/VehicleIcon'
 
 const BOOKING_STEPS = ['Язык', 'Транспорт', 'Маршрут', 'Данные', 'Подтверждение']
 
@@ -148,12 +149,18 @@ export function BookingConfirmation() {
 
           {/* Vehicle Type */}
           <div className="flex items-center space-x-3 mb-4 p-3 bg-gray-50 rounded-lg">
-            <span className="text-2xl">
-              {getVehicleTypeIcon(currentBooking.vehicle?.type || selectedVehicleType!)}
-            </span>
+            <VehicleIcon
+              type={currentBooking.vehicle?.type || selectedVehicleType!}
+              brand={currentBooking.vehicle?.brand}
+              model={currentBooking.vehicle?.model}
+              size="lg"
+            />
             <div>
               <div className="font-medium text-gray-900">
-                {getVehicleTypeName(currentBooking.vehicle?.type || selectedVehicleType!)}
+                {currentBooking.vehicle ?
+                  `${currentBooking.vehicle.brand} ${currentBooking.vehicle.model}` :
+                  getVehicleModelName(selectedVehicleType!)
+                }
               </div>
               <div className="text-sm text-gray-600">
                 {currentBooking.vehicle ?

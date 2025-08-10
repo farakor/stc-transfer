@@ -8,6 +8,7 @@ export interface PriceCalculationRequest {
   to: string
   vehicleType: VehicleType
   distance?: number
+  hours?: number // для почасовой оплаты
 }
 
 export interface PriceCalculationResult {
@@ -17,6 +18,7 @@ export interface PriceCalculationResult {
   basePrice: number
   pricePerKm: number
   distance: number
+  hours?: number // для почасовой оплаты
   totalPrice: number
   currency: string
   breakdown: {
@@ -50,9 +52,185 @@ export class RouteService {
     }
   }
 
+  // Фиксированные цены по маршрутам и типам транспорта (из нового прайс-листа)
+  private static FIXED_PRICES: Record<string, Record<string, number>> = {
+    // Отели и достопримечательности в городе - 20,000 сум для всех типов транспорта
+    'Hilton Samarkand Regency': {
+      'BUS': 20000, 'MICROBUS': 20000, 'MINIVAN': 20000, 'PREMIUM': 20000, 'SEDAN': 20000
+    },
+    'Silk Road by Minyoun': {
+      'BUS': 20000, 'MICROBUS': 20000, 'MINIVAN': 20000, 'PREMIUM': 20000, 'SEDAN': 20000
+    },
+    'Savitsky Plaza': {
+      'BUS': 20000, 'MICROBUS': 20000, 'MINIVAN': 20000, 'PREMIUM': 20000, 'SEDAN': 20000
+    },
+    'Lia! by Minyoun Stars of Ulugbek': {
+      'BUS': 20000, 'MICROBUS': 20000, 'MINIVAN': 20000, 'PREMIUM': 20000, 'SEDAN': 20000
+    },
+    'Hilton Garden Inn Samarkand Afrosiyob': {
+      'BUS': 20000, 'MICROBUS': 20000, 'MINIVAN': 20000, 'PREMIUM': 20000, 'SEDAN': 20000
+    },
+    'Hilton Garden Inn Samarkand Sogd': {
+      'BUS': 20000, 'MICROBUS': 20000, 'MINIVAN': 20000, 'PREMIUM': 20000, 'SEDAN': 20000
+    },
+    'Wellness Park Hotel Bactria': {
+      'BUS': 20000, 'MICROBUS': 20000, 'MINIVAN': 20000, 'PREMIUM': 20000, 'SEDAN': 20000
+    },
+    'Wellness Park Hotel Turon': {
+      'BUS': 20000, 'MICROBUS': 20000, 'MINIVAN': 20000, 'PREMIUM': 20000, 'SEDAN': 20000
+    },
+    'Конгресс центр': {
+      'BUS': 20000, 'MICROBUS': 20000, 'MINIVAN': 20000, 'PREMIUM': 20000, 'SEDAN': 20000
+    },
+    'Айван': {
+      'BUS': 20000, 'MICROBUS': 20000, 'MINIVAN': 20000, 'PREMIUM': 20000, 'SEDAN': 20000
+    },
+    'Вечный Город': {
+      'BUS': 20000, 'MICROBUS': 20000, 'MINIVAN': 20000, 'PREMIUM': 20000, 'SEDAN': 20000
+    },
+    'Фонтан': {
+      'BUS': 20000, 'MICROBUS': 20000, 'MINIVAN': 20000, 'PREMIUM': 20000, 'SEDAN': 20000
+    },
+
+    // Основные направления из прайс-листа
+    'Аэропорт': {
+      'BUS': 780000,           // Автобус Higer
+      'MICROBUS': 650000,      // Mercedes Sprinter
+      'MINIVAN': 400000,       // Kia Carnival
+      'PREMIUM': 400000,       // Электромобиль Hongqi EHS 9
+      'SEDAN': 150000          // Электромобиль Hongqi EHS 5
+    },
+    'Аэропорт Самарканда': {
+      'BUS': 780000,
+      'MICROBUS': 650000,
+      'MINIVAN': 400000,
+      'PREMIUM': 400000,
+      'SEDAN': 150000
+    },
+    'Железнодорожный вокзал': {
+      'BUS': 780000,
+      'MICROBUS': 650000,
+      'MINIVAN': 400000,
+      'PREMIUM': 400000,
+      'SEDAN': 150000
+    },
+    'Экскурсия по Самарканду': {
+      'BUS': 2600000,          // Автобус Higer
+      'MICROBUS': 3000000,     // Mercedes Sprinter
+      'MINIVAN': 2000000,      // Kia Carnival
+      'PREMIUM': 2000000,      // Электромобиль Hongqi EHS 9
+      'SEDAN': 845000          // Электромобиль Hongqi EHS 5
+    },
+    'Поездка в Шахрисабз': {
+      'SEDAN': 3500000,        // Электромобиль Hongqi EHS 5
+      'MINIVAN': 2200000       // Kia Carnival
+    },
+    'Поездка в Нурату': {
+      'SEDAN': 5200000,        // Электромобиль Hongqi EHS 5
+      'MINIVAN': 3000000       // Kia Carnival
+    },
+    'Поездка в Бухару': {
+      'SEDAN': 6100000,        // Электромобиль Hongqi EHS 5
+      'MICROBUS': 3900000,     // Mercedes Sprinter
+      'MINIVAN': 3600000       // Kia Carnival
+    },
+    'Поездка в Ташкент': {
+      'SEDAN': 6500000,        // Электромобиль Hongqi EHS 5
+      'MICROBUS': 4300000,     // Mercedes Sprinter
+      'MINIVAN': 3900000       // Kia Carnival
+    },
+    'Поездка в Хиву': {
+      // Цены не указаны в таблице (########)
+    }
+  }
+
+  // Почасовые тарифы для поездок по Самарканду (из нового прайс-листа)
+  private static HOURLY_RATES: Record<string, { hourly: number; perKm: number }> = {
+    'BUS': { hourly: 325000, perKm: 0 },           // Автобус Higer: 325,000 за 1 час
+    'PREMIUM': { hourly: 400000, perKm: 40000 },   // Hongqi EHS 9: 40,000 за 1 км + 400,000 за 1 час ожидания
+    'SEDAN': { hourly: 150000, perKm: 15000 }      // Hongqi EHS 5: 15,000 за 1 км + 150,000 за 1 час ожидания
+  }
+
   // Рассчитать стоимость поездки
   static async calculatePrice(request: PriceCalculationRequest): Promise<PriceCalculationResult> {
     console.log('🔍 Calculating price for:', request)
+
+    const destination = request.to
+    const vehicleType = request.vehicleType
+
+    // Проверяем, есть ли фиксированная цена для данного маршрута и типа транспорта
+    const fixedPrice = this.FIXED_PRICES[destination]?.[vehicleType]
+
+    if (fixedPrice) {
+      console.log(`💰 Using fixed price: ${fixedPrice} UZS for ${destination} with ${vehicleType}`)
+
+      const result = {
+        routeId: undefined,
+        routeType: 'FIXED',
+        vehicleType: request.vehicleType,
+        basePrice: 0,
+        pricePerKm: 0,
+        distance: 0,
+        totalPrice: fixedPrice,
+        currency: 'UZS',
+        breakdown: [
+          {
+            label: `Фиксированная стоимость: ${destination}`,
+            amount: fixedPrice
+          }
+        ]
+      }
+
+      console.log('✅ Fixed price calculation result:', result)
+      return result
+    }
+
+    // Специальная логика для поездок по Самарканду (почасовая оплата)
+    if (destination === 'Поездка по Самарканду') {
+      const hourlyRate = this.HOURLY_RATES[vehicleType]
+
+      if (hourlyRate) {
+        const hours = request.hours || 1 // По умолчанию 1 час
+        const distance = request.distance || 0
+
+        const hourlyPrice = hourlyRate.hourly * hours
+        const distancePrice = hourlyRate.perKm * distance
+        const totalPrice = hourlyPrice + distancePrice
+
+        const result = {
+          routeId: undefined,
+          routeType: 'HOURLY',
+          vehicleType: request.vehicleType,
+          basePrice: 0,
+          pricePerKm: hourlyRate.perKm,
+          distance: distance,
+          hours: hours,
+          totalPrice,
+          currency: 'UZS',
+          breakdown: [
+            {
+              label: `Почасовая оплата (${hours} ч)`,
+              amount: hourlyPrice
+            },
+            ...(distance > 0 ? [{
+              label: `Пробег (${distance} км)`,
+              amount: distancePrice
+            }] : [])
+          ]
+        }
+
+        console.log('✅ Hourly price calculation result:', result)
+        return result
+      }
+    }
+
+    // Для кастомных адресов - используем старую логику с расчетом по километражу
+    return this.calculateCustomPrice(request)
+  }
+
+  // Расчет цены для кастомных маршрутов
+  private static async calculateCustomPrice(request: PriceCalculationRequest): Promise<PriceCalculationResult> {
+    console.log('🔍 Calculating custom price for:', request)
 
     // Ищем существующий маршрут
     const route = await this.findRouteByLocations(request.from, request.to)
@@ -110,7 +288,7 @@ export class RouteService {
       ]
     }
 
-    console.log('✅ Price calculation result:', result)
+    console.log('✅ Custom price calculation result:', result)
     return result
   }
 
