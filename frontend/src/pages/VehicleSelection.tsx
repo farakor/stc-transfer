@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useVehicleTypes } from '@/hooks/useVehicles'
 import { useAppStore } from '@/services/store'
 import { VehicleType } from '@/types'
-import { formatPrice } from '@/utils/formatting'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { VehicleIcon } from '@/components/VehicleIcon'
 
@@ -121,15 +120,7 @@ export function VehicleSelection() {
                     </span>
                   </div>
 
-                  {/* Price */}
-                  {vehicle.basePrice && (
-                    <div className="text-right">
-                      <span className="text-xs text-gray-500">от </span>
-                      <span className="text-lg font-bold text-primary-600">
-                        {formatPrice(vehicle.basePrice)}
-                      </span>
-                    </div>
-                  )}
+
                 </div>
 
                 {/* Arrow */}
