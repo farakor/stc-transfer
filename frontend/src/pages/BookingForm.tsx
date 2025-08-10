@@ -7,7 +7,7 @@ import { useCreateBooking } from '@/hooks/useBookings'
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
 import { ProgressBar } from '@/components/ProgressBar'
 import { NotificationToast } from '@/components/NotificationToast'
-import { formatPrice, getVehicleTypeName, getRepresentativeVehicle, getVehicleModelName } from '@/utils/formatting'
+import { formatPrice, getRepresentativeVehicle, getVehicleModelName, isSamarkandTrip, getSamarkandTariffs } from '@/utils/formatting'
 import { VehicleIcon } from '@/components/VehicleIcon'
 
 const BOOKING_STEPS = ['Язык', 'Транспорт', 'Маршрут', 'Данные', 'Подтверждение']
@@ -195,16 +195,35 @@ export function BookingForm() {
 
           {/* Price Breakdown */}
           <div className="border-t pt-4">
-            {priceCalculation.breakdown.map((item, index) => (
-              <div key={index} className="flex justify-between text-sm mb-2">
-                <span className="text-gray-600">{item.label}:</span>
-                <span className="font-medium">{formatPrice(item.amount)}</span>
+            {isSamarkandTrip(toLocation) ? (
+              <div className="text-center py-4">
+                <div className="text-lg font-medium text-amber-600 mb-2">
+                  ⏱️ Почасовая оплата
+                </div>
+                <div className="text-primary-600 font-semibold">
+                  Сумма вычисляется после окончания поездки
+                </div>
+                <div className="text-sm text-gray-500 mt-2">
+                  {(() => {
+                    const tariffs = getSamarkandTariffs(selectedVehicleType || '')
+                    return `Тариф: ${formatPrice(tariffs.perKm)} за 1 км | ${formatPrice(tariffs.hourly)} за 1 час ожидания`
+                  })()}
+                </div>
               </div>
-            ))}
-            <div className="flex justify-between text-lg font-bold text-primary-600 border-t pt-2 mt-2">
-              <span>Итого:</span>
-              <span>{formatPrice(priceCalculation.totalPrice)}</span>
-            </div>
+            ) : (
+              <>
+                {priceCalculation.breakdown.map((item, index) => (
+                  <div key={index} className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-600">{item.label}:</span>
+                    <span className="font-medium">{formatPrice(item.amount)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-lg font-bold text-primary-600 border-t pt-2 mt-2">
+                  <span>Итого:</span>
+                  <span>{formatPrice(priceCalculation.totalPrice)}</span>
+                </div>
+              </>
+            )}
           </div>
         </motion.div>
 

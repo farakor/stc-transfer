@@ -147,8 +147,8 @@ export class RouteService {
   // Почасовые тарифы для поездок по Самарканду (из нового прайс-листа)
   private static HOURLY_RATES: Record<string, { hourly: number; perKm: number }> = {
     'BUS': { hourly: 325000, perKm: 0 },           // Автобус Higer: 325,000 за 1 час
-    'PREMIUM': { hourly: 400000, perKm: 40000 },   // Hongqi EHS 9: 40,000 за 1 км + 400,000 за 1 час ожидания
-    'SEDAN': { hourly: 150000, perKm: 15000 }      // Hongqi EHS 5: 15,000 за 1 км + 150,000 за 1 час ожидания
+    'PREMIUM': { hourly: 400000, perKm: 40000 },   // Электромобиль Hongqi EHS 9: 40,000 за 1 км + 400,000 за 1 час ожидания
+    'SEDAN': { hourly: 150000, perKm: 15000 }      // Электромобиль Hongqi EHS 5: 15,000 за 1 км + 150,000 за 1 час ожидания
   }
 
   // Рассчитать стоимость поездки

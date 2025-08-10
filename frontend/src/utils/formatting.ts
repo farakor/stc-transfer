@@ -105,7 +105,7 @@ export function getVehicleImage(brand?: string, model?: string): string | null {
 
   // Обрабатываем полные названия транспорта
   const fullName = `${brand} ${model}`.toLowerCase()
-  
+
   // Проверяем полные названия
   if (fullName.includes('hongqi ehs 5') || fullName.includes('hongqi ehs5')) {
     return new URL('../assets/eqm5_black.png', import.meta.url).href
@@ -259,4 +259,30 @@ export function isEmpty(value: string | null | undefined): boolean {
 // Капитализация первой буквы
 export function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
+}
+
+// Проверка, является ли поездка по Самарканду
+export function isSamarkandTrip(toLocation: string): boolean {
+  return toLocation === 'Поездка по Самарканду'
+}
+
+// Форматирование цены с учетом особенностей поездки по Самарканду
+export function formatTripPrice(price: number, toLocation: string, currency = 'UZS'): string {
+  if (isSamarkandTrip(toLocation)) {
+    return 'Сумма вычисляется после окончания поездки'
+  }
+  return formatPrice(price, currency)
+}
+
+// Получить статические тарифы для поездок по Самарканду
+export function getSamarkandTariffs(vehicleType: string): { perKm: number; hourly: number } {
+  const tariffs: Record<string, { perKm: number; hourly: number }> = {
+    'SEDAN': { perKm: 15000, hourly: 150000 },     // Электромобиль Hongqi EHS 5
+    'PREMIUM': { perKm: 40000, hourly: 400000 },   // Электромобиль Hongqi EHS 9
+    'BUS': { perKm: 0, hourly: 325000 },           // Автобус Higer
+    'MICROBUS': { perKm: 25000, hourly: 200000 },  // Mercedes-Benz Sprinter (примерные значения)
+    'MINIVAN': { perKm: 20000, hourly: 180000 },   // KIA Carnival (примерные значения)
+  }
+
+  return tariffs[vehicleType] || { perKm: 0, hourly: 0 }
 }

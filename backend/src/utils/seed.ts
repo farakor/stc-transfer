@@ -15,10 +15,10 @@ async function main() {
 
   // Создание автомобилей
   const vehicles = await Promise.all([
-    // Седаны Hongqi EHS 5
+    // Седаны Электромобиль Hongqi EHS 5
     ...Array.from({ length: 10 }, (_, i) => prisma.vehicle.create({
       data: {
-        name: 'Hongqi EHS 5',
+        name: 'Электромобиль Hongqi EHS 5',
         type: VehicleType.SEDAN,
         capacity: 3,
         price_per_km: 1500,
@@ -28,10 +28,10 @@ async function main() {
       }
     })),
 
-    // Премиум Hongqi EHS 9
+    // Премиум Электромобиль Hongqi EHS 9
     ...Array.from({ length: 2 }, (_, i) => prisma.vehicle.create({
       data: {
-        name: 'Hongqi EHS 9',
+        name: 'Электромобиль Hongqi EHS 9',
         type: VehicleType.PREMIUM,
         capacity: 3,
         price_per_km: 3000,

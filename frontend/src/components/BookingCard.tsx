@@ -2,9 +2,9 @@ import { motion } from 'framer-motion'
 import { Booking, VehicleType } from '@/types'
 import {
   formatDateTime,
-  formatPrice,
   getBookingStatusColor,
-  getBookingStatusName
+  getBookingStatusName,
+  formatTripPrice
 } from '@/utils/formatting'
 import { VehicleIcon } from '@/components/VehicleIcon'
 
@@ -78,7 +78,7 @@ export function BookingCard({ booking, onClick, className }: BookingCardProps) {
         <div className="text-right">
           <span className="text-gray-500">Стоимость:</span>
           <div className="font-bold text-primary-600">
-            {formatPrice(booking.price)}
+            {formatTripPrice(booking.price, booking.toLocation)}
           </div>
         </div>
       </div>

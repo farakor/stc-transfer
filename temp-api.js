@@ -13,7 +13,7 @@ app.get('/api/vehicles/types', (req, res) => {
   const vehicleTypes = [
     {
       type: 'SEDAN',
-      name: 'Hongqi EHS 5',
+      name: 'Электромобиль Hongqi EHS 5',
       description: 'Комфортный седан для поездок до 3 пассажиров',
       capacity: 3,
       features: ['Кондиционер', 'Wi-Fi', 'USB зарядка'],
@@ -22,7 +22,7 @@ app.get('/api/vehicles/types', (req, res) => {
     },
     {
       type: 'PREMIUM',
-      name: 'Hongqi EHS 9',
+      name: 'Электромобиль Hongqi EHS 9',
       description: 'Премиум седан класса люкс для VIP поездок',
       capacity: 3,
       features: ['Кожаные сиденья', 'Панорамная крыша', 'Премиум аудио', 'Wi-Fi'],

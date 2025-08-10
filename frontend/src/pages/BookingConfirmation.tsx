@@ -6,12 +6,11 @@ import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
 import { ProgressBar } from '@/components/ProgressBar'
 import { NotificationToast } from '@/components/NotificationToast'
 import {
-  formatPrice,
   formatDateTime,
-  getVehicleTypeName,
   getBookingStatusName,
   getBookingStatusColor,
-  getVehicleModelName
+  getVehicleModelName,
+  formatTripPrice
 } from '@/utils/formatting'
 import { VehicleIcon } from '@/components/VehicleIcon'
 
@@ -224,7 +223,7 @@ export function BookingConfirmation() {
           <div className="border-t pt-4">
             <div className="flex justify-between text-lg font-bold text-primary-600">
               <span>Стоимость поездки:</span>
-              <span>{formatPrice(currentBooking.price)}</span>
+              <span>{formatTripPrice(currentBooking.price, currentBooking.toLocation)}</span>
             </div>
           </div>
 
