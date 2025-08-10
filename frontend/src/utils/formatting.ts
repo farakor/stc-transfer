@@ -172,8 +172,20 @@ export function getRepresentativeVehicle(type: VehicleType): { brand: string, mo
 
 // Получить полное название автомобиля для типа
 export function getVehicleModelName(type: VehicleType): string {
-  const vehicle = getRepresentativeVehicle(type)
-  return vehicle.brand && vehicle.model ? `${vehicle.brand} ${vehicle.model}` : getVehicleTypeName(type)
+  switch (type) {
+    case VehicleType.SEDAN:
+      return 'Электромобиль Hongqi EHS 5'
+    case VehicleType.PREMIUM:
+      return 'Электромобиль Hongqi EHS 9'
+    case VehicleType.MINIVAN:
+      return 'KIA Carnival'
+    case VehicleType.MICROBUS:
+      return 'Mercedes-Benz Sprinter'
+    case VehicleType.BUS:
+      return 'Автобус Higer'
+    default:
+      return getVehicleTypeName(type)
+  }
 }
 
 // Получить цвет для статуса заказа

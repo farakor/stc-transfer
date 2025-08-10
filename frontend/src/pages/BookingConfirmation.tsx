@@ -10,7 +10,8 @@ import {
   getBookingStatusName,
   getBookingStatusColor,
   getVehicleModelName,
-  formatTripPrice
+  formatTripPrice,
+  getRepresentativeVehicle
 } from '@/utils/formatting'
 import { VehicleIcon } from '@/components/VehicleIcon'
 
@@ -148,12 +149,19 @@ export function BookingConfirmation() {
 
           {/* Vehicle Type */}
           <div className="flex items-center space-x-3 mb-4 p-3 bg-gray-50 rounded-lg">
-            <VehicleIcon
-              type={currentBooking.vehicle?.type || selectedVehicleType!}
-              brand={currentBooking.vehicle?.brand}
-              model={currentBooking.vehicle?.model}
-              size="lg"
-            />
+            {(() => {
+              const vehicleType = currentBooking.vehicle?.type || selectedVehicleType!
+              const representativeVehicle = getRepresentativeVehicle(vehicleType)
+
+              return (
+                <VehicleIcon
+                  type={vehicleType}
+                  brand={currentBooking.vehicle?.brand || representativeVehicle.brand}
+                  model={currentBooking.vehicle?.model || representativeVehicle.model}
+                  size="lg"
+                />
+              )
+            })()}
             <div>
               <div className="font-medium text-gray-900">
                 {currentBooking.vehicle ?
@@ -163,7 +171,7 @@ export function BookingConfirmation() {
               </div>
               <div className="text-sm text-gray-600">
                 {currentBooking.vehicle ?
-                  `${currentBooking.vehicle.brand} ${currentBooking.vehicle.model}` :
+                  'Назначен автомобиль' :
                   'Автомобиль будет назначен'
                 }
               </div>
