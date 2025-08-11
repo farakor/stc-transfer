@@ -3,9 +3,12 @@ import AdminLayout from './AdminLayout';
 import AdminDashboard from './AdminDashboard';
 import BookingsManagement from './BookingsManagement';
 import DriversManagement from './DriversManagement';
+import VehiclesManagement from './VehiclesManagement';
+import SystemSettings from './SystemSettings';
+import UsersManagement from './UsersManagement';
 
 interface AdminAppProps {
-  page?: 'dashboard' | 'bookings' | 'drivers' | 'vehicles' | 'settings';
+  page?: 'dashboard' | 'bookings' | 'drivers' | 'vehicles' | 'users' | 'settings';
 }
 
 const AdminApp: React.FC<AdminAppProps> = ({ page = 'dashboard' }) => {
@@ -19,8 +22,10 @@ const AdminApp: React.FC<AdminAppProps> = ({ page = 'dashboard' }) => {
         return <DriversManagement />;
       case 'vehicles':
         return <VehiclesManagement />;
+      case 'users':
+        return <UsersManagement />;
       case 'settings':
-        return <AdminSettings />;
+        return <SystemSettings />;
       default:
         return <AdminDashboard />;
     }
@@ -34,23 +39,5 @@ const AdminApp: React.FC<AdminAppProps> = ({ page = 'dashboard' }) => {
 };
 
 // Заглушки для других страниц (будут реализованы позже)
-
-const VehiclesManagement: React.FC = () => (
-  <div className="p-6">
-    <h1 className="text-3xl font-bold text-gray-900 mb-6">Управление транспортом</h1>
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-      <p className="text-gray-600">Страница управления транспортом в разработке</p>
-    </div>
-  </div>
-);
-
-const AdminSettings: React.FC = () => (
-  <div className="p-6">
-    <h1 className="text-3xl font-bold text-gray-900 mb-6">Настройки системы</h1>
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-      <p className="text-gray-600">Страница настроек в разработке</p>
-    </div>
-  </div>
-);
 
 export default AdminApp;

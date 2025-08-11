@@ -10,6 +10,7 @@ import bookingRoutes from './routes/bookings';
 import userRoutes from './routes/users';
 import routeRoutes from './routes/routes';
 import adminRoutes from './routes/admin';
+import driverRoutes from './routes/drivers';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -63,6 +64,7 @@ app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/routes', routeRoutes);
+app.use('/api/drivers', driverRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Telegram webhook endpoint

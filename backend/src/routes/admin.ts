@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { AdminController } from '@/controllers/adminController'
+import { SettingsController } from '@/controllers/settingsController'
 
 const router = Router()
 
@@ -32,5 +33,15 @@ router.post('/telegram/test', AdminController.testTelegramBot)
 router.get('/analytics/revenue', AdminController.getRevenueAnalytics)
 router.get('/analytics/popular-routes', AdminController.getPopularRoutes)
 router.get('/analytics/driver-performance', AdminController.getDriverPerformance)
+
+// Настройки системы
+router.get('/settings', SettingsController.getAllSettings)
+router.post('/settings', SettingsController.upsertSettings)
+router.get('/settings/categories', SettingsController.getCategories)
+router.get('/settings/export', SettingsController.exportSettings)
+router.post('/settings/initialize', SettingsController.initializeDefaultSettings)
+router.get('/settings/:key', SettingsController.getSettingByKey)
+router.put('/settings/:key', SettingsController.updateSetting)
+router.delete('/settings/:key', SettingsController.deleteSetting)
 
 export default router

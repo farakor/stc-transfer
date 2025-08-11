@@ -32,6 +32,9 @@ interface TelegramWebApp {
   disableClosingConfirmation(): void
   setHeaderColor(color: string): void
   setBackgroundColor(color: string): void
+  showAlert(message: string): void
+  showConfirm(message: string, callback?: (confirmed: boolean) => void): void
+  showPopup(params: { title?: string; message: string; buttons?: Array<{ id?: string; type?: string; text: string }> }, callback?: (buttonId: string) => void): void
 
   // Main Button
   MainButton: {
@@ -130,6 +133,20 @@ export function useTelegramWebApp() {
         disableClosingConfirmation: () => console.log('Mock WebApp disableClosingConfirmation'),
         setHeaderColor: (color: string) => console.log('Mock setHeaderColor:', color),
         setBackgroundColor: (color: string) => console.log('Mock setBackgroundColor:', color),
+        showAlert: (message: string) => {
+          console.log('Mock showAlert:', message);
+          alert(message);
+        },
+        showConfirm: (message: string, callback?: (confirmed: boolean) => void) => {
+          console.log('Mock showConfirm:', message);
+          const confirmed = confirm(message);
+          if (callback) callback(confirmed);
+        },
+        showPopup: (params: any, callback?: (buttonId: string) => void) => {
+          console.log('Mock showPopup:', params);
+          alert(params.message);
+          if (callback) callback('ok');
+        },
 
         MainButton: {
           text: '',

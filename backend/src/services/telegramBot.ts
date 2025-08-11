@@ -262,4 +262,15 @@ ${reason ? `Причина: ${reason}` : ''}
       throw error
     }
   }
+
+  // Публичный метод для отправки сообщений
+  public async sendMessage(chatId: number, message: string, options?: any): Promise<void> {
+    try {
+      await this.bot.sendMessage(chatId, message, options)
+      console.log(`📤 Сообщение отправлено пользователю ${chatId}`)
+    } catch (error) {
+      console.error('❌ Ошибка отправки сообщения:', error)
+      throw error
+    }
+  }
 }

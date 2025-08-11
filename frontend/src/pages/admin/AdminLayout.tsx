@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Calendar,
   Users,
+  UserCheck,
   Car,
   Settings,
   LogOut,
@@ -14,7 +15,7 @@ import {
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-  currentPage: 'dashboard' | 'bookings' | 'drivers' | 'vehicles' | 'settings';
+  currentPage: 'dashboard' | 'bookings' | 'drivers' | 'vehicles' | 'users' | 'settings';
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage }) => {
@@ -36,7 +37,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage }) => {
     {
       name: 'Водители',
       href: '/admin/drivers',
-      icon: Users,
+      icon: UserCheck,
       key: 'drivers'
     },
     {
@@ -44,6 +45,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage }) => {
       href: '/admin/vehicles',
       icon: Car,
       key: 'vehicles'
+    },
+    {
+      name: 'Клиенты',
+      href: '/admin/users',
+      icon: Users,
+      key: 'users'
     },
     {
       name: 'Настройки',
@@ -173,8 +180,8 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ navigation, currentPage
                 key={item.name}
                 href={item.href}
                 className={`${isActive
-                    ? 'bg-blue-100 border-blue-500 text-blue-700 border-r-2'
-                    : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-blue-100 border-blue-500 text-blue-700 border-r-2'
+                  : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   } group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors`}
               >
                 <item.icon

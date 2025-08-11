@@ -402,4 +402,143 @@ export class BookingService {
       createdAt: booking.created_at
     }
   }
+
+  // Начать рейс
+  static async startTrip(bookingId: string, driverId: number, location?: { lat: number, lng: number }) {
+    console.log(`🚀 Начинаем рейс ${bookingId} водителем ${driverId}`)
+
+    // Проверяем, что заказ существует и имеет статус CONFIRMED
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        user: true,
+        driver: true,
+        vehicle: true
+      }
+    })
+
+    if (!booking) {
+      throw new Error('Booking not found')
+    }
+
+    if (booking.status !== BookingStatus.CONFIRMED && booking.status !== BookingStatus.PENDING) {
+      throw new Error('Booking must be PENDING or CONFIRMED to start trip')
+    }
+
+    if (booking.driver_id !== driverId) {
+      throw new Error('Driver is not assigned to this booking')
+    }
+
+    // Обновляем статус заказа
+    const updatedBooking = await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: BookingStatus.IN_PROGRESS,
+        updated_at: new Date()
+      },
+      include: {
+        user: true,
+        driver: true,
+        vehicle: true
+      }
+    })
+
+    // Обновляем статус водителя
+    await prisma.driver.update({
+      where: { id: driverId },
+      data: { status: DriverStatus.BUSY }
+    })
+
+    console.log(`✅ Рейс ${bookingId} начат`)
+
+    // Отправляем уведомление клиенту
+    try {
+      if (booking.user.telegram_id) {
+        const telegramBot = TelegramBotService.getInstance()
+        await telegramBot.sendMessage(
+          Number(booking.user.telegram_id),
+          `🚗 Ваш рейс начат!\n\n` +
+          `📍 Маршрут: ${booking.from_location} → ${booking.to_location}\n` +
+          `👤 Водитель: ${booking.driver?.name}\n` +
+          `📞 Телефон: ${booking.driver?.phone}\n` +
+          `🚙 Автомобиль: ${booking.vehicle?.brand} ${booking.vehicle?.model}\n` +
+          `🔢 Госномер: ${booking.vehicle?.license_plate}\n\n` +
+          `Приятной поездки! 🛣️`
+        )
+      }
+    } catch (error) {
+      console.error('❌ Ошибка отправки уведомления о начале рейса:', error)
+    }
+
+    return updatedBooking
+  }
+
+  // Завершить рейс
+  static async completeTrip(bookingId: string, driverId: number, location?: { lat: number, lng: number }) {
+    console.log(`✅ Завершаем рейс ${bookingId} водителем ${driverId}`)
+
+    // Проверяем, что заказ существует и имеет статус IN_PROGRESS
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        user: true,
+        driver: true,
+        vehicle: true
+      }
+    })
+
+    if (!booking) {
+      throw new Error('Booking not found')
+    }
+
+    if (booking.status !== BookingStatus.IN_PROGRESS) {
+      throw new Error('Booking is not in progress')
+    }
+
+    if (booking.driver_id !== driverId) {
+      throw new Error('Driver is not assigned to this booking')
+    }
+
+    // Обновляем статус заказа
+    const updatedBooking = await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: BookingStatus.COMPLETED,
+        updated_at: new Date()
+      },
+      include: {
+        user: true,
+        driver: true,
+        vehicle: true
+      }
+    })
+
+    // Обновляем статус водителя
+    await prisma.driver.update({
+      where: { id: driverId },
+      data: { status: DriverStatus.AVAILABLE }
+    })
+
+    console.log(`✅ Рейс ${bookingId} завершен`)
+
+    // Отправляем уведомление клиенту
+    try {
+      if (booking.user.telegram_id) {
+        const telegramBot = TelegramBotService.getInstance()
+        await telegramBot.sendMessage(
+          Number(booking.user.telegram_id),
+          `✅ Ваш рейс завершен!\n\n` +
+          `📍 Маршрут: ${booking.from_location} → ${booking.to_location}\n` +
+          `💰 Стоимость: ${booking.price} сум\n` +
+          `👤 Водитель: ${booking.driver?.name}\n\n` +
+          `Спасибо за использование нашего сервиса! 🙏\n` +
+          `Оцените поездку и оставьте отзыв.`
+        )
+      }
+    } catch (error) {
+      console.error('❌ Ошибка отправки уведомления о завершении рейса:', error)
+    }
+
+    return updatedBooking
+  }
 }

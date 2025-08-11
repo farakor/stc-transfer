@@ -24,4 +24,10 @@ router.put('/:id/status', BookingController.updateBookingStatus)
 // PUT /api/bookings/:id/assign-driver - Назначить водителя к заказу
 router.put('/:id/assign-driver', BookingController.assignDriver)
 
+// PUT /api/bookings/:id/start - Начать рейс
+router.put('/:id/start', BookingController.startTrip)
+
+// PUT /api/bookings/:id/complete - Завершить рейс
+router.put('/:id/complete', BookingController.completeTrip)
+
 export default router

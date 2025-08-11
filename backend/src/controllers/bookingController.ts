@@ -245,4 +245,50 @@ export class BookingController {
       })
     }
   }
+
+  // PUT /api/bookings/:id/start - Начать рейс
+  static async startTrip(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+      const { driverId, location } = req.body
+
+      console.log(`🚀 Начало рейса ${id} водителем ${driverId}`)
+
+      const booking = await BookingService.startTrip(id, driverId, location)
+
+      res.json({
+        success: true,
+        data: booking
+      })
+    } catch (error) {
+      console.error('❌ Error starting trip:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to start trip'
+      })
+    }
+  }
+
+  // PUT /api/bookings/:id/complete - Завершить рейс
+  static async completeTrip(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+      const { driverId, location } = req.body
+
+      console.log(`✅ Завершение рейса ${id} водителем ${driverId}`)
+
+      const booking = await BookingService.completeTrip(id, driverId, location)
+
+      res.json({
+        success: true,
+        data: booking
+      })
+    } catch (error) {
+      console.error('❌ Error completing trip:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to complete trip'
+      })
+    }
+  }
 }
