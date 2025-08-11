@@ -1,6 +1,5 @@
 import { prisma } from '@/utils/prisma'
 import { VehicleService } from './vehicleService'
-import { VehicleServiceMock } from './vehicleServiceMock'
 import { VehicleType } from '@prisma/client'
 
 export interface PriceCalculationRequest {
@@ -39,17 +38,12 @@ export class RouteService {
 
   // Найти маршрут по городам
   static async findRouteByLocations(fromCity: string, toCity: string) {
-    try {
-      return await prisma.route.findFirst({
-        where: {
-          from_city: fromCity,
-          to_city: toCity
-        }
-      })
-    } catch (error) {
-      console.warn('⚠️ Database not available, using base pricing')
-      return null
-    }
+    return await prisma.route.findFirst({
+      where: {
+        from_city: fromCity,
+        to_city: toCity
+      }
+    })
   }
 
   // Фиксированные цены по маршрутам и типам транспорта (из нового прайс-листа)
@@ -237,13 +231,7 @@ export class RouteService {
     console.log('📍 Found route:', route)
 
     // Получаем транспорт для расчета цены за км
-    let vehicles;
-    try {
-      vehicles = await VehicleService.getVehiclesByType(request.vehicleType)
-    } catch (error) {
-      console.warn('⚠️ Database not available, using mock data')
-      vehicles = await VehicleServiceMock.getVehiclesByType(request.vehicleType)
-    }
+    const vehicles = await VehicleService.getVehiclesByType(request.vehicleType)
     console.log('🚗 Found vehicles:', vehicles?.length || 0)
 
     const vehicle = vehicles[0]
@@ -294,67 +282,27 @@ export class RouteService {
 
   // Получить популярные направления
   static async getPopularDestinations() {
-    try {
-      const popularRoutes = await prisma.route.findMany({
-        where: {
-          is_popular: true
-        },
-        orderBy: {
-          from_city: 'asc'
-        },
-        take: 10
-      })
+    const popularRoutes = await prisma.route.findMany({
+      where: {
+        is_popular: true
+      },
+      orderBy: {
+        from_city: 'asc'
+      },
+      take: 10
+    })
 
-      return popularRoutes.map(route => ({
-        id: route.id,
-        name: `${route.from_city} → ${route.to_city}`,
-        fromCity: route.from_city,
-        toCity: route.to_city,
-        distance: route.distance,
-        duration: route.duration,
-        basePrice: route.base_price,
-        type: this.getDestinationType(route.to_city),
-        icon: this.getDestinationIcon(route.to_city)
-      }))
-    } catch (error) {
-      console.warn('⚠️ Database not available for popular destinations, using mock data')
-      // Возвращаем моковые популярные направления
-      return [
-        {
-          id: 1,
-          name: 'Самарканд → Ташкент',
-          fromCity: 'Самарканд',
-          toCity: 'Ташкент',
-          distance: 300,
-          duration: 240,
-          basePrice: 100000,
-          type: 'city',
-          icon: '🏛️'
-        },
-        {
-          id: 2,
-          name: 'Бухара → Ташкент',
-          fromCity: 'Бухара',
-          toCity: 'Ташкент',
-          distance: 450,
-          duration: 300,
-          basePrice: 120000,
-          type: 'landmark',
-          icon: '🕌'
-        },
-        {
-          id: 3,
-          name: 'Ташкент → Самарканд',
-          fromCity: 'Ташкент',
-          toCity: 'Самарканд',
-          distance: 300,
-          duration: 240,
-          basePrice: 100000,
-          type: 'city',
-          icon: '🏛️'
-        }
-      ]
-    }
+    return popularRoutes.map(route => ({
+      id: route.id,
+      name: `${route.from_city} → ${route.to_city}`,
+      fromCity: route.from_city,
+      toCity: route.to_city,
+      distance: route.distance,
+      duration: route.duration,
+      basePrice: route.base_price,
+      type: this.getDestinationType(route.to_city),
+      icon: this.getDestinationIcon(route.to_city)
+    }))
   }
 
   private static getDestinationType(cityName: string): string {

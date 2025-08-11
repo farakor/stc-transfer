@@ -13,57 +13,90 @@ async function main() {
 
   console.log('🗑️ Cleared existing data')
 
-  // Создание автомобилей
+  // Создание автомобилей на основе данных из мок сервиса
   const vehicles = await Promise.all([
-    // Седаны Электромобиль Hongqi EHS 5
-    ...Array.from({ length: 10 }, (_, i) => prisma.vehicle.create({
+    // Электромобиль Hongqi EHS 5 (SEDAN)
+    ...Array.from({ length: 3 }, (_, i) => prisma.vehicle.create({
       data: {
         name: 'Электромобиль Hongqi EHS 5',
         type: VehicleType.SEDAN,
         capacity: 3,
         price_per_km: 1500,
-        description: 'Комфортный седан для поездок до 3 пассажиров',
-        features: ['Кондиционер', 'Wi-Fi', 'USB зарядка'],
-        status: VehicleStatus.AVAILABLE
+        image_url: '/assets/ehs9.png',
+        description: 'Комфортный электромобиль для поездок до 3 пассажиров',
+        features: ['Электропривод', 'Кондиционер', 'Wi-Fi', 'USB зарядка'],
+        status: VehicleStatus.AVAILABLE,
+        brand: 'Hongqi',
+        model: 'EHS 5',
+        license_plate: `EHS5${String(i + 1).padStart(3, '0')}`
       }
     })),
 
-    // Премиум Электромобиль Hongqi EHS 9
+    // Электромобиль Hongqi EHS 9 (PREMIUM)
     ...Array.from({ length: 2 }, (_, i) => prisma.vehicle.create({
       data: {
         name: 'Электромобиль Hongqi EHS 9',
         type: VehicleType.PREMIUM,
         capacity: 3,
         price_per_km: 3000,
-        description: 'Премиум седан класса люкс для VIP поездок',
-        features: ['Кожаные сиденья', 'Панорамная крыша', 'Премиум аудио', 'Wi-Fi'],
-        status: VehicleStatus.AVAILABLE
+        image_url: '/assets/ehs9.png',
+        description: 'Премиум электромобиль класса люкс для VIP поездок',
+        features: ['Электропривод', 'Кожаные сиденья', 'Панорамная крыша', 'Премиум аудио', 'Wi-Fi'],
+        status: VehicleStatus.AVAILABLE,
+        brand: 'Hongqi',
+        model: 'EHS 9',
+        license_plate: `EHS9${String(i + 1).padStart(3, '0')}`
       }
     })),
 
-    // Минивэны KIA Carnival
-    ...Array.from({ length: 4 }, (_, i) => prisma.vehicle.create({
+    // Kia Carnival (MINIVAN)
+    ...Array.from({ length: 3 }, (_, i) => prisma.vehicle.create({
       data: {
-        name: 'KIA Carnival',
+        name: 'Kia Carnival',
         type: VehicleType.MINIVAN,
         capacity: 5,
         price_per_km: 2000,
+        image_url: '/assets/carnival-kia-black-30.png',
         description: 'Просторный минивэн для группы до 5 человек',
-        features: ['Климат-контроль', 'USB зарядка', 'Просторный салон'],
-        status: VehicleStatus.AVAILABLE
+        features: ['Климат-контроль', 'USB зарядка', 'Просторный салон', 'Багажник'],
+        status: VehicleStatus.AVAILABLE,
+        brand: 'KIA',
+        model: 'Carnival',
+        license_plate: `CARN${String(i + 1).padStart(3, '0')}`
       }
     })),
 
-    // Микроавтобус Mercedes-Benz Sprinter
-    prisma.vehicle.create({
+    // Mercedes-Benz Sprinter (MICROBUS)
+    ...Array.from({ length: 2 }, (_, i) => prisma.vehicle.create({
       data: {
         name: 'Mercedes-Benz Sprinter',
         type: VehicleType.MICROBUS,
         capacity: 16,
         price_per_km: 2500,
+        image_url: '/assets/mercedes-benz-sprinter.png',
         description: 'Микроавтобус для больших групп до 16 человек',
-        features: ['Кондиционер', 'Большой багажник', 'Удобные сиденья'],
-        status: VehicleStatus.AVAILABLE
+        features: ['Кондиционер', 'Большой багажник', 'Удобные сиденья', 'Высокая крыша'],
+        status: VehicleStatus.AVAILABLE,
+        brand: 'Mercedes-Benz',
+        model: 'Sprinter',
+        license_plate: `SPRT${String(i + 1).padStart(3, '0')}`
+      }
+    })),
+
+    // Автобус Higer (BUS)
+    prisma.vehicle.create({
+      data: {
+        name: 'Автобус Higer',
+        type: VehicleType.BUS,
+        capacity: 30,
+        price_per_km: 3000,
+        image_url: '/assets/higer-bus.png',
+        description: 'Комфортабельный автобус для больших групп до 30 человек',
+        features: ['Кондиционер', 'Большой багажник', 'Мягкие сиденья', 'Система безопасности'],
+        status: VehicleStatus.AVAILABLE,
+        brand: 'Higer',
+        model: 'Bus',
+        license_plate: 'HIGER001'
       }
     })
   ])
@@ -103,16 +136,26 @@ async function main() {
 
   console.log(`👥 Created ${drivers.length} drivers`)
 
-  // Создание маршрутов
+  // Создание маршрутов на основе RouteService FIXED_PRICES
   const routes = await Promise.all([
-    // Фиксированные маршруты
+    // Аэропорт и вокзал - популярные направления  
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Аэропорт',
+        distance: 15,
+        duration: 30,
+        base_price: 0, // Используем фиксированные цены из RouteService
+        is_popular: true
+      }
+    }),
     prisma.route.create({
       data: {
         from_city: 'Самарканд',
         to_city: 'Аэропорт Самарканда',
         distance: 15,
         duration: 30,
-        base_price: 150000,
+        base_price: 0,
         is_popular: true
       }
     }),
@@ -122,68 +165,195 @@ async function main() {
         to_city: 'Железнодорожный вокзал',
         distance: 8,
         duration: 20,
-        base_price: 150000,
+        base_price: 0,
+        is_popular: true
+      }
+    }),
+
+    // Отели в городе - фиксированная цена 20,000 сум
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Hilton Samarkand Regency',
+        distance: 5,
+        duration: 15,
+        base_price: 0,
         is_popular: true
       }
     }),
     prisma.route.create({
       data: {
         from_city: 'Самарканд',
-        to_city: 'Достопримечательности Самарканда',
+        to_city: 'Silk Road by Minyoun',
+        distance: 4,
+        duration: 12,
+        base_price: 0,
+        is_popular: true
+      }
+    }),
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Savitsky Plaza',
+        distance: 3,
+        duration: 10,
+        base_price: 0,
+        is_popular: true
+      }
+    }),
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Lia! by Minyoun Stars of Ulugbek',
+        distance: 6,
+        duration: 18,
+        base_price: 0,
+        is_popular: true
+      }
+    }),
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Hilton Garden Inn Samarkand Afrosiyob',
+        distance: 7,
+        duration: 20,
+        base_price: 0,
+        is_popular: true
+      }
+    }),
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Hilton Garden Inn Samarkand Sogd',
+        distance: 5,
+        duration: 15,
+        base_price: 0,
+        is_popular: true
+      }
+    }),
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Wellness Park Hotel Bactria',
+        distance: 8,
+        duration: 25,
+        base_price: 0,
+        is_popular: true
+      }
+    }),
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Wellness Park Hotel Turon',
+        distance: 9,
+        duration: 27,
+        base_price: 0,
+        is_popular: true
+      }
+    }),
+
+    // Достопримечательности города
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Конгресс центр',
+        distance: 4,
+        duration: 12,
+        base_price: 0,
+        is_popular: true
+      }
+    }),
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Айван',
+        distance: 3,
+        duration: 10,
+        base_price: 0,
+        is_popular: true
+      }
+    }),
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Вечный Город',
+        distance: 5,
+        duration: 15,
+        base_price: 0,
+        is_popular: true
+      }
+    }),
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Фонтан',
+        distance: 2,
+        duration: 8,
+        base_price: 0,
+        is_popular: true
+      }
+    }),
+
+    // Экскурсии и дальние поездки
+    prisma.route.create({
+      data: {
+        from_city: 'Самарканд',
+        to_city: 'Экскурсия по Самарканду',
         distance: 50,
         duration: 180,
-        base_price: 845000,
+        base_price: 0,
         is_popular: true
       }
     }),
-    // Дальние маршруты
     prisma.route.create({
       data: {
         from_city: 'Самарканд',
-        to_city: 'Шахрисабз',
+        to_city: 'Поездка в Шахрисабз',
         distance: 80,
         duration: 90,
-        base_price: 2200000,
+        base_price: 0,
         is_popular: false
       }
     }),
     prisma.route.create({
       data: {
         from_city: 'Самарканд',
-        to_city: 'Нурату',
+        to_city: 'Поездка в Нурату',
         distance: 120,
         duration: 150,
-        base_price: 3000000,
+        base_price: 0,
         is_popular: false
       }
     }),
     prisma.route.create({
       data: {
         from_city: 'Самарканд',
-        to_city: 'Бухара',
+        to_city: 'Поездка в Бухару',
         distance: 270,
         duration: 240,
-        base_price: 3600000,
+        base_price: 0,
         is_popular: false
       }
     }),
     prisma.route.create({
       data: {
         from_city: 'Самарканд',
-        to_city: 'Ташкент',
+        to_city: 'Поездка в Ташкент',
         distance: 300,
         duration: 240,
-        base_price: 3900000,
+        base_price: 0,
         is_popular: false
       }
     }),
+
+    // Поездки по городу - почасовая оплата
     prisma.route.create({
       data: {
         from_city: 'Самарканд',
-        to_city: 'В пределах города',
+        to_city: 'Поездка по Самарканду',
         distance: 25,
         duration: 60,
-        base_price: 150000,
+        base_price: 0,
         is_popular: true
       }
     })
