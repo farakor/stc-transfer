@@ -220,4 +220,46 @@ ID заказа: ${booking.id}
       console.error('❌ Failed to send dispatcher notification:', error)
     }
   }
+
+  // Отправить уведомление о назначении водителя
+  public async sendDriverAssignmentNotification(chatId: number, booking: any, driver: any) {
+    const message = `
+✅ Водитель назначен!
+
+📍 Маршрут: ${booking.fromLocation} → ${booking.toLocation}
+👤 Водитель: ${driver.name}
+📞 Телефон водителя: ${driver.phone}
+🚗 Автомобиль: ${booking.vehicle?.brand} ${booking.vehicle?.model}
+🔢 Номер: ${booking.vehicle?.licensePlate}
+
+Водитель уже направляется к вам!
+    `
+
+    try {
+      await this.sendNotification(chatId, message)
+    } catch (error) {
+      console.error('❌ Failed to send driver assignment notification:', error)
+      throw error
+    }
+  }
+
+  // Отправить уведомление об отмене заказа
+  public async sendCancellationNotification(chatId: number, bookingId: string, reason?: string) {
+    const message = `
+❌ Заказ отменен
+
+ID заказа: ${bookingId}
+${reason ? `Причина: ${reason}` : ''}
+
+Приносим извинения за неудобства. 
+Если у вас есть вопросы, свяжитесь с нами.
+    `
+
+    try {
+      await this.sendNotification(chatId, message)
+    } catch (error) {
+      console.error('❌ Failed to send cancellation notification:', error)
+      throw error
+    }
+  }
 }

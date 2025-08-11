@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STC Transfer - Админ панель</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .admin-card {
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .admin-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .status-pending {
+      @apply bg-yellow-100 text-yellow-800 border-yellow-200;
+    }
+
+    .status-confirmed {
+      @apply bg-blue-100 text-blue-800 border-blue-200;
+    }
+
+    .status-completed {
+      @apply bg-green-100 text-green-800 border-green-200;
+    }
+
+    .status-cancelled {
+      @apply bg-red-100 text-red-800 border-red-200;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100">
+  <div class="min-h-screen flex">
+    <!-- Sidebar -->
+    <div class="w-64 bg-white shadow-lg">
+      <div class="p-6">
+        <div class="flex items-center">
+          <div class="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
+            <span class="text-sm font-bold text-white">STC</span>
+          </div>
+          <div class="ml-3">
+            <p class="text-lg font-semibold text-gray-900">Admin Panel</p>
+            <p class="text-xs text-gray-500">Панель диспетчера</p>
+          </div>
+        </div>
+      </div>
+
+      <nav class="mt-6 px-3">
+        <a href="#dashboard" class="flex items-center px-3 py-2 bg-blue-100 text-blue-700 rounded-md mb-1">
+          <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i>
+          Панель управления
+        </a>
+        <a href="#bookings" class="flex items-center px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md mb-1">
+          <i data-lucide="calendar" class="w-5 h-5 mr-3"></i>
+          Заказы
+        </a>
+        <a href="#drivers" class="flex items-center px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md mb-1">
+          <i data-lucide="users" class="w-5 h-5 mr-3"></i>
+          Водители
+        </a>
+        <a href="#vehicles" class="flex items-center px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md mb-1">
+          <i data-lucide="car" class="w-5 h-5 mr-3"></i>
+          Транспорт
+        </a>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-y-auto">
+      <!-- Header -->
+      <div class="bg-white shadow-sm border-b p-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">Панель диспетчера</h1>
+            <p class="text-gray-600">Добро пожаловать в систему управления заказами</p>
+          </div>
+          <div class="flex items-center space-x-4">
+            <button class="relative p-2 text-gray-400 hover:text-gray-500">
+              <i data-lucide="bell" class="w-6 h-6"></i>
+              <span class="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
+            </button>
+            <div class="flex items-center">
+              <div class="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
+                <span class="text-sm font-medium text-white">Д</span>
+              </div>
+              <span class="ml-2 text-sm font-medium text-gray-700">Диспетчер</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Content -->
+      <div class="p-6">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div class="admin-card bg-white p-6 rounded-lg shadow-sm border">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-600">Всего заказов</p>
+                <p class="text-2xl font-bold text-gray-900">24</p>
+                <p class="text-sm text-green-600">+12% за неделю</p>
+              </div>
+              <div class="bg-blue-500 text-white p-3 rounded-lg">
+                <i data-lucide="calendar-days" class="w-6 h-6"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-card bg-white p-6 rounded-lg shadow-sm border">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-600">Завершенные</p>
+                <p class="text-2xl font-bold text-gray-900">18</p>
+                <p class="text-sm text-green-600">+8% за неделю</p>
+              </div>
+              <div class="bg-green-500 text-white p-3 rounded-lg">
+                <i data-lucide="check-circle" class="w-6 h-6"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-card bg-white p-6 rounded-lg shadow-sm border">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-600">В ожидании</p>
+                <p class="text-2xl font-bold text-gray-900">3</p>
+                <p class="text-sm text-yellow-600">Требует внимания</p>
+              </div>
+              <div class="bg-yellow-500 text-white p-3 rounded-lg">
+                <i data-lucide="clock" class="w-6 h-6"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-card bg-white p-6 rounded-lg shadow-sm border">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-600">Выручка</p>
+                <p class="text-2xl font-bold text-gray-900">850k</p>
+                <p class="text-sm text-green-600">+15% за неделю</p>
+              </div>
+              <div class="bg-purple-500 text-white p-3 rounded-lg">
+                <i data-lucide="trending-up" class="w-6 h-6"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Bookings -->
+        <div class="bg-white rounded-lg shadow-sm border">
+          <div class="p-6 border-b">
+            <div class="flex justify-between items-center">
+              <h2 class="text-lg font-semibold text-gray-900">Последние заказы</h2>
+              <button class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                Показать все
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="text-left py-3 px-6 font-medium text-gray-900">ID</th>
+                  <th class="text-left py-3 px-6 font-medium text-gray-900">Клиент</th>
+                  <th class="text-left py-3 px-6 font-medium text-gray-900">Маршрут</th>
+                  <th class="text-left py-3 px-6 font-medium text-gray-900">Водитель</th>
+                  <th class="text-left py-3 px-6 font-medium text-gray-900">Статус</th>
+                  <th class="text-left py-3 px-6 font-medium text-gray-900">Стоимость</th>
+                  <th class="text-left py-3 px-6 font-medium text-gray-900">Действия</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr class="hover:bg-gray-50">
+                  <td class="py-4 px-6">
+                    <span class="font-mono text-sm text-blue-600">#1234</span>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div>
+                      <div class="font-medium text-gray-900">Алексей Иванов</div>
+                      <div class="text-sm text-gray-600">+998 90 123 45 67</div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div class="flex items-center">
+                      <i data-lucide="map-pin" class="w-4 h-4 text-gray-400 mr-2"></i>
+                      <div>
+                        <div class="text-sm font-medium">Самарканд</div>
+                        <div class="text-sm text-gray-600">→ Ташкент</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6">
+                    <span class="text-sm text-gray-500">Не назначен</span>
+                  </td>
+                  <td class="py-4 px-6">
+                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full status-pending">
+                      Ожидает
+                    </span>
+                  </td>
+                  <td class="py-4 px-6">
+                    <span class="font-medium">120,000 сум</span>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div class="flex space-x-2">
+                      <button class="text-green-600 hover:text-green-700" title="Назначить водителя">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                      </button>
+                      <button class="text-blue-600 hover:text-blue-700" title="Просмотр">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                      </button>
+                      <button class="text-red-600 hover:text-red-700" title="Отменить">
+                        <i data-lucide="x-circle" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr class="hover:bg-gray-50">
+                  <td class="py-4 px-6">
+                    <span class="font-mono text-sm text-blue-600">#1235</span>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div>
+                      <div class="font-medium text-gray-900">Мария Петрова</div>
+                      <div class="text-sm text-gray-600">+998 91 234 56 78</div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div class="flex items-center">
+                      <i data-lucide="map-pin" class="w-4 h-4 text-gray-400 mr-2"></i>
+                      <div>
+                        <div class="text-sm font-medium">Аэропорт</div>
+                        <div class="text-sm text-gray-600">→ Центр города</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div>
+                      <div class="text-sm font-medium text-gray-900">Ибрагим</div>
+                      <div class="text-sm text-gray-600">Kia Carnival</div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6">
+                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full status-confirmed">
+                      Подтвержден
+                    </span>
+                  </td>
+                  <td class="py-4 px-6">
+                    <span class="font-medium">45,000 сум</span>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div class="flex space-x-2">
+                      <button class="text-blue-600 hover:text-blue-700" title="Просмотр">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                      </button>
+                      <button class="text-green-600 hover:text-green-700" title="Связаться">
+                        <i data-lucide="phone" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr class="hover:bg-gray-50">
+                  <td class="py-4 px-6">
+                    <span class="font-mono text-sm text-blue-600">#1236</span>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div>
+                      <div class="font-medium text-gray-900">Олег Сидоров</div>
+                      <div class="text-sm text-gray-600">+998 93 345 67 89</div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div class="flex items-center">
+                      <i data-lucide="map-pin" class="w-4 h-4 text-gray-400 mr-2"></i>
+                      <div>
+                        <div class="text-sm font-medium">Регистан</div>
+                        <div class="text-sm text-gray-600">→ Гур-Эмир</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div>
+                      <div class="text-sm font-medium text-gray-900">Азиз</div>
+                      <div class="text-sm text-gray-600">Mercedes Sprinter</div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-6">
+                    <span class="inline-flex px-2 py-1 text-xs font-medium rounded-full status-completed">
+                      Завершен
+                    </span>
+                  </td>
+                  <td class="py-4 px-6">
+                    <span class="font-medium">25,000 сум</span>
+                  </td>
+                  <td class="py-4 px-6">
+                    <div class="flex space-x-2">
+                      <button class="text-blue-600 hover:text-blue-700" title="Просмотр">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                      </button>
+                      <button class="text-green-600 hover:text-green-700" title="Отзыв">
+                        <i data-lucide="star" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="admin-card bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-lg text-white">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-semibold">Telegram бот</h3>
+                <p class="text-blue-100 text-sm">Отправить тестовое сообщение</p>
+              </div>
+              <i data-lucide="send" class="w-8 h-8"></i>
+            </div>
+            <button
+              class="mt-4 bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+              Тестировать
+            </button>
+          </div>
+
+          <div class="admin-card bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-lg text-white">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-semibold">Экспорт данных</h3>
+                <p class="text-green-100 text-sm">Скачать отчет за период</p>
+              </div>
+              <i data-lucide="download" class="w-8 h-8"></i>
+            </div>
+            <button
+              class="mt-4 bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+              Экспортировать
+            </button>
+          </div>
+
+          <div class="admin-card bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-lg text-white">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-semibold">Настройки</h3>
+                <p class="text-purple-100 text-sm">Управление системой</p>
+              </div>
+              <i data-lucide="settings" class="w-8 h-8"></i>
+            </div>
+            <button
+              class="mt-4 bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+              Настроить
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Simple navigation demo
+    document.querySelectorAll('nav a').forEach(link => {
+      link.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        // Remove active class from all links
+        document.querySelectorAll('nav a').forEach(l => {
+          l.className = l.className.replace('bg-blue-100 text-blue-700', 'text-gray-600 hover:bg-gray-50');
+        });
+
+        // Add active class to clicked link
+        this.className = this.className.replace('text-gray-600 hover:bg-gray-50', 'bg-blue-100 text-blue-700');
+
+        // You would load different content here
+        console.log('Navigating to:', this.getAttribute('href'));
+      });
+    });
+
+    // Demo notifications
+    document.querySelector('[data-lucide="bell"]').parentNode.addEventListener('click', function () {
+      alert('3 новых уведомления:\n\n• Новый заказ #1237\n• Водитель прибыл\n• Заказ #1234 завершен');
+    });
+
+    // Demo actions
+    document.querySelectorAll('button[title]').forEach(button => {
+      button.addEventListener('click', function (e) {
+        e.preventDefault();
+        const action = this.getAttribute('title');
+        alert(`Действие: ${action}\n\nВ реальной системе здесь будет соответствующий функционал.`);
+      });
+    });
+
+    // Quick action buttons
+    document.querySelectorAll('.admin-card button').forEach(button => {
+      button.addEventListener('click', function () {
+        const title = this.parentNode.querySelector('h3').textContent;
+        alert(`${title}\n\nФункция в разработке...`);
+      });
+    });
+  </script>
+</body>
+
+</html>

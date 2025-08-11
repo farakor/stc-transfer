@@ -119,8 +119,20 @@ export class BookingService {
           price: booking.price
         })
 
-        // Уведомление диспетчеру (можно добавить позже)
-        // await telegramBot.sendDispatcherNotification(booking)
+        // Уведомление диспетчеру
+        await telegramBot.sendDispatcherNotification({
+          id: booking.id,
+          fromLocation: booking.from_location,
+          toLocation: booking.to_location,
+          vehicleType: data.vehicleType,
+          price: booking.price,
+          pickupTime: booking.pickup_time,
+          notes: booking.notes,
+          user: {
+            name: booking.user.name || booking.user.first_name,
+            phone: booking.user.phone
+          }
+        })
 
       } catch (error) {
         console.error('Failed to send notifications:', error)
@@ -256,6 +268,22 @@ export class BookingService {
       }),
       VehicleService.updateVehicleStatus(driver.vehicle_id!, VehicleStatus.BUSY)
     ])
+
+    // Отправить уведомление клиенту о назначении водителя
+    try {
+      const telegramBot = TelegramBotService.getInstance()
+      await telegramBot.sendDriverAssignmentNotification(
+        Number(booking.user.telegram_id),
+        {
+          fromLocation: booking.from_location,
+          toLocation: booking.to_location,
+          vehicle: booking.vehicle
+        },
+        booking.driver
+      )
+    } catch (error) {
+      console.error('Failed to send driver assignment notification:', error)
+    }
 
     return this.formatBookingDetails(booking)
   }

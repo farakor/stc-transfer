@@ -72,6 +72,42 @@ export class VehicleController {
     }
   }
 
+  // GET /api/vehicles/all - Получить все автомобили для админ панели
+  static async getAllVehicles(req: Request, res: Response): Promise<void> {
+    try {
+      const vehicles = await VehicleService.getAllVehicles()
+
+      const vehicleData = vehicles.map(vehicle => ({
+        id: vehicle.id,
+        type: vehicle.type,
+        name: vehicle.name,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        license_plate: vehicle.license_plate,
+        capacity: vehicle.capacity,
+        pricePerKm: Number(vehicle.price_per_km),
+        status: vehicle.status,
+        description: vehicle.description,
+        features: vehicle.features || [],
+        imageUrl: vehicle.image_url,
+        createdAt: vehicle.created_at,
+        updatedAt: vehicle.updated_at
+      }))
+
+      res.json({
+        success: true,
+        data: vehicleData,
+        total: vehicleData.length
+      })
+    } catch (error) {
+      console.error('❌ Error fetching all vehicles:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch vehicles'
+      })
+    }
+  }
+
   // GET /api/vehicles/types - Получить типы автомобилей с описанием
   static async getVehicleTypes(req: Request, res: Response): Promise<void> {
     try {

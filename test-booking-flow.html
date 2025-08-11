@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест создания заказа - STC Transfer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .loading {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-2xl">
+    <h1 class="text-3xl font-bold text-center mb-8 text-gray-900">
+      🚗 Тест создания заказа
+    </h1>
+
+    <!-- Форма заказа -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Создать новый заказ</h2>
+
+      <form id="bookingForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Telegram ID (для тестирования)
+          </label>
+          <input type="number" id="telegramId" value="12345" required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Откуда
+          </label>
+          <input type="text" id="fromLocation" value="Самарканд" required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Куда
+          </label>
+          <input type="text" id="toLocation" value="Ташкент" required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Тип транспорта
+          </label>
+          <select id="vehicleType" required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="SEDAN">Седан</option>
+            <option value="PREMIUM">Премиум</option>
+            <option value="MINIVAN">Минивэн</option>
+            <option value="MICROBUS">Микроавтобус</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Время подачи (опционально)
+          </label>
+          <input type="datetime-local" id="pickupTime"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Комментарии (опционально)
+          </label>
+          <textarea id="notes" rows="3" placeholder="Особые пожелания..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+
+        <button type="submit" id="submitBtn"
+          class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
+          <span id="submitText">Создать заказ</span>
+          <div id="submitLoader"
+            class="hidden loading inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full ml-2">
+          </div>
+        </button>
+      </form>
+    </div>
+
+    <!-- Результат -->
+    <div id="result" class="hidden">
+      <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+        <h3 class="text-lg font-semibold text-green-800 mb-2">✅ Заказ создан успешно!</h3>
+        <div id="bookingDetails" class="text-sm text-green-700"></div>
+      </div>
+    </div>
+
+    <!-- Ошибки -->
+    <div id="error" class="hidden">
+      <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+        <h3 class="text-lg font-semibold text-red-800 mb-2">❌ Ошибка</h3>
+        <div id="errorMessage" class="text-sm text-red-700"></div>
+      </div>
+    </div>
+
+    <!-- Список активных заказов -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Активные заказы</h2>
+        <button onclick="loadActiveBookings()"
+          class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors">
+          Обновить
+        </button>
+      </div>
+
+      <div id="activeBookings">
+        <div class="text-center text-gray-500 py-4">
+          Нажмите "Обновить" для загрузки заказов
+        </div>
+      </div>
+    </div>
+
+    <!-- Действия -->
+    <div class="mt-6 grid grid-cols-2 gap-4">
+      <a href="/admin/dashboard"
+        class="block bg-purple-600 text-white text-center py-3 px-4 rounded-md hover:bg-purple-700 transition-colors">
+        🏠 Админ панель
+      </a>
+      <a href="/"
+        class="block bg-blue-600 text-white text-center py-3 px-4 rounded-md hover:bg-blue-700 transition-colors">
+        📱 Основное приложение
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api';
+
+    // Установка времени по умолчанию (+1 час от текущего времени)
+    document.addEventListener('DOMContentLoaded', function () {
+      const now = new Date();
+      now.setHours(now.getHours() + 1);
+      document.getElementById('pickupTime').value = now.toISOString().slice(0, 16);
+
+      // Загрузить активные заказы при загрузке страницы
+      loadActiveBookings();
+    });
+
+    // Создание заказа
+    document.getElementById('bookingForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById('submitBtn');
+      const submitText = document.getElementById('submitText');
+      const submitLoader = document.getElementById('submitLoader');
+      const resultDiv = document.getElementById('result');
+      const errorDiv = document.getElementById('error');
+
+      // Показать индикатор загрузки
+      submitBtn.disabled = true;
+      submitText.textContent = 'Создание заказа...';
+      submitLoader.classList.remove('hidden');
+      resultDiv.classList.add('hidden');
+      errorDiv.classList.add('hidden');
+
+      try {
+        const formData = {
+          telegramId: parseInt(document.getElementById('telegramId').value),
+          fromLocation: document.getElementById('fromLocation').value,
+          toLocation: document.getElementById('toLocation').value,
+          vehicleType: document.getElementById('vehicleType').value,
+          pickupTime: document.getElementById('pickupTime').value || undefined,
+          notes: document.getElementById('notes').value || undefined,
+          distanceKm: 280 // Приблизительное расстояние Самарканд-Ташкент
+        };
+
+        console.log('Отправка заказа:', formData);
+
+        const response = await fetch(`${API_BASE}/bookings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+        console.log('Ответ сервера:', result);
+
+        if (result.success) {
+          // Показать успешный результат
+          document.getElementById('bookingDetails').innerHTML = `
+                        <p><strong>ID заказа:</strong> ${result.data.id}</p>
+                        <p><strong>Маршрут:</strong> ${result.data.fromLocation} → ${result.data.toLocation}</p>
+                        <p><strong>Стоимость:</strong> ${result.data.price} сум</p>
+                        <p><strong>Статус:</strong> ${result.data.status}</p>
+                        <p><strong>Создан:</strong> ${new Date(result.data.createdAt).toLocaleString('ru-RU')}</p>
+                    `;
+          resultDiv.classList.remove('hidden');
+
+          // Обновить список активных заказов
+          setTimeout(() => {
+            loadActiveBookings();
+          }, 1000);
+        } else {
+          throw new Error(result.error || 'Неизвестная ошибка');
+        }
+      } catch (error) {
+        console.error('Ошибка создания заказа:', error);
+        document.getElementById('errorMessage').textContent = error.message;
+        errorDiv.classList.remove('hidden');
+      } finally {
+        // Восстановить кнопку
+        submitBtn.disabled = false;
+        submitText.textContent = 'Создать заказ';
+        submitLoader.classList.add('hidden');
+      }
+    });
+
+    // Загрузка активных заказов
+    async function loadActiveBookings() {
+      const container = document.getElementById('activeBookings');
+      container.innerHTML = '<div class="text-center text-gray-500 py-4">Загрузка...</div>';
+
+      try {
+        const response = await fetch(`${API_BASE}/bookings/active`);
+        const result = await response.json();
+
+        if (result.success && result.data && result.data.length > 0) {
+          container.innerHTML = result.data.map(booking => `
+                        <div class="border border-gray-200 rounded-lg p-4 mb-3">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="font-semibold text-gray-900">
+                                        #${booking.id.slice(0, 8)}... 
+                                        <span class="text-sm px-2 py-1 rounded-full ${getStatusClass(booking.status)}">
+                                            ${getStatusText(booking.status)}
+                                        </span>
+                                    </div>
+                                    <div class="text-sm text-gray-600 mt-1">
+                                        📍 ${booking.fromLocation} → ${booking.toLocation}
+                                    </div>
+                                    <div class="text-sm text-gray-600">
+                                        👤 ${booking.user.name || 'Клиент'} | 💰 ${booking.price} сум
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        🕒 ${new Date(booking.createdAt).toLocaleString('ru-RU')}
+                                    </div>
+                                </div>
+                                <div class="flex space-x-2 ml-4">
+                                    ${booking.status === 'PENDING' ? `
+                                        <button onclick="assignDriver('${booking.id}')" 
+                                                class="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">
+                                            Назначить
+                                        </button>
+                                        <button onclick="cancelBooking('${booking.id}')" 
+                                                class="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">
+                                            Отменить
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+        } else {
+          container.innerHTML = '<div class="text-center text-gray-500 py-4">Нет активных заказов</div>';
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки заказов:', error);
+        container.innerHTML = '<div class="text-center text-red-500 py-4">Ошибка загрузки заказов</div>';
+      }
+    }
+
+    // Назначить водителя
+    async function assignDriver(bookingId) {
+      if (!confirm('Назначить водителя "Ибрагим Азизов" на этот заказ?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/bookings/${bookingId}/assign-driver`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ driverId: '1' })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('✅ Водитель назначен! Клиент получил уведомление.');
+          loadActiveBookings();
+        } else {
+          alert('❌ Ошибка назначения водителя: ' + (result.error || 'Неизвестная ошибка'));
+        }
+      } catch (error) {
+        console.error('Ошибка назначения водителя:', error);
+        alert('❌ Ошибка назначения водителя');
+      }
+    }
+
+    // Отменить заказ
+    async function cancelBooking(bookingId) {
+      if (!confirm('Вы уверены, что хотите отменить этот заказ?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/bookings/${bookingId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            status: 'cancelled',
+            notes: 'Отменено диспетчером через тестовую панель'
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('✅ Заказ отменен! Клиент получил уведомление.');
+          loadActiveBookings();
+        } else {
+          alert('❌ Ошибка отмены заказа: ' + (result.error || 'Неизвестная ошибка'));
+        }
+      } catch (error) {
+        console.error('Ошибка отмены заказа:', error);
+        alert('❌ Ошибка отмены заказа');
+      }
+    }
+
+    // Утилиты для статусов
+    function getStatusClass(status) {
+      switch (status) {
+        case 'PENDING': return 'bg-yellow-100 text-yellow-800';
+        case 'CONFIRMED': return 'bg-blue-100 text-blue-800';
+        case 'IN_PROGRESS': return 'bg-purple-100 text-purple-800';
+        case 'COMPLETED': return 'bg-green-100 text-green-800';
+        case 'CANCELLED': return 'bg-red-100 text-red-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    }
+
+    function getStatusText(status) {
+      switch (status) {
+        case 'PENDING': return 'Ожидает';
+        case 'CONFIRMED': return 'Подтвержден';
+        case 'IN_PROGRESS': return 'В пути';
+        case 'COMPLETED': return 'Завершен';
+        case 'CANCELLED': return 'Отменен';
+        default: return status;
+      }
+    }
+
+    // Автообновление каждые 10 секунд
+    setInterval(loadActiveBookings, 10000);
+  </script>
+</body>
+
+</html>

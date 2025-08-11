@@ -11,6 +11,18 @@ export class VehicleService {
     })
   }
 
+  // Получить все автомобили (для админ панели)
+  static async getAllVehicles() {
+    return await prisma.vehicle.findMany({
+      include: {
+        driver: true
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    })
+  }
+
   // Получить автомобили по типу
   static async getVehiclesByType(type: VehicleType) {
     return await prisma.vehicle.findMany({
