@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест создания водителя</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+
+    .btn {
+      background-color: #007bff;
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    .btn-secondary {
+      background-color: #6c757d;
+    }
+
+    .btn-secondary:hover {
+      background-color: #545b62;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      display: none;
+    }
+
+    .success {
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+
+    .error {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+
+    .drivers-list {
+      margin-top: 30px;
+      padding: 20px;
+      background-color: #f8f9fa;
+      border-radius: 5px;
+    }
+
+    .driver-item {
+      background: white;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border-left: 4px solid #007bff;
+    }
+
+    .loading {
+      text-align: center;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🚗 Тест создания водителя</h1>
+
+    <form id="driverForm">
+      <div class="form-group">
+        <label for="name">ФИО водителя *</label>
+        <input type="text" id="name" name="name" required placeholder="Введите полное имя">
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Номер телефона *</label>
+        <input type="tel" id="phone" name="phone" required placeholder="+998 90 123 45 67">
+      </div>
+
+      <div class="form-group">
+        <label for="license">Номер водительских прав *</label>
+        <input type="text" id="license" name="license" required placeholder="AB1234567">
+      </div>
+
+      <div class="form-group">
+        <label for="vehicleId">Автомобиль (опционально)</label>
+        <select id="vehicleId" name="vehicleId">
+          <option value="">Не назначен</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn">➕ Создать водителя</button>
+      <button type="button" class="btn btn-secondary" onclick="loadDrivers()">🔄 Обновить список</button>
+    </form>
+
+    <div id="result" class="result"></div>
+
+    <div class="drivers-list">
+      <h3>📋 Список водителей</h3>
+      <div id="driversList" class="loading">Загрузка...</div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3001/api';
+
+    // Загрузка водителей при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function () {
+      loadDrivers();
+      loadVehicles();
+    });
+
+    // Обработчик формы
+    document.getElementById('driverForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(e.target);
+      const driverData = {
+        name: formData.get('name'),
+        phone: formData.get('phone'),
+        license: formData.get('license'),
+        vehicleId: formData.get('vehicleId') || null
+      };
+
+      console.log('📤 Отправка данных водителя:', driverData);
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/drivers`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(driverData)
+        });
+
+        const result = await response.json();
+        console.log('📦 Ответ сервера:', result);
+
+        if (result.success) {
+          showResult('✅ Водитель успешно создан!', 'success');
+          e.target.reset(); // Очистить форму
+          loadDrivers(); // Обновить список
+        } else {
+          showResult(`❌ Ошибка: ${result.error}`, 'error');
+        }
+      } catch (error) {
+        console.error('❌ Ошибка сети:', error);
+        showResult(`❌ Ошибка сети: ${error.message}`, 'error');
+      }
+    });
+
+    // Загрузка списка водителей
+    async function loadDrivers() {
+      const driversList = document.getElementById('driversList');
+      driversList.innerHTML = '<div class="loading">Загрузка водителей...</div>';
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/drivers`);
+        const result = await response.json();
+
+        console.log('📋 Загружены водители:', result);
+
+        if (result.success && result.data) {
+          if (result.data.length === 0) {
+            driversList.innerHTML = '<p>Водители не найдены</p>';
+          } else {
+            driversList.innerHTML = result.data.map(driver => `
+                            <div class="driver-item">
+                                <strong>${driver.name}</strong><br>
+                                📞 ${driver.phone}<br>
+                                🆔 ${driver.license}<br>
+                                📊 Статус: <span style="color: ${getStatusColor(driver.status)}">${getStatusText(driver.status)}</span><br>
+                                🚗 Автомобиль: ${driver.vehicle ? `${driver.vehicle.brand} ${driver.vehicle.model} (${driver.vehicle.licensePlate})` : 'Не назначен'}<br>
+                                📅 Создан: ${new Date(driver.createdAt).toLocaleString('ru-RU')}
+                            </div>
+                        `).join('');
+          }
+        } else {
+          driversList.innerHTML = `<p style="color: red;">Ошибка загрузки: ${result.error}</p>`;
+        }
+      } catch (error) {
+        console.error('❌ Ошибка загрузки водителей:', error);
+        driversList.innerHTML = `<p style="color: red;">Ошибка сети: ${error.message}</p>`;
+      }
+    }
+
+    // Загрузка списка автомобилей
+    async function loadVehicles() {
+      try {
+        const response = await fetch(`${API_BASE}/admin/vehicles`);
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          const vehicleSelect = document.getElementById('vehicleId');
+          vehicleSelect.innerHTML = '<option value="">Не назначен</option>';
+
+          result.data.forEach(vehicle => {
+            if (vehicle.status === 'AVAILABLE' && !vehicle.driver) {
+              const option = document.createElement('option');
+              option.value = vehicle.id;
+              option.textContent = `${vehicle.brand} ${vehicle.model} (${vehicle.licensePlate})`;
+              vehicleSelect.appendChild(option);
+            }
+          });
+        }
+      } catch (error) {
+        console.error('❌ Ошибка загрузки автомобилей:', error);
+      }
+    }
+
+    // Показать результат
+    function showResult(message, type) {
+      const result = document.getElementById('result');
+      result.textContent = message;
+      result.className = `result ${type}`;
+      result.style.display = 'block';
+
+      // Скрыть через 5 секунд
+      setTimeout(() => {
+        result.style.display = 'none';
+      }, 5000);
+    }
+
+    // Получить цвет статуса
+    function getStatusColor(status) {
+      switch (status) {
+        case 'AVAILABLE': return '#28a745';
+        case 'BUSY': return '#ffc107';
+        case 'OFFLINE': return '#6c757d';
+        default: return '#333';
+      }
+    }
+
+    // Получить текст статуса
+    function getStatusText(status) {
+      switch (status) {
+        case 'AVAILABLE': return 'Доступен';
+        case 'BUSY': return 'Занят';
+        case 'OFFLINE': return 'Не в сети';
+        default: return status;
+      }
+    }
+  </script>
+</body>
+
+</html>

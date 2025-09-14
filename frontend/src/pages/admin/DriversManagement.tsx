@@ -170,55 +170,107 @@ const DriversManagement: React.FC = () => {
 
       if (editingDriver) {
         // Обновление существующего водителя
-        const updatedDrivers = drivers.map(driver => {
-          if (driver.id === editingDriver.id) {
-            const selectedVehicle = vehicles.find(v => v.id === formData.vehicleId);
-            return {
-              ...driver,
-              name: formData.name,
-              phone: formData.phone,
-              license: formData.license,
-              vehicle: selectedVehicle ? {
-                id: selectedVehicle.id,
-                brand: selectedVehicle.brand || '',
-                model: selectedVehicle.model || '',
-                licensePlate: selectedVehicle.license_plate || '',
-                type: selectedVehicle.type
-              } : undefined,
-              updatedAt: new Date().toISOString()
-            };
-          }
-          return driver;
+        console.log('🔄 Обновление водителя через API...');
+        const response = await fetch(`/api/admin/drivers/${editingDriver.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            phone: formData.phone,
+            license: formData.license,
+            vehicleId: formData.vehicleId || null
+          }),
         });
-        setDrivers(updatedDrivers);
-        alert('✅ Водитель успешно обновлен!');
+
+        const result = await response.json();
+        console.log('📦 Ответ API обновления водителя:', result);
+
+        if (result.success) {
+          // Обновляем локальное состояние
+          const updatedDrivers = drivers.map(driver => {
+            if (driver.id === editingDriver.id) {
+              const selectedVehicle = vehicles.find(v => v.id === formData.vehicleId);
+              return {
+                ...driver,
+                name: formData.name,
+                phone: formData.phone,
+                license: formData.license,
+                vehicle: selectedVehicle ? {
+                  id: selectedVehicle.id,
+                  brand: selectedVehicle.brand || '',
+                  model: selectedVehicle.model || '',
+                  licensePlate: selectedVehicle.license_plate || '',
+                  type: selectedVehicle.type
+                } : undefined,
+                updatedAt: new Date().toISOString()
+              };
+            }
+            return driver;
+          });
+          setDrivers(updatedDrivers);
+          alert('✅ Водитель успешно обновлен!');
+        } else {
+          throw new Error(result.error || 'Ошибка при обновлении водителя');
+        }
       } else {
         // Создание нового водителя
-        const selectedVehicle = vehicles.find(v => v.id === formData.vehicleId);
-        const newDriver: Driver = {
-          id: (drivers.length + 1).toString(),
-          name: formData.name,
-          phone: formData.phone,
-          license: formData.license,
-          status: 'AVAILABLE',
-          vehicle: selectedVehicle ? {
-            id: selectedVehicle.id,
-            brand: selectedVehicle.brand || '',
-            model: selectedVehicle.model || '',
-            licensePlate: selectedVehicle.license_plate || '',
-            type: selectedVehicle.type
-          } : undefined,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        setDrivers([...drivers, newDriver]);
-        alert('✅ Водитель успешно добавлен!');
+        console.log('➕ Создание нового водителя через API...');
+        const response = await fetch('/api/admin/drivers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            phone: formData.phone,
+            license: formData.license,
+            vehicleId: formData.vehicleId || null
+          }),
+        });
+
+        const result = await response.json();
+        console.log('📦 Ответ API создания водителя:', result);
+
+        if (result.success) {
+          // Добавляем нового водителя в локальное состояние
+          const selectedVehicle = vehicles.find(v => v.id === formData.vehicleId);
+          const newDriver: Driver = {
+            id: result.data.id,
+            name: result.data.name,
+            phone: result.data.phone,
+            license: result.data.license,
+            status: result.data.status,
+            vehicle: selectedVehicle ? {
+              id: selectedVehicle.id,
+              brand: selectedVehicle.brand || '',
+              model: selectedVehicle.model || '',
+              licensePlate: selectedVehicle.license_plate || '',
+              type: selectedVehicle.type
+            } : undefined,
+            createdAt: result.data.createdAt,
+            updatedAt: result.data.createdAt
+          };
+          setDrivers([...drivers, newDriver]);
+          alert('✅ Водитель успешно добавлен в базу данных!');
+        } else {
+          throw new Error(result.error || 'Ошибка при создании водителя');
+        }
       }
 
+      // Сбрасываем форму и закрываем модал
+      setFormData({
+        name: '',
+        phone: '',
+        license: '',
+        vehicleId: ''
+      });
+      setEditingDriver(null);
       setShowModal(false);
     } catch (error) {
       console.error('❌ Ошибка при сохранении водителя:', error);
-      alert('❌ Ошибка при сохранении водителя');
+      alert(`❌ Ошибка при сохранении водителя: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
     }
   };
 
@@ -228,11 +280,23 @@ const DriversManagement: React.FC = () => {
     }
 
     try {
-      setDrivers(drivers.filter(driver => driver.id !== driverId));
-      alert('✅ Водитель удален!');
+      console.log('🗑️ Удаление водителя через API:', driverId);
+      const response = await fetch(`/api/admin/drivers/${driverId}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+      console.log('📦 Ответ API удаления водителя:', result);
+
+      if (result.success) {
+        setDrivers(drivers.filter(driver => driver.id !== driverId));
+        alert('✅ Водитель удален из базы данных!');
+      } else {
+        throw new Error(result.error || 'Ошибка при удалении водителя');
+      }
     } catch (error) {
       console.error('❌ Ошибка при удалении водителя:', error);
-      alert('❌ Ошибка при удалении водителя');
+      alert(`❌ Ошибка при удалении водителя: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
     }
   };
 

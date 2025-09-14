@@ -90,10 +90,10 @@ export class VehicleController {
         description: vehicle.description,
         features: vehicle.features || [],
         imageUrl: vehicle.image_url,
-        driver: vehicle.driver ? {
-          id: vehicle.driver.id,
-          name: vehicle.driver.name,
-          phone: vehicle.driver.phone
+        driver: (vehicle as any).driver ? {
+          id: (vehicle as any).driver.id,
+          name: (vehicle as any).driver.name,
+          phone: (vehicle as any).driver.phone
         } : null,
         createdAt: vehicle.created_at,
         updatedAt: vehicle.updated_at
