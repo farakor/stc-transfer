@@ -89,15 +89,23 @@ export function VehicleSelection() {
               whileTap={{ scale: 0.98 }}
             >
               <div className="flex items-center space-x-4">
-                {/* Vehicle Icon */}
+                {/* Vehicle Image */}
                 <div className="flex-shrink-0">
                   <div className="w-32 h-32 flex items-center justify-center">
-                    <VehicleIcon
-                      type={vehicle.type}
-                      brand={vehicle.name?.split(' ')[0]}
-                      model={vehicle.name?.split(' ').slice(1).join(' ')}
-                      size="xl"
-                    />
+                    {vehicle.imageUrl ? (
+                      <img
+                        src={vehicle.imageUrl}
+                        alt={vehicle.name}
+                        className="w-32 h-24 object-contain rounded-lg"
+                      />
+                    ) : (
+                      <VehicleIcon
+                        type={vehicle.type}
+                        brand={vehicle.name?.split(' ')[0]}
+                        model={vehicle.name?.split(' ').slice(1).join(' ')}
+                        size="xl"
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -118,6 +126,11 @@ export function VehicleSelection() {
                     <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-50 text-green-700 text-xs font-medium">
                       🧳 {vehicle.baggageCapacity} чемодана
                     </span>
+                    {vehicle.availableCount !== undefined && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-orange-50 text-orange-700 text-xs font-medium">
+                        🚗 {vehicle.availableCount} доступно
+                      </span>
+                    )}
                   </div>
 
 

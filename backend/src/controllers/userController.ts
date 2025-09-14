@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { UserService } from '@/services/userService'
+import { AdminService } from '@/services/adminService'
 
 export class UserController {
   // POST /api/users - Создать или обновить пользователя
@@ -159,6 +160,39 @@ export class UserController {
       res.status(500).json({
         success: false,
         error: 'Failed to fetch user statistics'
+      })
+    }
+  }
+
+  // GET /api/users?role=driver - Получить всех водителей
+  static async getUsers(req: Request, res: Response): Promise<void> {
+    try {
+      const { role } = req.query
+
+      if (role === 'driver') {
+        // Получаем всех водителей
+        const drivers = await AdminService.getAllDrivers()
+
+        res.json({
+          success: true,
+          data: drivers
+        })
+      } else {
+        // Получаем обычных пользователей
+        const { page = 1, limit = 20 } = req.query
+        const result = await UserService.getAllUsers(Number(page), Number(limit))
+
+        res.json({
+          success: true,
+          data: result.users,
+          pagination: result.pagination
+        })
+      }
+    } catch (error) {
+      console.error('❌ Error fetching users:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch users'
       })
     }
   }

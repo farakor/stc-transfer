@@ -15,11 +15,17 @@ import {
   Settings,
   Activity,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
+import LicensePlate from '../../components/LicensePlate';
+import LicensePlateInput from '../../components/LicensePlateInput';
 
 interface Vehicle {
-  id: string;
+  id: number;
   type: 'SEDAN' | 'PREMIUM' | 'MINIVAN' | 'MICROBUS' | 'BUS';
   name: string;
   brand?: string;
@@ -34,10 +40,16 @@ interface Vehicle {
   createdAt: string;
   updatedAt: string;
   driver?: {
-    id: string;
+    id: number;
     name: string;
     phone: string;
   };
+}
+
+interface VehicleInstance {
+  license_plate: string;
+  status: string;
+  driverId?: number | null;
 }
 
 interface VehicleFormData {
@@ -45,12 +57,14 @@ interface VehicleFormData {
   name: string;
   brand: string;
   model: string;
-  license_plate: string;
   capacity: number;
   pricePerKm: number;
-  status: string;
   description: string;
   features: string[];
+  quantity: number;
+  instances: VehicleInstance[];
+  imageUrl: string;
+  imageFile: File | null;
 }
 
 const VehiclesManagement: React.FC = () => {
@@ -61,21 +75,46 @@ const VehiclesManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [showAddMoreModal, setShowAddMoreModal] = useState(false);
+  const [addingToModel, setAddingToModel] = useState<string | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [editingSubVehicle, setEditingSubVehicle] = useState<Vehicle | null>(null);
+  const [editingGroup, setEditingGroup] = useState<string | null>(null);
+  const [groupInstances, setGroupInstances] = useState<Vehicle[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [formData, setFormData] = useState<VehicleFormData>({
     type: 'SEDAN',
     name: '',
     brand: '',
     model: '',
-    license_plate: '',
     capacity: 3,
     pricePerKm: 1500,
-    status: 'AVAILABLE',
     description: '',
-    features: []
+    features: [],
+    quantity: 1,
+    instances: [{ license_plate: '', status: 'AVAILABLE', driverId: null }],
+    imageUrl: '',
+    imageFile: null
   });
+
+  const fetchDrivers = async () => {
+    try {
+      const response = await fetch('/api/users?role=driver');
+      const data = await response.json();
+
+      if (data.success) {
+        setDrivers(data.data || []);
+      } else {
+        console.error('Failed to fetch drivers:', data.error);
+      }
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+    }
+  };
 
   useEffect(() => {
     fetchVehicles();
+    fetchDrivers();
   }, []);
 
   const fetchVehicles = async () => {
@@ -110,12 +149,14 @@ const VehiclesManagement: React.FC = () => {
       name: '',
       brand: '',
       model: '',
-      license_plate: '',
       capacity: 3,
       pricePerKm: 1500,
-      status: 'AVAILABLE',
       description: '',
-      features: []
+      features: [],
+      quantity: 1,
+      instances: [{ license_plate: '', status: 'AVAILABLE', driverId: null }],
+      imageUrl: '',
+      imageFile: null
     });
     setShowModal(true);
   };
@@ -127,58 +168,179 @@ const VehiclesManagement: React.FC = () => {
       name: vehicle.name,
       brand: vehicle.brand || '',
       model: vehicle.model || '',
-      license_plate: vehicle.license_plate || '',
       capacity: vehicle.capacity,
       pricePerKm: vehicle.pricePerKm,
-      status: vehicle.status,
       description: vehicle.description || '',
-      features: vehicle.features || []
+      features: vehicle.features || [],
+      quantity: 1,
+      instances: [{ license_plate: vehicle.license_plate || '', status: vehicle.status, driverId: vehicle.driver?.id || null }],
+      imageUrl: vehicle.imageUrl || '',
+      imageFile: null
     });
     setShowModal(true);
   };
 
   const handleSave = async () => {
     try {
-      if (!formData.brand.trim() || !formData.model.trim() || !formData.license_plate.trim()) {
-        alert('Пожалуйста, заполните все обязательные поля');
-        return;
-      }
+      // Для подчиненного автомобиля проверяем только гос номер
+      if (editingSubVehicle) {
+        if (!formData.instances[0].license_plate.trim()) {
+          alert('Пожалуйста, заполните государственный номер');
+          return;
+        }
 
-      console.log('💾 Сохранение автомобиля:', formData);
+        console.log('💾 Сохранение подчиненного автомобиля:', editingSubVehicle.id, formData.instances[0]);
 
-      if (editingVehicle) {
-        // Обновление существующего автомобиля
-        const response = await fetch(`/api/vehicles/${editingVehicle.id}`, {
+        const response = await fetch(`/api/vehicles/${editingSubVehicle.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({
+            license_plate: formData.instances[0].license_plate,
+            status: formData.instances[0].status
+          }),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to update vehicle');
+          throw new Error('Failed to update sub-vehicle');
         }
 
-        alert('✅ Автомобиль успешно обновлен!');
+        alert('✅ Экземпляр автомобиля успешно обновлен!');
+        setShowModal(false);
+        setEditingSubVehicle(null);
+        fetchVehicles();
+        return;
+      }
+
+      // Проверяем основные поля для главного автомобиля
+      if (!formData.brand.trim() || !formData.model.trim()) {
+        alert('Пожалуйста, заполните марку и модель');
+        return;
+      }
+
+      // Проверяем, что все экземпляры имеют гос номера
+      const emptyPlates = formData.instances.some(instance => !instance.license_plate.trim());
+      if (emptyPlates) {
+        alert('Пожалуйста, заполните все государственные номера');
+        return;
+      }
+
+      console.log('💾 Сохранение автомобилей:', formData);
+
+      // Подготавливаем данные для отправки
+      let finalImageUrl = formData.imageUrl;
+
+      // Если есть новый файл изображения, конвертируем его в base64
+      if (formData.imageFile) {
+        finalImageUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(formData.imageFile!);
+        });
+      }
+
+      if (editingVehicle) {
+        // Проверяем, редактируем ли мы группу (все автомобили с тем же названием)
+        const groupVehicles = vehicleGroups[editingVehicle.name];
+
+        if (editingGroup) {
+          // Редактирование группы - обновляем все экземпляры
+          const updatePromises = groupInstances.map((vehicle, index) => {
+            const instanceData = formData.instances[index];
+            const vehicleData = {
+              type: formData.type,
+              name: formData.name,
+              brand: formData.brand,
+              model: formData.model,
+              capacity: formData.capacity,
+              pricePerKm: formData.pricePerKm,
+              description: formData.description,
+              features: formData.features,
+              imageUrl: finalImageUrl,
+              // Индивидуальные данные экземпляра
+              license_plate: instanceData.license_plate,
+              status: instanceData.status,
+              driverId: instanceData.driverId
+            };
+
+            return fetch(`/api/vehicles/${vehicle.id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(vehicleData),
+            });
+          });
+
+          const responses = await Promise.all(updatePromises);
+          const failedUpdates = responses.filter(response => !response.ok);
+
+          if (failedUpdates.length > 0) {
+            throw new Error(`Failed to update ${failedUpdates.length} vehicles in group`);
+          }
+
+          alert(`✅ Группа "${formData.name}" успешно обновлена (${groupVehicles.length} экземпляров)!`);
+        } else {
+          // Обновление существующего автомобиля (только один экземпляр)
+          const vehicleData = {
+            ...formData,
+            license_plate: formData.instances[0].license_plate,
+            status: formData.instances[0].status,
+            driverId: formData.instances[0].driverId,
+            imageUrl: finalImageUrl
+          };
+
+          const response = await fetch(`/api/vehicles/${editingVehicle.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(vehicleData),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update vehicle');
+          }
+
+          alert('✅ Автомобиль успешно обновлен!');
+        }
       } else {
-        // Создание нового автомобиля
-        const response = await fetch('/api/vehicles', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(formData),
+        // Создание новых автомобилей (может быть несколько)
+        const promises = formData.instances.map(instance => {
+          const vehicleData = {
+            ...formData,
+            license_plate: instance.license_plate,
+            status: instance.status,
+            driverId: instance.driverId,
+            imageUrl: finalImageUrl
+          };
+
+          return fetch('/api/vehicles', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(vehicleData),
+          });
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to create vehicle');
+        const responses = await Promise.all(promises);
+
+        // Проверяем, что все запросы успешны
+        const failedResponses = responses.filter(response => !response.ok);
+        if (failedResponses.length > 0) {
+          throw new Error(`Failed to create ${failedResponses.length} vehicles`);
         }
 
-        alert('✅ Автомобиль успешно добавлен!');
+        const successCount = responses.length;
+        alert(`✅ Успешно добавлено ${successCount} автомобиль${successCount > 1 ? 'ей' : ''}!`);
       }
 
       setShowModal(false);
+      setEditingVehicle(null);
+      setEditingGroup(null);
+      setGroupInstances([]);
       fetchVehicles(); // Перезагружаем список
     } catch (error) {
       console.error('❌ Ошибка при сохранении автомобиля:', error);
@@ -186,7 +348,7 @@ const VehiclesManagement: React.FC = () => {
     }
   };
 
-  const handleDelete = async (vehicleId: string) => {
+  const handleDelete = async (vehicleId: number) => {
     if (!confirm('Вы уверены, что хотите удалить этот автомобиль?')) {
       return;
     }
@@ -208,7 +370,7 @@ const VehiclesManagement: React.FC = () => {
     }
   };
 
-  const handleStatusChange = async (vehicleId: string, newStatus: string) => {
+  const handleStatusChange = async (vehicleId: number, newStatus: string) => {
     try {
       const response = await fetch(`/api/vehicles/${vehicleId}/status`, {
         method: 'PUT',
@@ -296,6 +458,225 @@ const VehiclesManagement: React.FC = () => {
     });
   };
 
+  const handleQuantityChange = (quantity: number) => {
+    const newInstances = Array.from({ length: quantity }, (_, index) =>
+      formData.instances[index] || { license_plate: '', status: 'AVAILABLE', driverId: null }
+    );
+
+    setFormData({
+      ...formData,
+      quantity,
+      instances: newInstances
+    });
+  };
+
+  const updateInstance = (index: number, field: keyof VehicleInstance, value: string | number | null) => {
+    const newInstances = [...formData.instances];
+    newInstances[index] = { ...newInstances[index], [field]: value };
+    setFormData({
+      ...formData,
+      instances: newInstances
+    });
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Проверяем тип файла
+      if (!file.type.startsWith('image/')) {
+        alert('Пожалуйста, выберите файл изображения');
+        return;
+      }
+
+      // Проверяем размер файла (максимум 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Размер файла не должен превышать 5MB');
+        return;
+      }
+
+      // Создаем URL для предпросмотра
+      const imageUrl = URL.createObjectURL(file);
+
+      setFormData({
+        ...formData,
+        imageFile: file,
+        imageUrl: imageUrl
+      });
+    }
+  };
+
+  const removeImage = () => {
+    if (formData.imageUrl && formData.imageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(formData.imageUrl);
+    }
+
+    setFormData({
+      ...formData,
+      imageFile: null,
+      imageUrl: ''
+    });
+  };
+
+  const handleAddMoreInstances = (vehicleName: string) => {
+    // Находим первый автомобиль с таким названием для копирования данных
+    const existingVehicle = vehicles.find(v => v.name === vehicleName);
+    if (!existingVehicle) return;
+
+    setAddingToModel(vehicleName);
+    setFormData({
+      type: existingVehicle.type,
+      name: existingVehicle.name,
+      brand: existingVehicle.brand || '',
+      model: existingVehicle.model || '',
+      capacity: existingVehicle.capacity,
+      pricePerKm: existingVehicle.pricePerKm,
+      description: existingVehicle.description || '',
+      features: existingVehicle.features || [],
+      quantity: 1,
+      instances: [{ license_plate: '', status: 'AVAILABLE', driverId: null }],
+      imageUrl: existingVehicle.imageUrl || '',
+      imageFile: null
+    });
+    setShowAddMoreModal(true);
+  };
+
+  const toggleGroupExpansion = (groupName: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(groupName)) {
+      newExpanded.delete(groupName);
+    } else {
+      newExpanded.add(groupName);
+    }
+    setExpandedGroups(newExpanded);
+  };
+
+  const handleEditSubVehicle = (vehicle: Vehicle) => {
+    setEditingSubVehicle(vehicle);
+    setFormData({
+      type: vehicle.type,
+      name: vehicle.name,
+      brand: vehicle.brand || '',
+      model: vehicle.model || '',
+      capacity: vehicle.capacity,
+      pricePerKm: vehicle.pricePerKm,
+      description: vehicle.description || '',
+      features: vehicle.features || [],
+      quantity: 1,
+      instances: [{ license_plate: vehicle.license_plate || '', status: vehicle.status, driverId: vehicle.driver?.id || null }],
+      imageUrl: vehicle.imageUrl || '',
+      imageFile: null
+    });
+    setShowModal(true);
+  };
+
+  const handleEditGroup = (vehicleName: string) => {
+    // Находим все автомобили в группе
+    const groupVehicles = vehicleGroups[vehicleName];
+    if (!groupVehicles || groupVehicles.length === 0) return;
+
+    const groupInfo = groupVehicles[0];
+    setEditingGroup(vehicleName);
+    setGroupInstances([...groupVehicles]); // Копируем все экземпляры группы
+    setEditingVehicle(groupInfo); // Используем как базу для редактирования группы
+
+    setFormData({
+      type: groupInfo.type,
+      name: groupInfo.name,
+      brand: groupInfo.brand || '',
+      model: groupInfo.model || '',
+      capacity: groupInfo.capacity,
+      pricePerKm: groupInfo.pricePerKm,
+      description: groupInfo.description || '',
+      features: groupInfo.features || [],
+      quantity: groupVehicles.length,
+      instances: groupVehicles.map(vehicle => ({
+        license_plate: vehicle.license_plate || '',
+        status: vehicle.status,
+        driverId: vehicle.driver?.id || null
+      })),
+      imageUrl: groupInfo.imageUrl || '',
+      imageFile: null
+    });
+    setShowModal(true);
+  };
+
+  const handleDeleteGroup = async (vehicleName: string) => {
+    const groupVehicles = vehicleGroups[vehicleName];
+    if (!groupVehicles || groupVehicles.length === 0) return;
+
+    const confirmMessage = `Вы уверены, что хотите удалить всю группу "${vehicleName}" (${groupVehicles.length} экземпляров)?`;
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      // Удаляем все автомобили в группе
+      const deletePromises = groupVehicles.map(vehicle =>
+        fetch(`/api/vehicles/${vehicle.id}`, { method: 'DELETE' })
+      );
+
+      const responses = await Promise.all(deletePromises);
+      const failedDeletes = responses.filter(response => !response.ok);
+
+      if (failedDeletes.length > 0) {
+        throw new Error(`Failed to delete ${failedDeletes.length} vehicles`);
+      }
+
+      alert(`✅ Группа "${vehicleName}" успешно удалена (${groupVehicles.length} экземпляров)!`);
+      fetchVehicles(); // Перезагружаем список
+    } catch (error) {
+      console.error('❌ Ошибка при удалении группы:', error);
+      alert('❌ Ошибка при удалении группы');
+    }
+  };
+
+  const handleSaveMoreInstances = async () => {
+    try {
+      // Проверяем, что все экземпляры имеют гос номера
+      const emptyPlates = formData.instances.some(instance => !instance.license_plate.trim());
+      if (emptyPlates) {
+        alert('Пожалуйста, заполните все государственные номера');
+        return;
+      }
+
+      console.log('💾 Добавление экземпляров к модели:', addingToModel, formData);
+
+      // Создание новых экземпляров
+      const promises = formData.instances.map(instance => {
+        const vehicleData = {
+          ...formData,
+          license_plate: instance.license_plate,
+          status: instance.status,
+          driverId: instance.driverId
+        };
+
+        return fetch('/api/vehicles', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(vehicleData),
+        });
+      });
+
+      const responses = await Promise.all(promises);
+
+      // Проверяем, что все запросы успешны
+      const failedResponses = responses.filter(response => !response.ok);
+      if (failedResponses.length > 0) {
+        throw new Error(`Failed to create ${failedResponses.length} vehicles`);
+      }
+
+      const successCount = responses.length;
+      alert(`✅ Успешно добавлено ${successCount} экземпляр${successCount > 1 ? 'ов' : ''} к модели ${addingToModel}!`);
+
+      setShowAddMoreModal(false);
+      setAddingToModel(null);
+      fetchVehicles(); // Перезагружаем список
+    } catch (error) {
+      console.error('❌ Ошибка при добавлении экземпляров:', error);
+      alert('❌ Ошибка при добавлении экземпляров');
+    }
+  };
+
   const filteredVehicles = vehicles.filter(vehicle => {
     const matchesFilter = filter === 'ALL' || vehicle.status === filter;
     const matchesTypeFilter = typeFilter === 'ALL' || vehicle.type === typeFilter;
@@ -308,6 +689,16 @@ const VehiclesManagement: React.FC = () => {
 
     return matchesFilter && matchesTypeFilter && matchesSearch;
   });
+
+  // Группируем автомобили по названию для отображения кнопки "Добавить еще"
+  const vehicleGroups = filteredVehicles.reduce((groups, vehicle) => {
+    const key = vehicle.name;
+    if (!groups[key]) {
+      groups[key] = [];
+    }
+    groups[key].push(vehicle);
+    return groups;
+  }, {} as Record<string, Vehicle[]>);
 
   const stats = {
     total: vehicles.length,
@@ -448,88 +839,150 @@ const VehiclesManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredVehicles.map((vehicle) => (
-                <tr key={vehicle.id} className="hover:bg-gray-50">
-                  <td className="py-3 px-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Car className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {vehicle.brand} {vehicle.model}
+              {Object.entries(vehicleGroups).map(([vehicleName, vehiclesInGroup]) => {
+                const groupInfo = vehiclesInGroup[0]; // Берем данные для группы из первого автомобиля
+                const isExpanded = expandedGroups.has(vehicleName);
+
+                return (
+                  <React.Fragment key={vehicleName}>
+                    {/* Заголовок группы */}
+                    <tr className="hover:bg-blue-50 bg-blue-25 border-l-4 border-blue-500">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center space-x-3">
+                          <div>
+                            <div className="font-medium text-gray-900 flex items-center">
+                              {groupInfo.brand} {groupInfo.model}
+                              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {vehiclesInGroup.length}
+                              </span>
+                              <button
+                                onClick={() => toggleGroupExpansion(vehicleName)}
+                                className="ml-2 p-1 text-gray-400 hover:text-gray-600"
+                                title={isExpanded ? "Свернуть экземпляры" : "Показать экземпляры"}
+                              >
+                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              </button>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              Модель автомобиля
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-600">
-                          {vehicle.license_plate}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="space-y-1">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(groupInfo.type)}`}>
+                            {getTypeText(groupInfo.type)}
+                          </span>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Users className="w-4 h-4 mr-1" />
+                            {groupInfo.capacity} мест
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="space-y-1">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(vehicle.type)}`}>
-                        {getTypeText(vehicle.type)}
-                      </span>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Users className="w-4 h-4 mr-1" />
-                        {vehicle.capacity} мест
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    {vehicle.driver ? (
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {vehicle.driver.name}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-500">—</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-sm text-gray-500">
+                          {vehiclesInGroup.filter(v => v.status === 'AVAILABLE').length} доступно
                         </div>
-                        <div className="text-sm text-gray-600">
-                          {vehicle.driver.phone}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center text-sm text-gray-900">
+                          <DollarSign className="w-4 h-4 mr-1" />
+                          {groupInfo.pricePerKm.toLocaleString()} сум/км
                         </div>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-500">Не назначен</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(vehicle.status)}
-                      <select
-                        value={vehicle.status}
-                        onChange={(e) => handleStatusChange(vehicle.id, e.target.value)}
-                        className={`text-xs font-medium rounded-full border px-2 py-1 ${getStatusColor(vehicle.status)}`}
-                      >
-                        <option value="AVAILABLE">Доступен</option>
-                        <option value="BUSY">Занят</option>
-                        <option value="MAINTENANCE">На обслуживании</option>
-                      </select>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <DollarSign className="w-4 h-4 mr-1" />
-                      {vehicle.pricePerKm.toLocaleString()} сум/км
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleEdit(vehicle)}
-                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                        title="Редактировать"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(vehicle.id)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded"
-                        title="Удалить"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleAddMoreInstances(vehicleName)}
+                            className="p-1 text-green-600 hover:bg-green-50 rounded"
+                            title="Добавить еще экземпляры"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEditGroup(vehicleName)}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            title="Редактировать параметры группы"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteGroup(vehicleName)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Удалить всю группу"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Экземпляры автомобилей */}
+                    {isExpanded && vehiclesInGroup.map((vehicle) => (
+                      <tr key={vehicle.id} className="hover:bg-gray-50 bg-gray-25 border-l-4 border-gray-300">
+                        <td className="py-2 px-4 pl-12">
+                          <div className="flex items-center space-x-3">
+                            <LicensePlate plateNumber={vehicle.license_plate} size="small" />
+                          </div>
+                        </td>
+                        <td className="py-2 px-4">
+                          <div className="text-xs text-gray-400">
+                            —
+                          </div>
+                        </td>
+                        <td className="py-2 px-4">
+                          {vehicle.driver ? (
+                            <div>
+                              <div className="text-xs font-medium text-gray-700">
+                                {vehicle.driver.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {vehicle.driver.phone}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">Не назначен</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-4">
+                          <div className="flex items-center space-x-2">
+                            {getStatusIcon(vehicle.status)}
+                            <select
+                              value={vehicle.status}
+                              onChange={(e) => handleStatusChange(vehicle.id, e.target.value)}
+                              className={`text-xs font-medium rounded-full border px-2 py-1 ${getStatusColor(vehicle.status)}`}
+                            >
+                              <option value="AVAILABLE">Доступен</option>
+                              <option value="BUSY">Занят</option>
+                              <option value="MAINTENANCE">На обслуживании</option>
+                            </select>
+                          </div>
+                        </td>
+                        <td className="py-2 px-4">
+                          <div className="text-xs text-gray-400">
+                            —
+                          </div>
+                        </td>
+                        <td className="py-2 px-4">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleDelete(vehicle.id)}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded"
+                              title="Удалить экземпляр"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -549,7 +1002,8 @@ const VehiclesManagement: React.FC = () => {
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">
-                {editingVehicle ? 'Редактировать автомобиль' : 'Добавить автомобиль'}
+                {editingSubVehicle ? 'Редактировать экземпляр автомобиля' :
+                  editingVehicle ? (vehicleGroups[editingVehicle.name]?.length > 1 ? 'Редактировать группу автомобилей' : 'Редактировать автомобиль') : 'Добавить автомобиль'}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
@@ -559,126 +1013,199 @@ const VehiclesManagement: React.FC = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Тип автомобиля *
-                </label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="SEDAN">Седан</option>
-                  <option value="PREMIUM">Премиум</option>
-                  <option value="MINIVAN">Минивэн</option>
-                  <option value="MICROBUS">Микроавтобус</option>
-                  <option value="BUS">Автобус</option>
-                </select>
+            {/* Информация о модели (только для подчиненного автомобиля) */}
+            {editingSubVehicle && (
+              <div className="mb-4 p-4 bg-orange-50 rounded-lg">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <Car className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-orange-800">
+                      {formData.brand} {formData.model}
+                    </p>
+                    <p className="text-xs text-orange-600">
+                      Редактируется только госномер и статус экземпляра
+                    </p>
+                  </div>
+                </div>
               </div>
+            )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Название *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="например: Kia Carnival"
-                  required
-                />
-              </div>
+            {/* Основная информация (скрыта для подчиненного автомобиля) */}
+            {!editingSubVehicle && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Тип автомобиля *
+                  </label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="SEDAN">Седан</option>
+                    <option value="PREMIUM">Премиум</option>
+                    <option value="MINIVAN">Минивэн</option>
+                    <option value="MICROBUS">Микроавтобус</option>
+                    <option value="BUS">Автобус</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Марка *
-                </label>
-                <input
-                  type="text"
-                  value={formData.brand}
-                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="например: Kia"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Название *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="например: Kia Carnival"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Модель *
-                </label>
-                <input
-                  type="text"
-                  value={formData.model}
-                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="например: Carnival"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Марка *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.brand}
+                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="например: Kia"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Государственный номер *
-                </label>
-                <input
-                  type="text"
-                  value={formData.license_plate}
-                  onChange={(e) => setFormData({ ...formData, license_plate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="01 A 123 BC"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Модель *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.model}
+                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="например: Carnival"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Вместимость (человек) *
-                </label>
-                <input
-                  type="number"
-                  value={formData.capacity}
-                  onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  min="1"
-                  max="50"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Вместимость (человек) *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.capacity}
+                    onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min="1"
+                    max="50"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Тариф (сум/км) *
-                </label>
-                <input
-                  type="number"
-                  value={formData.pricePerKm}
-                  onChange={(e) => setFormData({ ...formData, pricePerKm: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  min="0"
-                  step="100"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Тариф (сум/км) *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.pricePerKm}
+                    onChange={(e) => setFormData({ ...formData, pricePerKm: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min="0"
+                    step="100"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Статус
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="AVAILABLE">Доступен</option>
-                  <option value="BUSY">Занят</option>
-                  <option value="MAINTENANCE">На обслуживании</option>
-                </select>
+                {!editingVehicle && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Количество автомобилей *
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.quantity}
+                      onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      min="1"
+                      max="10"
+                      required
+                    />
+                  </div>
+                )}
               </div>
-            </div>
+            )}
+
+            {!editingSubVehicle && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Фотография автомобиля
+                </label>
+
+                {formData.imageUrl ? (
+                  <div className="space-y-3">
+                    <div className="relative inline-block">
+                      <img
+                        src={formData.imageUrl}
+                        alt="Предпросмотр"
+                        className="w-32 h-24 object-cover rounded-lg border border-gray-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                        title="Удалить изображение"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div>
+                      <label className="cursor-pointer inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                        Заменить фото
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                    <div className="space-y-2">
+                      <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <div>
+                        <label className="cursor-pointer">
+                          <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                            Загрузить фото
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PNG, JPG, GIF до 5MB
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -731,6 +1258,73 @@ const VehiclesManagement: React.FC = () => {
               </div>
             </div>
 
+            {/* Экземпляры автомобилей */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {editingGroup ? `Экземпляры группы (${formData.quantity} шт.)` :
+                  editingVehicle ? 'Данные автомобиля' : `Данные автомобилей (${formData.quantity} шт.)`}
+              </label>
+              <div className="space-y-3">
+                {formData.instances.map((instance, index) => (
+                  <div key={index} className="p-3 border border-gray-200 rounded-md bg-gray-50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-medium text-gray-600">
+                        Экземпляр {index + 1}
+                      </span>
+                      {editingGroup && groupInstances[index] && (
+                        <span className="text-xs text-gray-500">
+                          (ID: {groupInstances[index].id})
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Государственный номер *
+                        </label>
+                        <LicensePlateInput
+                          value={instance.license_plate}
+                          onChange={(value) => updateInstance(index, 'license_plate', value)}
+                          placeholder="01 A123BC"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Статус
+                        </label>
+                        <select
+                          value={instance.status}
+                          onChange={(e) => updateInstance(index, 'status', e.target.value)}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        >
+                          <option value="AVAILABLE">Доступен</option>
+                          <option value="BUSY">Занят</option>
+                          <option value="MAINTENANCE">На обслуживании</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Водитель
+                        </label>
+                        <select
+                          value={instance.driverId || ''}
+                          onChange={(e) => updateInstance(index, 'driverId', e.target.value ? parseInt(e.target.value) : null)}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        >
+                          <option value="">Не назначен</option>
+                          {drivers.map((driver) => (
+                            <option key={driver.id} value={driver.id}>
+                              {driver.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowModal(false)}
@@ -744,6 +1338,116 @@ const VehiclesManagement: React.FC = () => {
               >
                 <Save className="w-4 h-4 mr-2" />
                 Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модал добавления экземпляров к существующей модели */}
+      {showAddMoreModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                Добавить экземпляры к модели: {addingToModel}
+              </h3>
+              <button
+                onClick={() => setShowAddMoreModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <Car className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-blue-800">
+                    {formData.brand} {formData.model}
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    Все характеристики будут скопированы из существующей модели
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Количество новых экземпляров *
+              </label>
+              <input
+                type="number"
+                value={formData.quantity}
+                onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                min="1"
+                max="10"
+                required
+              />
+            </div>
+
+            {/* Экземпляры автомобилей */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Данные новых экземпляров ({formData.quantity} шт.)
+              </label>
+              <div className="space-y-3">
+                {formData.instances.map((instance, index) => (
+                  <div key={index} className="p-3 border border-gray-200 rounded-md bg-gray-50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-medium text-gray-600">
+                        Экземпляр {index + 1}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Государственный номер *
+                        </label>
+                        <LicensePlateInput
+                          value={instance.license_plate}
+                          onChange={(value) => updateInstance(index, 'license_plate', value)}
+                          placeholder="01 A123BC"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Статус
+                        </label>
+                        <select
+                          value={instance.status}
+                          onChange={(e) => updateInstance(index, 'status', e.target.value)}
+                          className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        >
+                          <option value="AVAILABLE">Доступен</option>
+                          <option value="BUSY">Занят</option>
+                          <option value="MAINTENANCE">На обслуживании</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowAddMoreModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleSaveMoreInstances}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Добавить экземпляры
               </button>
             </div>
           </div>

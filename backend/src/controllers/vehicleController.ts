@@ -90,6 +90,11 @@ export class VehicleController {
         description: vehicle.description,
         features: vehicle.features || [],
         imageUrl: vehicle.image_url,
+        driver: vehicle.driver ? {
+          id: vehicle.driver.id,
+          name: vehicle.driver.name,
+          phone: vehicle.driver.phone
+        } : null,
         createdAt: vehicle.created_at,
         updatedAt: vehicle.updated_at
       }))
@@ -251,97 +256,45 @@ export class VehicleController {
     }
   }
 
-  // GET /api/vehicles/types - Получить типы автомобилей с описанием
+  // GET /api/vehicles/types - Получить типы автомобилей с описанием (группировка по названию)
   static async getVehicleTypes(req: Request, res: Response): Promise<void> {
     try {
-      // Пытаемся получить данные из базы
-      let vehicleTypes: any[] = []
+      console.log('🚗 Получение автомобилей по названиям...')
 
-      try {
-        const vehicles = await VehicleService.getAvailableVehicles()
+      // Получаем все автомобили из базы данных
+      const vehicles = await VehicleService.getAvailableVehicles()
+      console.log(`📦 Найдено ${vehicles.length} автомобилей в базе данных`)
 
-        // Группируем по типам
-        vehicleTypes = vehicles.reduce((acc, vehicle) => {
-          const existingType = acc.find(v => v.type === vehicle.type)
-          if (!existingType) {
-            acc.push({
-              type: vehicle.type,
-              name: vehicle.name,
-              description: vehicle.description,
-              capacity: vehicle.capacity,
-              features: vehicle.features || [],
-              imageUrl: vehicle.image_url,
-              pricePerKm: vehicle.price_per_km
-            })
-          }
-          return acc
-        }, [] as any[])
-      } catch (dbError) {
-        console.warn('⚠️ Database not available, using mock data:', dbError)
+      // Группируем по названиям и создаем уникальные варианты
+      const vehicleNamesMap = new Map()
 
-        // Возвращаем моковые данные если база недоступна
-        vehicleTypes = [
-          {
-            type: 'SEDAN',
-            name: 'Электромобиль Hongqi EHS 5',
-            description: 'Комфортный электромобиль для поездок до 3 пассажиров',
-            capacity: 3,
-            baggageCapacity: 2,
-            features: ['Кондиционер', 'Wi-Fi', 'USB зарядка', 'Экологичный'],
-            imageUrl: null,
-            pricePerKm: 1500,
-            basePrice: 20000
-          },
-          {
-            type: 'PREMIUM',
-            name: 'Электромобиль Hongqi EHS 9',
-            description: 'Премиум электромобиль класса люкс для VIP поездок',
-            capacity: 3,
-            baggageCapacity: 2,
-            features: ['Кожаные сиденья', 'Панорамная крыша', 'Премиум аудио', 'Wi-Fi', 'Экологичный'],
-            imageUrl: null,
-            pricePerKm: 3000,
-            basePrice: 20000
-          },
-          {
-            type: 'MINIVAN',
-            name: 'Kia Carnival',
-            description: 'Просторный минивэн для группы до 5 человек',
-            capacity: 5,
-            baggageCapacity: 4,
-            features: ['Климат-контроль', 'USB зарядка', 'Просторный салон'],
-            imageUrl: null,
-            pricePerKm: 2000,
-            basePrice: 20000
-          },
-          {
-            type: 'MICROBUS',
-            name: 'Mercedes-Benz Sprinter',
-            description: 'Микроавтобус для больших групп до 16 человек',
-            capacity: 16,
-            baggageCapacity: 10,
-            features: ['Кондиционер', 'Большой багажник', 'Удобные сиденья'],
-            imageUrl: null,
-            pricePerKm: 2500,
-            basePrice: 20000
-          },
-          {
-            type: 'BUS',
-            name: 'Автобус Higer',
-            description: 'Комфортабельный автобус для больших групп до 30 человек',
-            capacity: 30,
-            baggageCapacity: 15,
-            features: ['Кондиционер', 'Удобные сиденья', 'Большой багажник', 'Микрофон'],
-            imageUrl: null,
-            pricePerKm: 3000,
-            basePrice: 20000
-          }
-        ]
-      }
+      vehicles.forEach(vehicle => {
+        const nameKey = vehicle.name // Группируем по названию
+        if (!vehicleNamesMap.has(nameKey)) {
+          // Создаем вариант на основе первого автомобиля с этим названием
+          vehicleNamesMap.set(nameKey, {
+            type: vehicle.type,
+            name: vehicle.name,
+            description: vehicle.description || `${vehicle.name}`,
+            capacity: vehicle.capacity,
+            baggageCapacity: Math.floor(vehicle.capacity / 2), // Примерная вместимость багажа
+            features: vehicle.features || [],
+            imageUrl: vehicle.image_url,
+            pricePerKm: Number(vehicle.price_per_km),
+            basePrice: 20000, // Базовая цена
+            // Добавляем информацию о количестве доступных машин
+            availableCount: vehicles.filter(v => v.name === vehicle.name && v.status === 'AVAILABLE').length,
+            totalCount: vehicles.filter(v => v.name === vehicle.name).length
+          })
+        }
+      })
+
+      const vehicleOptions = Array.from(vehicleNamesMap.values())
+      console.log(`✅ Создано ${vehicleOptions.length} вариантов автомобилей по названиям`)
 
       res.json({
         success: true,
-        data: vehicleTypes
+        data: vehicleOptions
       })
     } catch (error) {
       console.error('❌ Error fetching vehicle types:', error)

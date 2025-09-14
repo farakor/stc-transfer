@@ -178,15 +178,17 @@ export interface AppState {
 
 // Vehicle card display data
 export interface VehicleDisplayData {
-  id: string
-  name: string
   type: VehicleType
+  name: string
+  description?: string
   capacity: number
   baggageCapacity: number
-  image: string
   features: string[]
+  imageUrl?: string
+  pricePerKm: number
   basePrice?: number
-  isAvailable: boolean
+  availableCount?: number // Количество доступных машин
+  totalCount?: number // Общее количество машин этого названия
 }
 
 // Popular destinations

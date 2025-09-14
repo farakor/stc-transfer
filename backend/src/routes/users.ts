@@ -3,6 +3,9 @@ import { UserController } from '@/controllers/userController'
 
 const router = Router()
 
+// GET /api/users - Получить пользователей (с поддержкой role=driver)
+router.get('/', UserController.getUsers)
+
 // POST /api/users - Создать или обновить пользователя
 router.post('/', UserController.createOrUpdateUser)
 

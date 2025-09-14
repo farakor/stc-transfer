@@ -61,7 +61,7 @@ export class VehicleService {
 
   // Создать новый автомобиль
   static async createVehicle(vehicleData: any) {
-    return await prisma.vehicle.create({
+    const vehicle = await prisma.vehicle.create({
       data: {
         type: vehicleData.type,
         name: vehicleData.name,
@@ -76,12 +76,33 @@ export class VehicleService {
         image_url: vehicleData.imageUrl
       }
     })
+
+    // Если указан водитель, назначаем его
+    if (vehicleData.driverId) {
+      await prisma.driver.update({
+        where: { id: vehicleData.driverId },
+        data: { vehicle_id: vehicle.id }
+      })
+    }
+
+    return vehicle
   }
 
   // Обновить автомобиль
   static async updateVehicle(vehicleId: number, vehicleData: any) {
     try {
-      return await prisma.vehicle.update({
+      // Получаем текущий автомобиль с водителем
+      const currentVehicle = await prisma.vehicle.findUnique({
+        where: { id: vehicleId },
+        include: { driver: true }
+      })
+
+      if (!currentVehicle) {
+        return null
+      }
+
+      // Обновляем автомобиль
+      const updatedVehicle = await prisma.vehicle.update({
         where: { id: vehicleId },
         data: {
           type: vehicleData.type,
@@ -98,6 +119,30 @@ export class VehicleService {
           updated_at: new Date()
         }
       })
+
+      // Обрабатываем назначение водителя
+      const newDriverId = vehicleData.driverId
+      const currentDriverId = currentVehicle.driver?.id
+
+      if (newDriverId !== currentDriverId) {
+        // Если был старый водитель, отвязываем его
+        if (currentDriverId) {
+          await prisma.driver.update({
+            where: { id: currentDriverId },
+            data: { vehicle_id: null }
+          })
+        }
+
+        // Если есть новый водитель, назначаем его
+        if (newDriverId) {
+          await prisma.driver.update({
+            where: { id: newDriverId },
+            data: { vehicle_id: vehicleId }
+          })
+        }
+      }
+
+      return updatedVehicle
     } catch (error) {
       console.error('Error updating vehicle:', error)
       return null
