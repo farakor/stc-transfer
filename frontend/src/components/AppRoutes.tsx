@@ -21,6 +21,7 @@ export function AppRoutes() {
       <Route path="/admin/drivers" element={<AdminApp page="drivers" />} />
       <Route path="/admin/vehicles" element={<AdminApp page="vehicles" />} />
       <Route path="/admin/users" element={<AdminApp page="users" />} />
+      <Route path="/admin/tariffs" element={<AdminApp page="tariffs" />} />
       <Route path="/admin/settings" element={<AdminApp page="settings" />} />
 
       {/* Driver app */}

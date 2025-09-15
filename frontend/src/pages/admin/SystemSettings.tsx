@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Settings,
-  DollarSign,
   Bell,
   Globe,
   Save,
@@ -23,21 +22,6 @@ interface SystemSetting {
   description?: string;
   createdAt: string;
   updatedAt: string;
-}
-
-interface TariffSettings {
-  basePrice: number;
-  minPrice: number;
-  perKmRates: {
-    SEDAN: number;
-    PREMIUM: number;
-    MINIVAN: number;
-    MICROBUS: number;
-    BUS: number;
-  };
-  nightSurcharge: number;
-  holidaySurcharge: number;
-  waitingTimeRate: number;
 }
 
 interface NotificationSettings {
@@ -67,25 +51,9 @@ interface GeneralSettings {
 const SystemSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'tariffs' | 'notifications' | 'general'>('tariffs');
+  const [activeTab, setActiveTab] = useState<'notifications' | 'general'>('notifications');
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
-
-  // Настройки тарифов
-  const [tariffSettings, setTariffSettings] = useState<TariffSettings>({
-    basePrice: 20000,
-    minPrice: 15000,
-    perKmRates: {
-      SEDAN: 1500,
-      PREMIUM: 3000,
-      MINIVAN: 2000,
-      MICROBUS: 2500,
-      BUS: 3000
-    },
-    nightSurcharge: 20,
-    holidaySurcharge: 30,
-    waitingTimeRate: 500
-  });
 
   // Настройки уведомлений
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
@@ -186,7 +154,6 @@ const SystemSettings: React.FC = () => {
 
   const parseSettings = (settingsArray: SystemSetting[]) => {
     // Парсинг настроек из массива в структурированные объекты
-    const tariffs = { ...tariffSettings };
     const notifications = { ...notificationSettings };
     const general = { ...generalSettings };
 
@@ -197,11 +164,7 @@ const SystemSettings: React.FC = () => {
             setting.value;
 
       // Распределяем по категориям
-      if (setting.category === 'tariffs') {
-        if (setting.key in tariffs) {
-          (tariffs as any)[setting.key] = value;
-        }
-      } else if (setting.category === 'notifications') {
+      if (setting.category === 'notifications') {
         if (setting.key in notifications) {
           (notifications as any)[setting.key] = value;
         }
@@ -212,7 +175,6 @@ const SystemSettings: React.FC = () => {
       }
     });
 
-    setTariffSettings(tariffs);
     setNotificationSettings(notifications);
     setGeneralSettings(general);
   };
@@ -224,14 +186,6 @@ const SystemSettings: React.FC = () => {
 
       // Формируем массив настроек для отправки
       const settingsToSave = [
-        // Тарифы
-        { key: 'basePrice', value: tariffSettings.basePrice.toString(), type: 'NUMBER', category: 'tariffs' },
-        { key: 'minPrice', value: tariffSettings.minPrice.toString(), type: 'NUMBER', category: 'tariffs' },
-        { key: 'perKmRates', value: JSON.stringify(tariffSettings.perKmRates), type: 'JSON', category: 'tariffs' },
-        { key: 'nightSurcharge', value: tariffSettings.nightSurcharge.toString(), type: 'NUMBER', category: 'tariffs' },
-        { key: 'holidaySurcharge', value: tariffSettings.holidaySurcharge.toString(), type: 'NUMBER', category: 'tariffs' },
-        { key: 'waitingTimeRate', value: tariffSettings.waitingTimeRate.toString(), type: 'NUMBER', category: 'tariffs' },
-
         // Уведомления
         { key: 'telegramBotToken', value: notificationSettings.telegramBotToken, type: 'STRING', category: 'notifications' },
         { key: 'dispatcherChatId', value: notificationSettings.dispatcherChatId, type: 'STRING', category: 'notifications' },
@@ -278,10 +232,6 @@ const SystemSettings: React.FC = () => {
     }
   };
 
-  const handleTariffChange = (key: keyof TariffSettings, value: any) => {
-    setTariffSettings(prev => ({ ...prev, [key]: value }));
-    setHasChanges(true);
-  };
 
   const handleNotificationChange = (key: keyof NotificationSettings, value: any) => {
     setNotificationSettings(prev => ({ ...prev, [key]: value }));
@@ -352,20 +302,10 @@ const SystemSettings: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="flex border-b border-gray-200">
           <button
-            onClick={() => setActiveTab('tariffs')}
-            className={`flex items-center px-6 py-4 text-sm font-medium border-b-2 ${activeTab === 'tariffs'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-          >
-            <DollarSign className="w-4 h-4 mr-2" />
-            Тарифы
-          </button>
-          <button
             onClick={() => setActiveTab('notifications')}
             className={`flex items-center px-6 py-4 text-sm font-medium border-b-2 ${activeTab === 'notifications'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
           >
             <Bell className="w-4 h-4 mr-2" />
@@ -374,8 +314,8 @@ const SystemSettings: React.FC = () => {
           <button
             onClick={() => setActiveTab('general')}
             className={`flex items-center px-6 py-4 text-sm font-medium border-b-2 ${activeTab === 'general'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
           >
             <Globe className="w-4 h-4 mr-2" />
@@ -384,121 +324,6 @@ const SystemSettings: React.FC = () => {
         </div>
 
         <div className="p-6">
-          {/* Вкладка тарифов */}
-          {activeTab === 'tariffs' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Базовые тарифы</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Базовая стоимость поездки (сум)
-                    </label>
-                    <input
-                      type="number"
-                      value={tariffSettings.basePrice}
-                      onChange={(e) => handleTariffChange('basePrice', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      step="1000"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Минимальная стоимость любой поездки
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Минимальная стоимость (сум)
-                    </label>
-                    <input
-                      type="number"
-                      value={tariffSettings.minPrice}
-                      onChange={(e) => handleTariffChange('minPrice', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      step="1000"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Абсолютный минимум для любой поездки
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Тарифы по типам транспорта (сум/км)</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.entries(tariffSettings.perKmRates).map(([type, rate]) => (
-                    <div key={type}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {type === 'SEDAN' ? 'Седан' :
-                          type === 'PREMIUM' ? 'Премиум' :
-                            type === 'MINIVAN' ? 'Минивэн' :
-                              type === 'MICROBUS' ? 'Микроавтобус' :
-                                'Автобус'}
-                      </label>
-                      <input
-                        type="number"
-                        value={rate}
-                        onChange={(e) => handleTariffChange('perKmRates', {
-                          ...tariffSettings.perKmRates,
-                          [type]: parseInt(e.target.value) || 0
-                        })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        step="100"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Дополнительные надбавки</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ночная надбавка (%)
-                    </label>
-                    <input
-                      type="number"
-                      value={tariffSettings.nightSurcharge}
-                      onChange={(e) => handleTariffChange('nightSurcharge', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      min="0"
-                      max="100"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">22:00 - 06:00</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Праздничная надбавка (%)
-                    </label>
-                    <input
-                      type="number"
-                      value={tariffSettings.holidaySurcharge}
-                      onChange={(e) => handleTariffChange('holidaySurcharge', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      min="0"
-                      max="100"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">В праздничные дни</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Тариф ожидания (сум/мин)
-                    </label>
-                    <input
-                      type="number"
-                      value={tariffSettings.waitingTimeRate}
-                      onChange={(e) => handleTariffChange('waitingTimeRate', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      step="100"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">После 5 минут бесплатного ожидания</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Вкладка уведомлений */}
           {activeTab === 'notifications' && (
             <div className="space-y-6">

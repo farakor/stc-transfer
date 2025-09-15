@@ -154,3 +154,61 @@ enum SettingType {
   BOOLEAN
   JSON
 }
+
+// Новые модели для конструктора тарифов
+
+model Location {
+  id          Int      @id @default(autoincrement())
+  name        String
+  type        String   @default("city") // city, airport, station, attraction
+  coordinates Json?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+
+  routes_from TariffRoute[] @relation("FromLocation")
+  routes_to   TariffRoute[] @relation("ToLocation")
+
+  @@map("Location")
+}
+
+model TariffRoute {
+  id                         Int      @id @default(autoincrement())
+  from_location_id           Int
+  to_location_id             Int
+  distance_km                Decimal? @db.Decimal(10, 2)
+  estimated_duration_minutes Int?
+  is_active                  Boolean  @default(true)
+  created_at                 DateTime @default(now())
+  updated_at                 DateTime @default(now())
+
+  from_location Location @relation("FromLocation", fields: [from_location_id], references: [id], onDelete: Cascade)
+  to_location   Location @relation("ToLocation", fields: [to_location_id], references: [id], onDelete: Cascade)
+  tariffs       Tariff[]
+
+  @@unique([from_location_id, to_location_id])
+  @@map("TariffRoute")
+}
+
+model Tariff {
+  id                        Int      @id @default(autoincrement())
+  route_id                  Int
+  vehicle_brand             String
+  vehicle_model             String
+  base_price                Decimal  @default(0) @db.Decimal(12, 2)
+  price_per_km              Decimal  @default(0) @db.Decimal(10, 2)
+  minimum_price             Decimal? @db.Decimal(12, 2)
+  night_surcharge_percent   Decimal? @default(0) @db.Decimal(5, 2)
+  holiday_surcharge_percent Decimal? @default(0) @db.Decimal(5, 2)
+  waiting_price_per_minute  Decimal? @default(0) @db.Decimal(8, 2)
+  is_active                 Boolean  @default(true)
+  valid_from                DateTime?
+  valid_until               DateTime?
+  created_at                DateTime @default(now())
+  updated_at                DateTime @default(now())
+
+  route TariffRoute @relation(fields: [route_id], references: [id], onDelete: Cascade)
+
+  @@unique([route_id, vehicle_brand, vehicle_model])
+  @@map("Tariff")
+}

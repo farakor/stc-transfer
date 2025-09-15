@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { AdminController } from '@/controllers/adminController'
 import { SettingsController } from '@/controllers/settingsController'
+import tariffRoutes from './tariffs'
 
 const router = Router()
 
@@ -43,5 +44,8 @@ router.post('/settings/initialize', SettingsController.initializeDefaultSettings
 router.get('/settings/:key', SettingsController.getSettingByKey)
 router.put('/settings/:key', SettingsController.updateSetting)
 router.delete('/settings/:key', SettingsController.deleteSetting)
+
+// Конструктор тарифов
+router.use('/tariffs', tariffRoutes)
 
 export default router

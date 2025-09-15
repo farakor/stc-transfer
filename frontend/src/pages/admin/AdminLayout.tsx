@@ -10,12 +10,13 @@ import {
   Menu,
   X,
   Bell,
-  Search
+  Search,
+  DollarSign
 } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-  currentPage: 'dashboard' | 'bookings' | 'drivers' | 'vehicles' | 'users' | 'settings';
+  currentPage: 'dashboard' | 'bookings' | 'drivers' | 'vehicles' | 'users' | 'tariffs' | 'settings';
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage }) => {
@@ -51,6 +52,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage }) => {
       href: '/admin/users',
       icon: Users,
       key: 'users'
+    },
+    {
+      name: 'Тарифы',
+      href: '/admin/tariffs',
+      icon: DollarSign,
+      key: 'tariffs'
     },
     {
       name: 'Настройки',

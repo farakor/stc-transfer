@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест CORS для API тарифов</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn {
+      background: #3b82f6;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 10px;
+      font-size: 16px;
+    }
+
+    .btn:hover {
+      background: #2563eb;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    .success {
+      background: #d1fae5;
+      border: 1px solid #10b981;
+      color: #065f46;
+    }
+
+    .error {
+      background: #fee2e2;
+      border: 1px solid #ef4444;
+      color: #991b1b;
+    }
+
+    .loading {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      color: #92400e;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🧪 Тест CORS для API тарифов</h1>
+    <p>Эта страница поможет диагностировать проблемы с загрузкой данных в конструкторе тарифов.</p>
+
+    <div>
+      <button class="btn" onclick="testMatrix()">🔍 Тест матрицы тарифов</button>
+      <button class="btn" onclick="testVehicleModels()">🚗 Тест моделей автомобилей</button>
+      <button class="btn" onclick="testLocations()">📍 Тест локаций</button>
+      <button class="btn" onclick="testRoutes()">🛣️ Тест маршрутов</button>
+    </div>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    function showResult(message, type = 'success') {
+      const resultDiv = document.getElementById('result');
+      resultDiv.className = `result ${type}`;
+      resultDiv.textContent = message;
+    }
+
+    function showLoading(message) {
+      showResult(message, 'loading');
+    }
+
+    async function testMatrix() {
+      showLoading('🔄 Загрузка матрицы тарифов...');
+      try {
+        const response = await fetch('http://localhost:3001/api/admin/tariffs/matrix', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        showResult(`✅ Матрица тарифов загружена успешно!
+                
+Данные:
+- Маршрутов: ${data.data.routes.length}
+- Моделей автомобилей: ${data.data.vehicleModels.length}
+- Тарифов: ${Object.keys(data.data.tariffs).length}
+
+Первый маршрут: ${data.data.routes[0]?.from_location?.name} → ${data.data.routes[0]?.to_location?.name}
+Первая модель: ${data.data.vehicleModels[0]?.brand} ${data.data.vehicleModels[0]?.model}`, 'success');
+      } catch (error) {
+        showResult(`❌ Ошибка загрузки матрицы тарифов:
+                
+${error.message}
+
+Возможные причины:
+1. Бэкенд не запущен на порту 3001
+2. CORS блокирует запрос
+3. Ошибка в API эндпоинте
+4. Проблемы с сетью
+
+Проверьте консоль браузера для подробностей.`, 'error');
+        console.error('Детальная ошибка:', error);
+      }
+    }
+
+    async function testVehicleModels() {
+      showLoading('🔄 Загрузка моделей автомобилей...');
+      try {
+        const response = await fetch('http://localhost:3001/api/admin/tariffs/vehicle-models');
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        showResult(`✅ Модели автомобилей загружены успешно!
+                
+Найдено моделей: ${data.data.length}
+
+Модели:
+${data.data.map(model => `- ${model.brand} ${model.model} (${model.count} шт.)`).join('\n')}`, 'success');
+      } catch (error) {
+        showResult(`❌ Ошибка загрузки моделей автомобилей:
+                
+${error.message}`, 'error');
+        console.error('Детальная ошибка:', error);
+      }
+    }
+
+    async function testLocations() {
+      showLoading('🔄 Загрузка локаций...');
+      try {
+        const response = await fetch('http://localhost:3001/api/admin/tariffs/locations');
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        showResult(`✅ Локации загружены успешно!
+                
+Найдено локаций: ${data.data.length}
+
+Локации:
+${data.data.map(loc => `- ${loc.name} (${loc.type})`).join('\n')}`, 'success');
+      } catch (error) {
+        showResult(`❌ Ошибка загрузки локаций:
+                
+${error.message}`, 'error');
+        console.error('Детальная ошибка:', error);
+      }
+    }
+
+    async function testRoutes() {
+      showLoading('🔄 Загрузка маршрутов...');
+      try {
+        const response = await fetch('http://localhost:3001/api/admin/tariffs/routes');
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        showResult(`✅ Маршруты загружены успешно!
+                
+Найдено маршрутов: ${data.data.length}
+
+Первые 5 маршрутов:
+${data.data.slice(0, 5).map(route => `- ${route.from_location.name} → ${route.to_location.name} (${route.distance_km} км)`).join('\n')}`, 'success');
+      } catch (error) {
+        showResult(`❌ Ошибка загрузки маршрутов:
+                
+${error.message}`, 'error');
+        console.error('Детальная ошибка:', error);
+      }
+    }
+
+    // Автоматический тест при загрузке страницы
+    window.onload = function () {
+      showResult('🚀 Страница загружена. Автоматически тестируем API...', 'loading');
+      // Автоматически тестируем матрицу
+      setTimeout(testMatrix, 1000);
+    };
+  </script>
+</body>
+
+</html>

@@ -5,10 +5,11 @@ import BookingsManagement from './BookingsManagement';
 import DriversManagement from './DriversManagement';
 import VehiclesManagement from './VehiclesManagement';
 import SystemSettings from './SystemSettings';
+import TariffsManagement from './TariffsManagement';
 import UsersManagement from './UsersManagement';
 
 interface AdminAppProps {
-  page?: 'dashboard' | 'bookings' | 'drivers' | 'vehicles' | 'users' | 'settings';
+  page?: 'dashboard' | 'bookings' | 'drivers' | 'vehicles' | 'users' | 'tariffs' | 'settings';
 }
 
 const AdminApp: React.FC<AdminAppProps> = ({ page = 'dashboard' }) => {
@@ -24,6 +25,8 @@ const AdminApp: React.FC<AdminAppProps> = ({ page = 'dashboard' }) => {
         return <VehiclesManagement />;
       case 'users':
         return <UsersManagement />;
+      case 'tariffs':
+        return <TariffsManagement />;
       case 'settings':
         return <SystemSettings />;
       default:

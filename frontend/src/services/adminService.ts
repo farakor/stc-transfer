@@ -43,22 +43,6 @@ class AdminService {
     }
   }
 
-  // Получить все заказы (используем активные заказы пока)
-  async getAllBookings(
-    filter?: BookingFilter,
-    pagination?: PaginationParams
-  ): Promise<AdminApiResponse<any[]>> {
-    console.log('🔍 AdminService.getAllBookings called with filter:', filter);
-
-    try {
-      const response = await this.getActiveBookings();
-      console.log('📦 AdminService.getAllBookings response:', response);
-      return response;
-    } catch (error) {
-      console.error('❌ AdminService.getAllBookings error:', error);
-      throw error;
-    }
-  }
 
   // Обновить статус заказа
   async updateBookingStatus(
@@ -245,10 +229,6 @@ class AdminService {
     return api.put(`${this.baseUrl}/users/${userId}`, userData);
   }
 
-  // Управление транспортом
-  async getVehicles(): Promise<AdminApiResponse<any[]>> {
-    return api.get(`${this.baseUrl}/vehicles`);
-  }
 
   async createVehicle(vehicleData: any): Promise<AdminApiResponse<any>> {
     return api.post(`${this.baseUrl}/vehicles`, vehicleData);
