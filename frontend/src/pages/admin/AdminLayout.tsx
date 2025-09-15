@@ -144,7 +144,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage }) => {
 
         {/* Основной контент */}
         <main className="flex-1 overflow-y-auto">
-          {children}
+          <div className="p-6 lg:p-8">
+            {children}
+          </div>
         </main>
       </div>
     </div>

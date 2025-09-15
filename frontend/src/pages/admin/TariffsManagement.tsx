@@ -84,6 +84,7 @@ const TariffsManagement: React.FC = () => {
   const [editingTariff, setEditingTariff] = useState<TariffData | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [activeTab, setActiveTab] = useState<'matrix' | 'routes' | 'locations'>('matrix');
+  const [newVehiclesCount, setNewVehiclesCount] = useState(0);
 
   // Форма для тарифа
   const [tariffForm, setTariffForm] = useState({
@@ -115,13 +116,23 @@ const TariffsManagement: React.FC = () => {
 
   useEffect(() => {
     loadTariffMatrix();
+
+    // Автоматическое обновление каждые 30 секунд
+    const interval = setInterval(() => {
+      console.log('🔄 Автоматическое обновление матрицы тарифов...');
+      loadTariffMatrix(true); // silent = true для автообновления
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const loadTariffMatrix = async () => {
+  const loadTariffMatrix = async (silent = false) => {
     try {
       console.log('🔄 Начинаем загрузку матрицы тарифов...');
-      setLoading(true);
-      setSaveStatus('idle');
+      if (!silent) {
+        setLoading(true);
+        setSaveStatus('idle');
+      }
 
       const response = await fetch('http://localhost:3001/api/admin/tariffs/matrix');
       console.log('📡 Ответ от сервера:', response.status, response.statusText);
@@ -134,22 +145,41 @@ const TariffsManagement: React.FC = () => {
       console.log('📦 Полученные данные:', data);
 
       if (data.success) {
+        const oldVehicleCount = matrix?.vehicleModels?.length || 0;
+        const newVehicleCount = data.data.vehicleModels?.length || 0;
+
         setMatrix(data.data);
         console.log('✅ Матрица тарифов загружена успешно');
-        setSaveStatus('success');
+
+        // Уведомляем о новых автомобилях
+        if (oldVehicleCount > 0 && newVehicleCount > oldVehicleCount) {
+          const newCount = newVehicleCount - oldVehicleCount;
+          console.log(`🚗 Обнаружено ${newCount} новых автомобилей!`);
+          setNewVehiclesCount(newCount);
+          if (!silent) {
+            setSaveStatus('success');
+          }
+        } else if (!silent) {
+          setSaveStatus('success');
+          setNewVehiclesCount(0); // Сбрасываем счетчик при ручном обновлении
+        }
       } else {
         throw new Error(data.error || 'Ошибка загрузки данных');
       }
 
     } catch (error) {
       console.error('❌ Ошибка загрузки матрицы тарифов:', error);
-      setSaveStatus('error');
+      if (!silent) {
+        setSaveStatus('error');
 
-      // Показываем пользователю детальную ошибку
-      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
-      alert(`Ошибка загрузки данных: ${errorMessage}\n\nПроверьте:\n1. Запущен ли бэкенд на порту 3001\n2. Консоль браузера для подробностей`);
+        // Показываем пользователю детальную ошибку
+        const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+        alert(`Ошибка загрузки данных: ${errorMessage}\n\nПроверьте:\n1. Запущен ли бэкенд на порту 3001\n2. Консоль браузера для подробностей`);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -332,7 +362,7 @@ const TariffsManagement: React.FC = () => {
       {/* Заголовок */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
             <Calculator className="w-8 h-8 mr-3 text-blue-600" />
             Конструктор тарифов
           </h1>
@@ -342,13 +372,36 @@ const TariffsManagement: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-3">
+          {newVehiclesCount > 0 && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <p className="text-sm text-green-700 font-medium">
+                🚗 Обнаружено {newVehiclesCount} новых автомобилей!
+              </p>
+              <p className="text-xs text-green-600">
+                Они уже добавлены в матрицу тарифов
+              </p>
+            </div>
+          )}
+          <div className="text-right">
+            <p className="text-sm text-gray-500">
+              💡 Добавили новый автомобиль? Нажмите "Обновить"
+            </p>
+            <p className="text-xs text-gray-400">
+              Автообновление каждые 30 сек
+            </p>
+          </div>
           <button
-            onClick={loadTariffMatrix}
+            onClick={() => loadTariffMatrix(false)}
             disabled={loading}
-            className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+            className="flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50 transition-colors"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Обновить
+            {newVehiclesCount > 0 && (
+              <span className="ml-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                +{newVehiclesCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -373,7 +426,7 @@ const TariffsManagement: React.FC = () => {
       )}
 
       {/* Вкладки */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg shadow">
         <div className="flex border-b border-gray-200">
           <button
             onClick={() => setActiveTab('matrix')}
@@ -431,7 +484,7 @@ const TariffsManagement: React.FC = () => {
               </div>
 
               {/* Таблица матрицы */}
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr>
@@ -545,7 +598,7 @@ const TariffsManagement: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {matrix.routes.map((route) => (
-                  <div key={route.id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={route.id} className="border border-gray-200 rounded-lg p-4 bg-white">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-2">
                         <span>{getLocationTypeIcon(route.from_location.type)}</span>
@@ -597,7 +650,7 @@ const TariffsManagement: React.FC = () => {
                 {Array.from(new Set(matrix.routes.flatMap(r => [r.from_location, r.to_location])))
                   .filter((location, index, self) => self.findIndex(l => l.id === location.id) === index)
                   .map((location) => (
-                    <div key={location.id} className="border border-gray-200 rounded-lg p-4">
+                    <div key={location.id} className="border border-gray-200 rounded-lg p-4 bg-white">
                       <div className="flex items-center space-x-2 mb-2">
                         <span className="text-2xl">{getLocationTypeIcon(location.type)}</span>
                         <div>
