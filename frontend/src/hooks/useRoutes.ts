@@ -8,6 +8,8 @@ export const routeKeys = {
   popular: () => [...routeKeys.all, 'popular'] as const,
   search: (from: string, to: string) => [...routeKeys.all, 'search', from, to] as const,
   detail: (id: string) => [...routeKeys.all, 'detail', id] as const,
+  locations: () => [...routeKeys.all, 'locations'] as const,
+  allRoutes: () => [...routeKeys.all, 'all-routes'] as const,
 }
 
 // Получить активные маршруты
@@ -57,5 +59,25 @@ export function useCalculatePrice() {
   return useMutation({
     mutationFn: (request: PriceCalculationRequest) =>
       RouteService.calculatePrice(request),
+  })
+}
+
+// Получить все локации
+export function useAllLocations() {
+  return useQuery({
+    queryKey: routeKeys.locations(),
+    queryFn: RouteService.getAllLocations,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    cacheTime: 30 * 60 * 1000, // 30 minutes
+  })
+}
+
+// Получить все маршруты
+export function useAllRoutes() {
+  return useQuery({
+    queryKey: routeKeys.allRoutes(),
+    queryFn: RouteService.getAllRoutes,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 15 * 60 * 1000, // 15 minutes
   })
 }

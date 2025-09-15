@@ -646,6 +646,7 @@ export class AdminService {
       price: Number(booking.price || booking.total_price || 0),
       pickupTime: booking.pickup_time,
       notes: booking.notes,
+      vehicleType: booking.vehicle_type,
       user: {
         id: booking.user?.id?.toString(),
         name: booking.user?.name || booking.user?.first_name,

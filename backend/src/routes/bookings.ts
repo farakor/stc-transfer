@@ -21,7 +21,10 @@ router.get('/:id', BookingController.getBookingById)
 // PUT /api/bookings/:id/status - Обновить статус заказа
 router.put('/:id/status', BookingController.updateBookingStatus)
 
-// PUT /api/bookings/:id/assign-driver - Назначить водителя к заказу
+// PUT /api/bookings/:id/assign-vehicle - Назначить автомобиль к заказу
+router.put('/:id/assign-vehicle', BookingController.assignVehicle)
+
+// PUT /api/bookings/:id/assign-driver - Назначить водителя к заказу (для совместимости)
 router.put('/:id/assign-driver', BookingController.assignDriver)
 
 // PUT /api/bookings/:id/start - Начать рейс

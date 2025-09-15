@@ -1,5 +1,25 @@
 import api from './api'
 import { Route, PopularDestination, PriceCalculation, VehicleType, ApiResponse } from '@/types'
+import axios from 'axios'
+
+export interface LocationData {
+  id: number
+  name: string
+  type: string
+  coordinates?: any
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface RouteData {
+  id: number
+  from_location: LocationData
+  to_location: LocationData
+  distance_km: number
+  estimated_duration_minutes: number
+  is_active: boolean
+}
 
 export interface PriceCalculationRequest {
   fromLocation: string
@@ -63,6 +83,26 @@ export class RouteService {
       throw error
     }
   }
-}
 
-import axios from 'axios'
+  // Получить все локации из API тарифов
+  static async getAllLocations(): Promise<LocationData[]> {
+    try {
+      const response = await api.get<ApiResponse<LocationData[]>>('/admin/tariffs/locations')
+      return response.data.data || []
+    } catch (error) {
+      console.error('Error fetching locations:', error)
+      return []
+    }
+  }
+
+  // Получить все маршруты из API тарифов
+  static async getAllRoutes(): Promise<RouteData[]> {
+    try {
+      const response = await api.get<ApiResponse<RouteData[]>>('/admin/tariffs/routes')
+      return response.data.data || []
+    } catch (error) {
+      console.error('Error fetching routes:', error)
+      return []
+    }
+  }
+}

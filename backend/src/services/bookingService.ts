@@ -22,6 +22,7 @@ export interface BookingDetails {
   price: number
   pickupTime?: Date
   notes?: string
+  vehicleType?: VehicleType
   user: {
     name?: string
     phone?: string
@@ -39,6 +40,19 @@ export interface BookingDetails {
 }
 
 export class BookingService {
+  // Проверить, существует ли маршрут в таблице Route
+  private static async validateRouteId(routeId: number): Promise<boolean> {
+    try {
+      const route = await prisma.route.findUnique({
+        where: { id: routeId }
+      })
+      return !!route
+    } catch (error) {
+      console.error('❌ Error validating route ID:', error)
+      return false
+    }
+  }
+
   // Создать новый заказ
   static async createBooking(data: CreateBookingData): Promise<BookingDetails> {
     console.log('🔍 Creating booking for:', data)
@@ -67,10 +81,8 @@ export class BookingService {
         distance: data.distanceKm
       })
 
-      // 3. Найти подходящий автомобиль
-      const vehicle = await VehicleService.findSuitableVehicle(data.vehicleType)
-
-      // 4. Создать заказ
+      // 3. Создать заказ БЕЗ назначения конкретного автомобиля
+      // Клиент выбирает только тип автомобиля, диспетчер назначает конкретный экземпляр
       const booking = await prisma.booking.create({
         data: {
           user_id: user.id,
@@ -84,9 +96,13 @@ export class BookingService {
           status: BookingStatus.PENDING,
           pickup_time: data.pickupTime ? new Date(data.pickupTime) : null,
           notes: data.notes,
-          vehicle_id: vehicle?.id,
-          driver_id: vehicle?.driver?.id,
-          route_id: priceCalculation.routeId
+          // НЕ назначаем автомобиль и водителя при создании
+          vehicle_id: null,
+          driver_id: null,
+          // Сохраняем выбранный клиентом тип автомобиля
+          vehicle_type: data.vehicleType,
+          // Только устанавливаем route_id если он существует и ссылается на таблицу Route
+          route_id: priceCalculation.routeId && await this.validateRouteId(priceCalculation.routeId) ? priceCalculation.routeId : null
         },
         include: {
           user: true,
@@ -96,18 +112,7 @@ export class BookingService {
         }
       })
 
-      // 5. Обновить статус автомобиля и водителя (если назначены)
-      if (vehicle && vehicle.driver) {
-        await Promise.all([
-          VehicleService.updateVehicleStatus(vehicle.id, VehicleStatus.BUSY),
-          prisma.driver.update({
-            where: { id: vehicle.driver.id },
-            data: { status: DriverStatus.BUSY }
-          })
-        ])
-      }
-
-      // 6. Отправить уведомления
+      // 4. Отправить уведомления
       try {
         const telegramBot = TelegramBotService.getInstance()
 
@@ -226,6 +231,71 @@ export class BookingService {
       )
     } catch (error) {
       console.error('Failed to send status update notification:', error)
+    }
+
+    return this.formatBookingDetails(booking)
+  }
+
+  // Назначить автомобиль к заказу
+  static async assignVehicle(bookingId: string, vehicleId: string) {
+    const vehicle = await prisma.vehicle.findUnique({
+      where: { id: parseInt(vehicleId) },
+      include: { driver: true }
+    })
+
+    if (!vehicle) {
+      throw new Error('Vehicle not found')
+    }
+
+    if (vehicle.status !== VehicleStatus.AVAILABLE) {
+      throw new Error('Vehicle is not available')
+    }
+
+    if (!vehicle.driver) {
+      throw new Error('Vehicle has no assigned driver')
+    }
+
+    if (vehicle.driver.status !== DriverStatus.AVAILABLE) {
+      throw new Error('Vehicle driver is not available')
+    }
+
+    const booking = await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        vehicle_id: vehicle.id,
+        driver_id: vehicle.driver.id,
+        status: BookingStatus.CONFIRMED
+      },
+      include: {
+        user: true,
+        vehicle: true,
+        driver: true
+      }
+    })
+
+    // Обновить статус автомобиля и водителя
+    await Promise.all([
+      VehicleService.updateVehicleStatus(vehicle.id, VehicleStatus.BUSY),
+      prisma.driver.update({
+        where: { id: vehicle.driver.id },
+        data: { status: DriverStatus.BUSY }
+      })
+    ])
+
+    // Отправить уведомление клиенту о назначении автомобиля
+    try {
+      const telegramBot = TelegramBotService.getInstance()
+      await telegramBot.sendDriverAssignmentNotification(
+        Number(booking.user.telegram_id),
+        {
+          fromLocation: booking.from_location,
+          toLocation: booking.to_location,
+          vehicle: booking.vehicle
+        },
+        booking.driver
+      )
+    } catch (error) {
+      console.error('Failed to send vehicle assignment notification:', error)
     }
 
     return this.formatBookingDetails(booking)
@@ -386,6 +456,7 @@ export class BookingService {
       price: Number(booking.price || booking.total_price || 0),
       pickupTime: booking.pickup_time,
       notes: booking.notes,
+      vehicleType: booking.vehicle_type,
       user: {
         name: booking.user?.name || booking.user?.first_name,
         phone: booking.user?.phone

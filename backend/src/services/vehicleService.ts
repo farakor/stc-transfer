@@ -5,6 +5,9 @@ export class VehicleService {
   // Получить все доступные автомобили
   static async getAvailableVehicles() {
     return await prisma.vehicle.findMany({
+      include: {
+        driver: true
+      },
       orderBy: {
         name: 'asc'
       }

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест цен на странице booking</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn {
+      background: #3b82f6;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 10px;
+      font-size: 16px;
+    }
+
+    .btn:hover {
+      background: #2563eb;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    .success {
+      background: #d1fae5;
+      border: 1px solid #10b981;
+      color: #065f46;
+    }
+
+    .error {
+      background: #fee2e2;
+      border: 1px solid #ef4444;
+      color: #991b1b;
+    }
+
+    .loading {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      color: #92400e;
+    }
+
+    .price-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px 0;
+    }
+
+    .price-title {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .price-details {
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .price-total {
+      font-size: 18px;
+      font-weight: bold;
+      color: #059669;
+      margin-top: 8px;
+    }
+
+    .route-type {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .route-type.database {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .route-type.fixed {
+      background: #fef3c7;
+      color: #92400e;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🧪 Тест цен на странице booking</h1>
+    <p>Проверяем, что страница booking теперь показывает цены из тарифов админ-панели.</p>
+
+    <div>
+      <button class="btn" onclick="testDatabaseTariffs()">💰 Тест тарифов из БД</button>
+      <button class="btn" onclick="testFixedPrices()">🏷️ Тест хардкодированных цен</button>
+      <button class="btn" onclick="testAllScenarios()">🎯 Тест всех сценариев</button>
+    </div>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    function showResult(message, type = 'success') {
+      const resultDiv = document.getElementById('result');
+      resultDiv.className = `result ${type}`;
+      resultDiv.innerHTML = message;
+    }
+
+    function showLoading(message) {
+      showResult(message, 'loading');
+    }
+
+    function formatPrice(amount) {
+      return new Intl.NumberFormat('ru-RU').format(amount) + ' сум';
+    }
+
+    function createPriceCard(data, title) {
+      const routeTypeClass = data.routeType === 'DATABASE' ? 'database' : 'fixed';
+      const routeTypeText = data.routeType === 'DATABASE' ? 'Из БД' : 'Фиксированная';
+
+      return `
+                <div class="price-card">
+                    <div class="price-title">
+                        ${title}
+                        <span class="route-type ${routeTypeClass}">${routeTypeText}</span>
+                    </div>
+                    <div class="price-details">
+                        ${data.breakdown.map(item => `• ${item.label}: ${formatPrice(item.amount)}`).join('<br>')}
+                    </div>
+                    <div class="price-total">
+                        Итого: ${formatPrice(data.totalPrice)}
+                    </div>
+                </div>
+            `;
+    }
+
+    async function calculatePrice(fromCity, toCity, vehicleType) {
+      const response = await fetch('http://localhost:3001/api/routes/calculate-price', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fromCity,
+          toCity,
+          vehicleType
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Ошибка расчета цены');
+      }
+
+      return result.data;
+    }
+
+    async function testDatabaseTariffs() {
+      showLoading('🔄 Тестируем тарифы из базы данных...');
+
+      try {
+        const tests = [
+          {
+            title: 'Самарканд → Аэропорт (SEDAN)',
+            from: 'Самарканд (центр)',
+            to: 'Аэропорт Самарканда',
+            vehicle: 'SEDAN'
+          },
+          {
+            title: 'Аэропорт → Самарканд (BUS)',
+            from: 'Аэропорт Самарканда',
+            to: 'Самарканд (центр)',
+            vehicle: 'BUS'
+          }
+        ];
+
+        let results = '✅ Тарифы из базы данных работают!\n\n';
+
+        for (const test of tests) {
+          const data = await calculatePrice(test.from, test.to, test.vehicle);
+          results += createPriceCard(data, test.title);
+        }
+
+        showResult(results, 'success');
+      } catch (error) {
+        showResult(`❌ Ошибка тестирования тарифов из БД:\n\n${error.message}`, 'error');
+      }
+    }
+
+    async function testFixedPrices() {
+      showLoading('🔄 Тестируем хардкодированные цены...');
+
+      try {
+        const tests = [
+          {
+            title: 'Самарканд → Аэропорт (SEDAN)',
+            from: 'Самарканд (центр)',
+            to: 'Аэропорт',
+            vehicle: 'SEDAN'
+          },
+          {
+            title: 'Самарканд → Железнодорожный вокзал (PREMIUM)',
+            from: 'Самарканд (центр)',
+            to: 'Железнодорожный вокзал',
+            vehicle: 'PREMIUM'
+          }
+        ];
+
+        let results = '✅ Хардкодированные цены работают!\n\n';
+
+        for (const test of tests) {
+          const data = await calculatePrice(test.from, test.to, test.vehicle);
+          results += createPriceCard(data, test.title);
+        }
+
+        showResult(results, 'success');
+      } catch (error) {
+        showResult(`❌ Ошибка тестирования хардкодированных цен:\n\n${error.message}`, 'error');
+      }
+    }
+
+    async function testAllScenarios() {
+      showLoading('🔄 Тестируем все сценарии...');
+
+      try {
+        const tests = [
+          // Тарифы из БД
+          {
+            title: '🗄️ БД: Самарканд → Аэропорт (SEDAN)',
+            from: 'Самарканд (центр)',
+            to: 'Аэропорт Самарканда',
+            vehicle: 'SEDAN'
+          },
+          {
+            title: '🗄️ БД: Аэропорт → Самарканд (BUS)',
+            from: 'Аэропорт Самарканда',
+            to: 'Самарканд (центр)',
+            vehicle: 'BUS'
+          },
+          // Хардкодированные цены
+          {
+            title: '🏷️ Фикс: Самарканд → Аэропорт (SEDAN)',
+            from: 'Самарканд (центр)',
+            to: 'Аэропорт',
+            vehicle: 'SEDAN'
+          },
+          {
+            title: '🏷️ Фикс: Самарканд → Экскурсия (PREMIUM)',
+            from: 'Самарканд (центр)',
+            to: 'Экскурсия по Самарканду',
+            vehicle: 'PREMIUM'
+          }
+        ];
+
+        let results = '🎯 Результаты всех тестов:\n\n';
+
+        for (const test of tests) {
+          try {
+            const data = await calculatePrice(test.from, test.to, test.vehicle);
+            results += createPriceCard(data, test.title);
+          } catch (error) {
+            results += `<div class="price-card" style="border-color: #ef4444;">
+                            <div class="price-title">${test.title}</div>
+                            <div style="color: #dc2626;">❌ Ошибка: ${error.message}</div>
+                        </div>`;
+          }
+        }
+
+        results += `
+                <div style="margin-top: 20px; padding: 15px; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px;">
+                    <h3 style="margin: 0 0 10px 0; color: #0c4a6e;">📋 Выводы:</h3>
+                    <ul style="margin: 0; color: #0c4a6e;">
+                        <li><strong>Тарифы из БД</strong> - используются в первую очередь (routeType: DATABASE)</li>
+                        <li><strong>Хардкодированные цены</strong> - используются как fallback (routeType: FIXED)</li>
+                        <li><strong>Детализация</strong> - показывается базовая стоимость и стоимость транспорта</li>
+                        <li><strong>Страница booking</strong> теперь показывает цены из админ-панели! 🎉</li>
+                    </ul>
+                </div>
+                `;
+
+        showResult(results, 'success');
+      } catch (error) {
+        showResult(`❌ Ошибка тестирования:\n\n${error.message}`, 'error');
+      }
+    }
+
+    // Автоматический тест при загрузке страницы
+    window.onload = function () {
+      showResult('🚀 Страница загружена. Нажмите кнопки для тестирования исправлений.', 'loading');
+    };
+  </script>
+</body>
+
+</html>

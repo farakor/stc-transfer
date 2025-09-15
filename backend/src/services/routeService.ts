@@ -46,6 +46,105 @@ export class RouteService {
     })
   }
 
+  // Найти тариф в базе данных по локациям и типу транспорта
+  static async findTariffFromDatabase(fromLocation: string, toLocation: string, vehicleType: string) {
+    try {
+      console.log(`🔍 Searching database tariff for: ${fromLocation} → ${toLocation}, vehicle: ${vehicleType}`)
+
+      // Ищем маршрут по локациям
+      const route = await prisma.tariffRoute.findFirst({
+        where: {
+          from_location: { name: fromLocation },
+          to_location: { name: toLocation },
+          is_active: true
+        },
+        include: {
+          from_location: true,
+          to_location: true
+        }
+      })
+
+      if (!route) {
+        console.log('❌ Route not found in database')
+        return null
+      }
+
+      console.log('✅ Found route:', route.id, route.from_location.name, '→', route.to_location.name)
+
+      // Ищем тариф для этого маршрута и типа транспорта
+      const tariff = await prisma.tariff.findFirst({
+        where: {
+          route_id: route.id,
+          is_active: true,
+          // Сопоставляем типы транспорта с брендами/моделями
+          OR: [
+            // Прямое сопоставление по типу транспорта
+            { vehicle_brand: vehicleType },
+            // Сопоставление по известным брендам
+            ...(vehicleType === 'SEDAN' ? [
+              { vehicle_brand: 'Hongqi', vehicle_model: 'EHS 5' },
+              { vehicle_brand: 'Hongqi' }
+            ] : []),
+            ...(vehicleType === 'PREMIUM' ? [
+              { vehicle_brand: 'Hongqi', vehicle_model: 'EHS 9' },
+              { vehicle_brand: 'Mercedes', vehicle_model: 'S-Class' }
+            ] : []),
+            ...(vehicleType === 'MINIVAN' ? [
+              { vehicle_brand: 'KIA', vehicle_model: 'Carnival' },
+              { vehicle_brand: 'Kia', vehicle_model: 'Carnival' }
+            ] : []),
+            ...(vehicleType === 'MICROBUS' ? [
+              { vehicle_brand: 'Mercedes', vehicle_model: 'Sprinter' }
+            ] : []),
+            ...(vehicleType === 'BUS' ? [
+              { vehicle_brand: 'Higer', vehicle_model: 'Bus' }
+            ] : [])
+          ]
+        },
+        include: {
+          route: {
+            include: {
+              from_location: true,
+              to_location: true
+            }
+          }
+        }
+      })
+
+      if (tariff) {
+        console.log('✅ Found tariff:', tariff.id, tariff.vehicle_brand, tariff.vehicle_model)
+        return {
+          id: tariff.id,
+          route_id: tariff.route_id,
+          vehicle_brand: tariff.vehicle_brand,
+          vehicle_model: tariff.vehicle_model,
+          base_price: Number(tariff.base_price),
+          price_per_km: Number(tariff.price_per_km),
+          minimum_price: tariff.minimum_price ? Number(tariff.minimum_price) : undefined,
+          night_surcharge_percent: tariff.night_surcharge_percent ? Number(tariff.night_surcharge_percent) : undefined,
+          holiday_surcharge_percent: tariff.holiday_surcharge_percent ? Number(tariff.holiday_surcharge_percent) : undefined,
+          waiting_price_per_minute: tariff.waiting_price_per_minute ? Number(tariff.waiting_price_per_minute) : undefined,
+          is_active: tariff.is_active,
+          route: {
+            id: tariff.route.id,
+            from_location: tariff.route.from_location,
+            to_location: tariff.route.to_location,
+            distance_km: tariff.route.distance_km ? Number(tariff.route.distance_km) : null,
+            estimated_duration_minutes: tariff.route.estimated_duration_minutes,
+            is_active: tariff.route.is_active
+          }
+        }
+      }
+
+      console.log('❌ Tariff not found for vehicle type:', vehicleType)
+      return null
+
+    } catch (error) {
+      console.error('❌ Error searching database tariff:', error)
+      return null
+    }
+  }
+
   // Фиксированные цены по маршрутам и типам транспорта (из нового прайс-листа)
   private static FIXED_PRICES: Record<string, Record<string, number>> = {
     // Отели и достопримечательности в городе - 20,000 сум для всех типов транспорта
@@ -152,7 +251,44 @@ export class RouteService {
     const destination = request.to
     const vehicleType = request.vehicleType
 
-    // Проверяем, есть ли фиксированная цена для данного маршрута и типа транспорта
+    // СНАЧАЛА проверяем тарифы из базы данных
+    const dbTariff = await this.findTariffFromDatabase(request.from, request.to, request.vehicleType)
+
+    if (dbTariff) {
+      console.log('💰 Using database tariff:', dbTariff)
+
+      const distance = dbTariff.route.distance_km || 0
+      const basePrice = dbTariff.base_price
+      const pricePerKm = dbTariff.price_per_km
+      const distancePrice = pricePerKm * distance
+      const totalPrice = basePrice + distancePrice
+
+      const result = {
+        routeId: dbTariff.route.id,
+        routeType: 'FIXED', // Используем FIXED для тарифов из БД
+        vehicleType: request.vehicleType,
+        basePrice,
+        pricePerKm,
+        distance,
+        totalPrice,
+        currency: 'UZS',
+        breakdown: [
+          {
+            label: 'Базовая стоимость маршрута',
+            amount: basePrice
+          },
+          {
+            label: `Транспорт (${distance} км)`,
+            amount: distancePrice
+          }
+        ]
+      }
+
+      console.log('✅ Database tariff calculation result:', result)
+      return result
+    }
+
+    // Если в БД нет тарифа, проверяем хардкодированные цены
     const fixedPrice = this.FIXED_PRICES[destination]?.[vehicleType]
 
     if (fixedPrice) {

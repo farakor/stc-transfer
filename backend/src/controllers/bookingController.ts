@@ -1,10 +1,13 @@
 import { Request, Response } from 'express'
+import { VehicleType } from '@prisma/client'
 import { BookingService } from '@/services/bookingService'
 
 export class BookingController {
   // POST /api/bookings - Создать новый заказ
   static async createBooking(req: Request, res: Response): Promise<void> {
     try {
+      console.log('📥 Received booking request:', req.body)
+
       const {
         telegramId,
         fromLocation,
@@ -15,6 +18,8 @@ export class BookingController {
         distanceKm
       } = req.body
 
+      console.log('🔍 Extracted vehicleType:', vehicleType, 'Type:', typeof vehicleType)
+
       // Валидация обязательных полей
       if (!telegramId || !fromLocation || !toLocation || !vehicleType) {
         res.status(400).json({
@@ -24,14 +29,19 @@ export class BookingController {
         return
       }
 
-      const validVehicleTypes = ['SEDAN', 'PREMIUM', 'MINIVAN', 'MICROBUS']
-      if (!validVehicleTypes.includes(vehicleType)) {
+      const validVehicleTypes = Object.values(VehicleType)
+      console.log('✅ Valid vehicle types:', validVehicleTypes)
+
+      if (!validVehicleTypes.includes(vehicleType as VehicleType)) {
+        console.log('❌ Invalid vehicle type received:', vehicleType)
         res.status(400).json({
           success: false,
-          error: 'Invalid vehicle type'
+          error: `Invalid vehicle type: ${vehicleType}. Valid types: ${validVehicleTypes.join(', ')}`
         })
         return
       }
+
+      console.log('✅ Vehicle type validation passed')
 
       const booking = await BookingService.createBooking({
         telegramId: BigInt(telegramId),
@@ -161,6 +171,44 @@ export class BookingController {
         success: false,
         error: 'Failed to update booking status'
       })
+    }
+  }
+
+  // PUT /api/bookings/:id/assign-vehicle - Назначить автомобиль к заказу
+  static async assignVehicle(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+      const { vehicleId } = req.body
+
+      if (!vehicleId) {
+        res.status(400).json({
+          success: false,
+          error: 'Vehicle ID is required'
+        })
+        return
+      }
+
+      const booking = await BookingService.assignVehicle(id, vehicleId)
+
+      res.json({
+        success: true,
+        data: booking,
+        message: 'Vehicle assigned successfully'
+      })
+    } catch (error) {
+      console.error('❌ Error assigning vehicle:', error)
+
+      if (error instanceof Error) {
+        res.status(400).json({
+          success: false,
+          error: error.message
+        })
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to assign vehicle'
+        })
+      }
     }
   }
 

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест модалки назначения автомобиля</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .booking {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px 0;
+      background: white;
+    }
+
+    .booking h3 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+
+    .booking-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    .info-item {
+      padding: 5px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .info-label {
+      font-weight: bold;
+      color: #666;
+    }
+
+    .assign-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    .assign-btn:hover {
+      background: #0056b3;
+    }
+
+    .vehicle-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .vehicle-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      background: white;
+    }
+
+    .vehicle-card h4 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+
+    .vehicle-info {
+      font-size: 14px;
+      color: #666;
+      margin: 5px 0;
+    }
+
+    .status-available {
+      color: #28a745;
+      font-weight: bold;
+    }
+
+    .status-busy {
+      color: #dc3545;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #dc3545;
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+
+    .success {
+      color: #155724;
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+
+    .filter-info {
+      background: #e9ecef;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🚗 Тест модалки назначения автомобиля</h1>
+
+    <div id="loadingMessage" class="loading">
+      Загружаем данные...
+    </div>
+
+    <div id="errorMessage" class="error" style="display: none;"></div>
+    <div id="successMessage" class="success" style="display: none;"></div>
+
+    <div id="bookingsContainer" style="display: none;">
+      <h2>📋 Заказы ожидающие назначения автомобиля</h2>
+      <div id="bookingsList"></div>
+    </div>
+
+    <div id="vehiclesContainer" style="display: none;">
+      <h2>🚙 Доступные автомобили</h2>
+      <div class="filter-info">
+        <strong>Фильтрация:</strong> Показываются только автомобили со статусом AVAILABLE и водителем со статусом
+        AVAILABLE
+      </div>
+      <div id="vehiclesList" class="vehicle-list"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3003/api';
+    let bookings = [];
+    let vehicles = [];
+
+    function getVehicleTypeName(type) {
+      const typeNames = {
+        'SEDAN': 'Седан',
+        'PREMIUM': 'Премиум',
+        'MINIVAN': 'Минивэн',
+        'MICROBUS': 'Микроавтобус',
+        'BUS': 'Автобус'
+      };
+      return typeNames[type] || type;
+    }
+
+    async function loadData() {
+      try {
+        console.log('🔄 Загружаем данные...');
+
+        // Загружаем заказы
+        const bookingsResponse = await fetch(`${API_BASE}/admin/bookings/active`);
+        const bookingsData = await bookingsResponse.json();
+
+        if (!bookingsResponse.ok || !bookingsData.success) {
+          throw new Error(`Ошибка загрузки заказов: ${bookingsData.error || 'Unknown error'}`);
+        }
+
+        bookings = bookingsData.data || [];
+        console.log('📋 Загружено заказов:', bookings.length);
+
+        // Загружаем автомобили
+        const vehiclesResponse = await fetch(`${API_BASE}/vehicles`);
+        const vehiclesData = await vehiclesResponse.json();
+
+        if (!vehiclesResponse.ok || !vehiclesData.success) {
+          throw new Error(`Ошибка загрузки автомобилей: ${vehiclesData.error || 'Unknown error'}`);
+        }
+
+        vehicles = vehiclesData.data || [];
+        console.log('🚗 Загружено автомобилей:', vehicles.length);
+
+        renderBookings();
+        renderVehicles();
+
+        document.getElementById('loadingMessage').style.display = 'none';
+        document.getElementById('bookingsContainer').style.display = 'block';
+        document.getElementById('vehiclesContainer').style.display = 'block';
+
+      } catch (error) {
+        console.error('❌ Ошибка:', error);
+        document.getElementById('errorMessage').textContent = error.message;
+        document.getElementById('errorMessage').style.display = 'block';
+        document.getElementById('loadingMessage').style.display = 'none';
+      }
+    }
+
+    function renderBookings() {
+      const container = document.getElementById('bookingsList');
+
+      // Фильтруем заказы без назначенного автомобиля
+      const unassignedBookings = bookings.filter(booking => !booking.vehicle);
+
+      if (unassignedBookings.length === 0) {
+        container.innerHTML = '<p>Нет заказов ожидающих назначения автомобиля</p>';
+        return;
+      }
+
+      container.innerHTML = unassignedBookings.map(booking => `
+                <div class="booking">
+                    <h3>Заказ #${booking.id.slice(0, 8)}...</h3>
+                    <div class="booking-info">
+                        <div class="info-item">
+                            <div class="info-label">Маршрут:</div>
+                            ${booking.fromLocation} → ${booking.toLocation}
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Тип автомобиля:</div>
+                            ${getVehicleTypeName(booking.vehicleType || 'SEDAN')}
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Статус:</div>
+                            ${booking.status}
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Стоимость:</div>
+                            ${Number(booking.price).toLocaleString()} сум
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Клиент:</div>
+                            ${booking.user?.name || 'Не указано'}
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Создан:</div>
+                            ${new Date(booking.createdAt).toLocaleString('ru-RU')}
+                        </div>
+                    </div>
+                    <button class="assign-btn" onclick="showAvailableVehicles('${booking.id}', '${booking.vehicleType}')">
+                        🚗 Показать подходящие автомобили
+                    </button>
+                </div>
+            `).join('');
+    }
+
+    function renderVehicles() {
+      const container = document.getElementById('vehiclesList');
+
+      container.innerHTML = vehicles.map(vehicle => `
+                <div class="vehicle-card">
+                    <h4>${vehicle.name}</h4>
+                    <div class="vehicle-info">
+                        <strong>Тип:</strong> ${getVehicleTypeName(vehicle.type)}
+                    </div>
+                    <div class="vehicle-info">
+                        <strong>Марка:</strong> ${vehicle.brand || 'Не указано'}
+                    </div>
+                    <div class="vehicle-info">
+                        <strong>Модель:</strong> ${vehicle.model || 'Не указано'}
+                    </div>
+                    <div class="vehicle-info">
+                        <strong>Номер:</strong> ${vehicle.licensePlate || 'Не указан'}
+                    </div>
+                    <div class="vehicle-info">
+                        <strong>Вместимость:</strong> ${vehicle.capacity} чел.
+                    </div>
+                    <div class="vehicle-info">
+                        <strong>Статус автомобиля:</strong> 
+                        <span class="status-${vehicle.status?.toLowerCase()}">${vehicle.status}</span>
+                    </div>
+                    <div class="vehicle-info">
+                        <strong>Водитель:</strong> 
+                        ${vehicle.driver ? `
+                            ${vehicle.driver.name} 
+                            (<span class="status-${vehicle.driver.status?.toLowerCase()}">${vehicle.driver.status}</span>)
+                        ` : 'Не назначен'}
+                    </div>
+                    <div class="vehicle-info">
+                        <strong>Доступен для назначения:</strong> 
+                        ${(vehicle.status === 'AVAILABLE' && vehicle.driver?.status === 'AVAILABLE') ?
+          '<span class="status-available">✅ Да</span>' :
+          '<span class="status-busy">❌ Нет</span>'
+        }
+                    </div>
+                </div>
+            `).join('');
+    }
+
+    function showAvailableVehicles(bookingId, requiredType) {
+      console.log(`🔍 Ищем автомобили для заказа ${bookingId}, тип: ${requiredType}`);
+
+      // Фильтруем автомобили как в админ-панели
+      const availableVehicles = vehicles.filter(v =>
+        v.status === 'AVAILABLE' &&
+        v.driver?.status === 'AVAILABLE' &&
+        (!requiredType || v.type === requiredType)
+      );
+
+      console.log('✅ Найдено подходящих автомобилей:', availableVehicles.length);
+      console.log('📋 Подходящие автомобили:', availableVehicles);
+
+      if (availableVehicles.length === 0) {
+        document.getElementById('errorMessage').textContent =
+          `Нет доступных автомобилей типа "${getVehicleTypeName(requiredType)}" с назначенным водителем`;
+        document.getElementById('errorMessage').style.display = 'block';
+        document.getElementById('successMessage').style.display = 'none';
+      } else {
+        document.getElementById('successMessage').innerHTML = `
+                    <strong>Найдено ${availableVehicles.length} подходящих автомобилей типа "${getVehicleTypeName(requiredType)}":</strong><br>
+                    ${availableVehicles.map(v =>
+          `• ${v.name} (${v.brand} ${v.model}, ${v.licensePlate}) - Водитель: ${v.driver.name}`
+        ).join('<br>')}
+                `;
+        document.getElementById('successMessage').style.display = 'block';
+        document.getElementById('errorMessage').style.display = 'none';
+      }
+
+      // Прокручиваем к результату
+      document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Загружаем данные при загрузке страницы
+    window.addEventListener('load', loadData);
+  </script>
+</body>
+
+</html>

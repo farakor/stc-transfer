@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест создания заказа</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 p-8">
+  <div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold mb-8 text-center">🚗 Тест создания заказа</h1>
+
+    <!-- Форма создания заказа -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Создать тестовый заказ</h2>
+      <form id="bookingForm" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Откуда</label>
+            <input type="text" id="fromLocation" value="Ташкент" class="w-full border rounded px-3 py-2" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Куда</label>
+            <input type="text" id="toLocation" value="Самарканд" class="w-full border rounded px-3 py-2" required>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Тип автомобиля</label>
+            <select id="vehicleType" class="w-full border rounded px-3 py-2" required>
+              <option value="SEDAN">Седан</option>
+              <option value="PREMIUM">Премиум</option>
+              <option value="MINIVAN" selected>Минивэн</option>
+              <option value="MICROBUS">Микроавтобус</option>
+              <option value="BUS">Автобус</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Telegram ID</label>
+            <input type="number" id="telegramId" value="123456789" class="w-full border rounded px-3 py-2" required>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Расстояние (км)</label>
+          <input type="number" id="distanceKm" value="280" class="w-full border rounded px-3 py-2">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Комментарии</label>
+          <textarea id="notes" placeholder="Дополнительные пожелания..."
+            class="w-full border rounded px-3 py-2 h-20"></textarea>
+        </div>
+
+        <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition-colors">
+          Создать заказ
+        </button>
+      </form>
+    </div>
+
+    <!-- Результат -->
+    <div id="result" class="bg-white rounded-lg shadow-md p-6 hidden">
+      <h3 class="text-lg font-semibold mb-4">Результат</h3>
+      <div id="resultContent"></div>
+    </div>
+
+    <!-- Лог -->
+    <div class="bg-gray-900 text-green-400 rounded-lg p-4">
+      <h3 class="text-lg font-semibold mb-2">📊 Лог операций</h3>
+      <div id="log" class="text-sm font-mono max-h-60 overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3003/api';
+
+    // Логирование
+    function log(message, type = 'info') {
+      const logElement = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const colors = {
+        info: 'text-green-400',
+        error: 'text-red-400',
+        success: 'text-blue-400',
+        warning: 'text-yellow-400'
+      };
+      logElement.innerHTML += `<div class="${colors[type]}">[${timestamp}] ${message}</div>`;
+      logElement.scrollTop = logElement.scrollHeight;
+    }
+
+    // Обработка формы
+    document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = {
+        telegramId: parseInt(document.getElementById('telegramId').value),
+        fromLocation: document.getElementById('fromLocation').value,
+        toLocation: document.getElementById('toLocation').value,
+        vehicleType: document.getElementById('vehicleType').value,
+        distanceKm: parseFloat(document.getElementById('distanceKm').value) || undefined,
+        notes: document.getElementById('notes').value || undefined
+      };
+
+      log(`🚀 Отправка заказа: ${JSON.stringify(formData)}`, 'info');
+
+      try {
+        const response = await fetch(`${API_BASE}/bookings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        log(`📨 Ответ сервера (${response.status}): ${JSON.stringify(data)}`, response.ok ? 'success' : 'error');
+
+        // Показать результат
+        const resultDiv = document.getElementById('result');
+        const resultContent = document.getElementById('resultContent');
+
+        if (response.ok && data.success) {
+          resultContent.innerHTML = `
+                        <div class="text-green-600">
+                            <h4 class="font-semibold mb-2">✅ Заказ создан успешно!</h4>
+                            <div class="space-y-2 text-sm">
+                                <p><strong>ID:</strong> ${data.data.id}</p>
+                                <p><strong>Маршрут:</strong> ${data.data.fromLocation} → ${data.data.toLocation}</p>
+                                <p><strong>Тип автомобиля:</strong> ${data.data.vehicleType || 'Не указан'}</p>
+                                <p><strong>Статус:</strong> ${data.data.status}</p>
+                                <p><strong>Стоимость:</strong> ${Number(data.data.price).toLocaleString()} сум</p>
+                                <p><strong>Автомобиль назначен:</strong> ${data.data.vehicle ? 'Да' : 'Нет'}</p>
+                                <p><strong>Водитель назначен:</strong> ${data.data.driver ? 'Да' : 'Нет'}</p>
+                            </div>
+                        </div>
+                    `;
+        } else {
+          resultContent.innerHTML = `
+                        <div class="text-red-600">
+                            <h4 class="font-semibold mb-2">❌ Ошибка создания заказа</h4>
+                            <p class="text-sm">${data.error || 'Неизвестная ошибка'}</p>
+                        </div>
+                    `;
+        }
+
+        resultDiv.classList.remove('hidden');
+
+      } catch (error) {
+        log(`❌ Ошибка запроса: ${error.message}`, 'error');
+
+        const resultDiv = document.getElementById('result');
+        const resultContent = document.getElementById('resultContent');
+
+        resultContent.innerHTML = `
+                    <div class="text-red-600">
+                        <h4 class="font-semibold mb-2">❌ Ошибка сети</h4>
+                        <p class="text-sm">${error.message}</p>
+                    </div>
+                `;
+
+        resultDiv.classList.remove('hidden');
+      }
+    });
+
+    // Инициализация
+    window.onload = function () {
+      log('🚀 Тестовая страница загружена', 'info');
+      log('📡 API URL: ' + API_BASE, 'info');
+    };
+  </script>
+</body>
+
+</html>

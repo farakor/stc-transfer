@@ -962,13 +962,11 @@ const TariffsManagement: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value={0}>Выберите локацию</option>
-                  {Array.from(new Set(matrix.routes.flatMap(r => [r.from_location, r.to_location])))
-                    .filter((location, index, self) => self.findIndex(l => l.id === location.id) === index)
-                    .map((location) => (
-                      <option key={location.id} value={location.id}>
-                        {getLocationTypeIcon(location.type)} {location.name}
-                      </option>
-                    ))}
+                  {allLocations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {getLocationTypeIcon(location.type)} {location.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -982,8 +980,7 @@ const TariffsManagement: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value={0}>Выберите локацию</option>
-                  {Array.from(new Set(matrix.routes.flatMap(r => [r.from_location, r.to_location])))
-                    .filter((location, index, self) => self.findIndex(l => l.id === location.id) === index)
+                  {allLocations
                     .filter(location => location.id !== routeForm.from_location_id)
                     .map((location) => (
                       <option key={location.id} value={location.id}>

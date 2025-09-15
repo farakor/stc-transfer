@@ -73,6 +73,32 @@ export class BookingService {
     const response = await api.get<ApiResponse<any>>(`/bookings/stats${params}`)
     return response.data.data || {}
   }
+
+  // Назначить автомобиль к заказу
+  static async assignVehicle(bookingId: string, vehicleId: string): Promise<Booking> {
+    const response = await api.put<ApiResponse<Booking>>(`/bookings/${bookingId}/assign-vehicle`, {
+      vehicleId
+    })
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || 'Failed to assign vehicle')
+    }
+
+    return response.data.data
+  }
+
+  // Назначить водителя к заказу (для совместимости)
+  static async assignDriver(bookingId: string, driverId: string): Promise<Booking> {
+    const response = await api.put<ApiResponse<Booking>>(`/bookings/${bookingId}/assign-driver`, {
+      driverId
+    })
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || 'Failed to assign driver')
+    }
+
+    return response.data.data
+  }
 }
 
 import axios from 'axios'

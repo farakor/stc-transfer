@@ -14,8 +14,10 @@ import {
   CreditCard,
   RefreshCw
 } from 'lucide-react';
-import { Booking, BookingStatus, Driver } from '../../types';
+import { Booking, BookingStatus, Vehicle } from '../../types';
 import { adminService } from '../../services/adminService';
+import { BookingService } from '../../services/bookingService';
+import { VehicleService } from '../../services/vehicleService';
 
 interface BookingWithDetails extends Booking {
   user: {
@@ -37,16 +39,16 @@ interface BookingWithDetails extends Booking {
 
 const BookingsManagement: React.FC = () => {
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<BookingStatus | 'ALL'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<BookingWithDetails | null>(null);
-  const [assignDriverModal, setAssignDriverModal] = useState<string | null>(null);
+  const [assignVehicleModal, setAssignVehicleModal] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBookings();
-    fetchDrivers();
+    fetchVehicles();
 
     // Автообновление каждые 30 секунд
     const interval = setInterval(() => {
@@ -72,62 +74,78 @@ const BookingsManagement: React.FC = () => {
     }
   };
 
-  const fetchDrivers = async () => {
+
+  const fetchVehicles = async () => {
     try {
-      // Пока используем заглушку для водителей
-      const mockDrivers = [
+      const vehiclesList = await VehicleService.getAvailableVehicles();
+      setVehicles(vehiclesList);
+    } catch (error) {
+      console.error('Ошибка при получении автомобилей:', error);
+      // Используем заглушку для автомобилей
+      const mockVehicles = [
         {
           id: '1',
-          name: 'Ибрагим Азизов',
-          phone: '+998 90 123 45 67',
+          brand: 'Kia',
+          model: 'Carnival',
+          type: 'MINIVAN',
+          capacity: 8,
+          baggageCapacity: 4,
+          licensePlate: '01 A 123 BC',
           status: 'AVAILABLE',
-          vehicle: {
-            brand: 'Kia',
-            model: 'Carnival',
-            licensePlate: '01 A 123 BC'
-          }
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          driver: {
+            id: '1',
+            name: 'Ибрагим Азизов',
+            phone: '+998 90 123 45 67',
+            vehicleId: '1',
+            status: 'AVAILABLE',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            vehicle: {} as Vehicle
+          },
+          pricing: []
         },
         {
           id: '2',
-          name: 'Азиз Рахимов',
-          phone: '+998 91 234 56 78',
+          brand: 'Mercedes',
+          model: 'Sprinter',
+          type: 'MICROBUS',
+          capacity: 16,
+          baggageCapacity: 8,
+          licensePlate: '01 B 456 CD',
           status: 'AVAILABLE',
-          vehicle: {
-            brand: 'Mercedes',
-            model: 'Sprinter',
-            licensePlate: '01 B 456 CD'
-          }
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          driver: {
+            id: '2',
+            name: 'Азиз Рахимов',
+            phone: '+998 91 234 56 78',
+            vehicleId: '2',
+            status: 'AVAILABLE',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            vehicle: {} as Vehicle
+          },
+          pricing: []
         }
       ];
-      setDrivers(mockDrivers as any);
-    } catch (error) {
-      console.error('Ошибка при получении водителей:', error);
+      setVehicles(mockVehicles as Vehicle[]);
     }
   };
 
-  const handleAssignDriver = async (bookingId: string, driverId: string) => {
+  const handleAssignVehicle = async (bookingId: string, vehicleId: string) => {
     try {
-      // Используем прямой API endpoint для назначения водителя
-      const response = await fetch(`/api/bookings/${bookingId}/assign-driver`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ driverId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to assign driver');
-      }
-
+      await BookingService.assignVehicle(bookingId, vehicleId);
       fetchBookings();
-      setAssignDriverModal(null);
-      alert('Водитель успешно назначен! Клиент получил уведомление.');
+      setAssignVehicleModal(null);
+      alert('Автомобиль успешно назначен! Клиент получил уведомление.');
     } catch (error) {
-      console.error('Ошибка при назначении водителя:', error);
-      alert('Ошибка при назначении водителя');
+      console.error('Ошибка при назначении автомобиля:', error);
+      alert('Ошибка при назначении автомобиля');
     }
   };
+
 
   const handleCancelBooking = async (bookingId: string) => {
     if (!confirm('Вы уверены, что хотите отменить этот заказ?')) {
@@ -178,6 +196,17 @@ const BookingsManagement: React.FC = () => {
       case 'COMPLETED': return 'Завершен';
       case 'CANCELLED': return 'Отменен';
       default: return status;
+    }
+  };
+
+  const getVehicleTypeName = (vehicleType: string) => {
+    switch (vehicleType) {
+      case 'SEDAN': return 'Седан';
+      case 'PREMIUM': return 'Премиум';
+      case 'MINIVAN': return 'Минивэн';
+      case 'MICROBUS': return 'Микроавтобус';
+      case 'BUS': return 'Автобус';
+      default: return vehicleType;
     }
   };
 
@@ -261,7 +290,7 @@ const BookingsManagement: React.FC = () => {
                 <th className="text-left py-3 px-4 font-medium text-gray-900">ID заказа</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-900">Клиент</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-900">Маршрут</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">Водитель</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-900">Транспорт</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-900">Статус</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-900">Стоимость</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-900">Дата</th>
@@ -306,20 +335,35 @@ const BookingsManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    {booking.driver ? (
+                    {booking.vehicle ? (
                       <div className="flex items-center space-x-2">
                         <Car className="w-4 h-4 text-green-500" />
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {booking.driver.name}
+                            {booking.vehicle.brand} {booking.vehicle.model}
                           </div>
                           <div className="text-sm text-gray-600">
-                            {booking.driver.phone}
+                            {booking.vehicle.licensePlate}
                           </div>
+                          {booking.driver && (
+                            <div className="text-xs text-gray-500">
+                              Водитель: {booking.driver.name}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-500">Не назначен</span>
+                      <div className="flex items-center space-x-2">
+                        <Car className="w-4 h-4 text-orange-500" />
+                        <div>
+                          <div className="text-sm text-orange-600">
+                            Требуется: {getVehicleTypeName(booking.vehicleType || 'SEDAN')}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Ожидает назначения
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </td>
                   <td className="py-3 px-4">
@@ -355,11 +399,11 @@ const BookingsManagement: React.FC = () => {
 
                       {booking.status === 'PENDING' && (
                         <button
-                          onClick={() => setAssignDriverModal(booking.id)}
-                          className="p-1 text-green-600 hover:bg-green-50 rounded"
-                          title="Назначить водителя"
+                          onClick={() => setAssignVehicleModal(booking.id)}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Назначить автомобиль"
                         >
-                          <UserCheck className="w-4 h-4" />
+                          <Car className="w-4 h-4" />
                         </button>
                       )}
 
@@ -389,36 +433,67 @@ const BookingsManagement: React.FC = () => {
         )}
       </div>
 
-      {/* Модал назначения водителя */}
-      {assignDriverModal && (
+      {/* Модал назначения автомобиля */}
+      {assignVehicleModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Назначить водителя</h3>
+            <h3 className="text-lg font-semibold mb-4">Назначить автомобиль</h3>
             <div className="space-y-3 max-h-60 overflow-y-auto">
-              {drivers.filter(d => d.status === 'AVAILABLE').map((driver) => (
-                <button
-                  key={driver.id}
-                  onClick={() => handleAssignDriver(assignDriverModal, driver.id)}
-                  className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-gray-900">{driver.name}</div>
-                      <div className="text-sm text-gray-600">{driver.phone}</div>
-                      {driver.vehicle && (
-                        <div className="text-xs text-gray-500">
-                          {driver.vehicle.brand} {driver.vehicle.model}
+              {(() => {
+                const selectedBooking = bookings.find(b => b.id === assignVehicleModal);
+                const requiredType = selectedBooking?.vehicleType;
+                const availableVehicles = vehicles.filter(v =>
+                  v.status === 'AVAILABLE' &&
+                  v.driver?.status === 'AVAILABLE' &&
+                  (!requiredType || v.type === requiredType)
+                );
+
+                return availableVehicles.length > 0 ? (
+                  availableVehicles.map((vehicle) => (
+                    <button
+                      key={vehicle.id}
+                      onClick={() => handleAssignVehicle(assignVehicleModal, vehicle.id)}
+                      className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {vehicle.brand} {vehicle.model}
+                          </div>
+                          <div className="text-sm text-gray-600">{vehicle.licensePlate}</div>
+                          {vehicle.driver && (
+                            <div className="text-xs text-gray-500">
+                              Водитель: {vehicle.driver.name}
+                            </div>
+                          )}
+                          <div className="text-xs text-blue-500">
+                            Вместимость: {vehicle.capacity} чел.
+                          </div>
                         </div>
-                      )}
-                    </div>
-                    <Car className="w-5 h-5 text-green-500" />
+                        <Car className="w-5 h-5 text-blue-500" />
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Car className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg font-medium mb-2">Нет доступных автомобилей</p>
+                    <p className="text-sm">
+                      {(() => {
+                        const selectedBooking = bookings.find(b => b.id === assignVehicleModal);
+                        const requiredType = selectedBooking?.vehicleType;
+                        return requiredType
+                          ? `Нет доступных автомобилей типа "${getVehicleTypeName(requiredType)}"`
+                          : 'Все автомобили заняты или находятся на обслуживании';
+                      })()}
+                    </p>
                   </div>
-                </button>
-              ))}
+                );
+              })()}
             </div>
             <div className="flex gap-3 mt-4">
               <button
-                onClick={() => setAssignDriverModal(null)}
+                onClick={() => setAssignVehicleModal(null)}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Отмена
@@ -427,6 +502,7 @@ const BookingsManagement: React.FC = () => {
           </div>
         </div>
       )}
+
 
       {/* Модал просмотра заказа */}
       {selectedBooking && (
@@ -480,17 +556,17 @@ const BookingsManagement: React.FC = () => {
                 </div>
               </div>
 
-              {selectedBooking.driver && (
+              {selectedBooking.vehicle && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Водитель</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Транспорт</label>
                   <div className="space-y-1">
-                    <p>{selectedBooking.driver.name}</p>
-                    <p className="text-sm text-gray-600">{selectedBooking.driver.phone}</p>
-                    {selectedBooking.vehicle && (
-                      <p className="text-sm text-gray-600">
-                        {selectedBooking.vehicle.brand} {selectedBooking.vehicle.model}
-                        ({selectedBooking.vehicle.licensePlate})
-                      </p>
+                    <p className="font-medium">{selectedBooking.vehicle.brand} {selectedBooking.vehicle.model}</p>
+                    <p className="text-sm text-gray-600">Госномер: {selectedBooking.vehicle.licensePlate}</p>
+                    {selectedBooking.driver && (
+                      <div className="text-sm text-gray-600">
+                        <p>Водитель: {selectedBooking.driver.name}</p>
+                        <p>Телефон: {selectedBooking.driver.phone}</p>
+                      </div>
                     )}
                   </div>
                 </div>

@@ -19,7 +19,17 @@ export class VehicleController {
         imageUrl: vehicle.image_url,
         description: vehicle.description,
         features: vehicle.features || [],
-        isAvailable: true
+        isAvailable: true,
+        status: vehicle.status,
+        licensePlate: vehicle.license_plate,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        driver: vehicle.driver ? {
+          id: vehicle.driver.id,
+          name: vehicle.driver.name,
+          phone: vehicle.driver.phone,
+          status: vehicle.driver.status
+        } : null
       }))
 
       res.json({

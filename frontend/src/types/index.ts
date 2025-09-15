@@ -115,6 +115,7 @@ export interface Booking {
   status: BookingStatus
   pickupTime?: string
   notes?: string
+  vehicleType?: VehicleType // Тип автомобиля, выбранный клиентом
   createdAt: string
   updatedAt: string
   user: User

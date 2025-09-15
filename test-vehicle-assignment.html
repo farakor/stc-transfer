@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест назначения автомобилей</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .loading {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 p-8">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold mb-8 text-center">🚗 Тест назначения транспорта к заказам</h1>
+
+    <!-- Статус подключения -->
+    <div id="connectionStatus" class="mb-6 p-4 rounded-lg">
+      <div class="flex items-center">
+        <div class="loading w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full mr-2"></div>
+        <span>Проверка подключения к API...</span>
+      </div>
+    </div>
+
+    <!-- Создание тестового заказа -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">📝 Создать тестовый заказ</h2>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <input type="text" id="fromLocation" placeholder="Откуда" value="Ташкент" class="border rounded px-3 py-2">
+        <input type="text" id="toLocation" placeholder="Куда" value="Самарканд" class="border rounded px-3 py-2">
+        <select id="vehicleType" class="border rounded px-3 py-2">
+          <option value="SEDAN">Седан</option>
+          <option value="PREMIUM">Премиум</option>
+          <option value="MINIVAN">Минивэн</option>
+          <option value="MICROBUS">Микроавтобус</option>
+        </select>
+        <input type="number" id="telegramId" placeholder="Telegram ID" value="123456789"
+          class="border rounded px-3 py-2">
+      </div>
+      <button onclick="createTestBooking()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+        Создать заказ
+      </button>
+    </div>
+
+    <!-- Список активных заказов -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">📋 Активные заказы</h2>
+        <button onclick="loadBookings()" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
+          🔄 Обновить
+        </button>
+      </div>
+      <div id="bookingsList" class="space-y-4">
+        <!-- Заказы будут загружены здесь -->
+      </div>
+    </div>
+
+    <!-- Список доступных автомобилей -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">🚙 Доступные автомобили</h2>
+        <button onclick="loadVehicles()" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600">
+          🔄 Обновить
+        </button>
+      </div>
+      <div id="vehiclesList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Автомобили будут загружены здесь -->
+      </div>
+    </div>
+
+    <!-- Лог операций -->
+    <div class="bg-gray-900 text-green-400 rounded-lg p-4 mt-6">
+      <h3 class="text-lg font-semibold mb-2">📊 Лог операций</h3>
+      <div id="operationLog" class="text-sm font-mono max-h-60 overflow-y-auto">
+        <!-- Лог будет здесь -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api';
+    let bookings = [];
+    let vehicles = [];
+
+    // Логирование
+    function log(message, type = 'info') {
+      const logElement = document.getElementById('operationLog');
+      const timestamp = new Date().toLocaleTimeString();
+      const colors = {
+        info: 'text-green-400',
+        error: 'text-red-400',
+        success: 'text-blue-400',
+        warning: 'text-yellow-400'
+      };
+      logElement.innerHTML += `<div class="${colors[type]}">[${timestamp}] ${message}</div>`;
+      logElement.scrollTop = logElement.scrollHeight;
+    }
+
+    // Проверка подключения к API
+    async function checkConnection() {
+      try {
+        const response = await fetch(`${API_BASE}/bookings/active`);
+        const data = await response.json();
+
+        document.getElementById('connectionStatus').innerHTML = `
+                    <div class="flex items-center text-green-600">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span>Подключение к API успешно</span>
+                    </div>
+                `;
+        log('✅ Подключение к API успешно', 'success');
+        return true;
+      } catch (error) {
+        document.getElementById('connectionStatus').innerHTML = `
+                    <div class="flex items-center text-red-600">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span>Ошибка подключения к API</span>
+                    </div>
+                `;
+        log(`❌ Ошибка подключения к API: ${error.message}`, 'error');
+        return false;
+      }
+    }
+
+    // Создание тестового заказа
+    async function createTestBooking() {
+      const fromLocation = document.getElementById('fromLocation').value;
+      const toLocation = document.getElementById('toLocation').value;
+      const vehicleType = document.getElementById('vehicleType').value;
+      const telegramId = parseInt(document.getElementById('telegramId').value);
+
+      if (!fromLocation || !toLocation || !telegramId) {
+        alert('Заполните все поля');
+        return;
+      }
+
+      try {
+        log(`🔄 Создание заказа: ${fromLocation} → ${toLocation}`, 'info');
+
+        const response = await fetch(`${API_BASE}/bookings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            telegramId,
+            fromLocation,
+            toLocation,
+            vehicleType,
+            distanceKm: 280
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          log(`✅ Заказ создан успешно: ID ${data.data.id}`, 'success');
+          await loadBookings();
+        } else {
+          log(`❌ Ошибка создания заказа: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        log(`❌ Ошибка при создании заказа: ${error.message}`, 'error');
+      }
+    }
+
+    // Загрузка активных заказов
+    async function loadBookings() {
+      try {
+        log('🔄 Загрузка активных заказов...', 'info');
+
+        const response = await fetch(`${API_BASE}/bookings/active`);
+        const data = await response.json();
+
+        if (data.success) {
+          bookings = data.data || [];
+          renderBookings();
+          log(`✅ Загружено ${bookings.length} заказов`, 'success');
+        } else {
+          log(`❌ Ошибка загрузки заказов: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        log(`❌ Ошибка при загрузке заказов: ${error.message}`, 'error');
+      }
+    }
+
+    // Загрузка доступных автомобилей
+    async function loadVehicles() {
+      try {
+        log('🔄 Загрузка автомобилей...', 'info');
+
+        const response = await fetch(`${API_BASE}/vehicles`);
+        const data = await response.json();
+
+        if (data.success) {
+          vehicles = data.data || [];
+          renderVehicles();
+          log(`✅ Загружено ${vehicles.length} автомобилей`, 'success');
+        } else {
+          // Используем заглушку если API не работает
+          vehicles = [
+            {
+              id: '1',
+              brand: 'Kia',
+              model: 'Carnival',
+              type: 'MINIVAN',
+              capacity: 8,
+              licensePlate: '01 A 123 BC',
+              status: 'AVAILABLE',
+              driver: {
+                id: '1',
+                name: 'Ибрагим Азизов',
+                phone: '+998 90 123 45 67',
+                status: 'AVAILABLE'
+              }
+            },
+            {
+              id: '2',
+              brand: 'Mercedes',
+              model: 'Sprinter',
+              type: 'MICROBUS',
+              capacity: 16,
+              licensePlate: '01 B 456 CD',
+              status: 'AVAILABLE',
+              driver: {
+                id: '2',
+                name: 'Азиз Рахимов',
+                phone: '+998 91 234 56 78',
+                status: 'AVAILABLE'
+              }
+            }
+          ];
+          renderVehicles();
+          log(`⚠️ Используются тестовые данные автомобилей`, 'warning');
+        }
+      } catch (error) {
+        log(`❌ Ошибка при загрузке автомобилей: ${error.message}`, 'error');
+      }
+    }
+
+    // Назначение автомобиля к заказу
+    async function assignVehicle(bookingId, vehicleId) {
+      try {
+        log(`🔄 Назначение автомобиля ${vehicleId} к заказу ${bookingId}...`, 'info');
+
+        const response = await fetch(`${API_BASE}/bookings/${bookingId}/assign-vehicle`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ vehicleId }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          log(`✅ Автомобиль успешно назначен к заказу`, 'success');
+          await loadBookings();
+          await loadVehicles();
+        } else {
+          log(`❌ Ошибка назначения автомобиля: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        log(`❌ Ошибка при назначении автомобиля: ${error.message}`, 'error');
+      }
+    }
+
+    // Отрисовка заказов
+    function renderBookings() {
+      const container = document.getElementById('bookingsList');
+
+      if (bookings.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-4">Нет активных заказов</p>';
+        return;
+      }
+
+      container.innerHTML = bookings.map(booking => `
+                <div class="border rounded-lg p-4 ${booking.status === 'PENDING' ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200'}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-semibold text-lg">${booking.fromLocation} → ${booking.toLocation}</div>
+                            <div class="text-sm text-gray-600">ID: ${booking.id}</div>
+                            <div class="text-sm text-gray-600">Статус: ${getStatusText(booking.status)}</div>
+                            <div class="text-sm text-gray-600">Стоимость: ${Number(booking.price).toLocaleString()} сум</div>
+                            ${booking.vehicle ? `
+                                <div class="text-sm text-green-600 mt-2">
+                                    🚗 ${booking.vehicle.brand} ${booking.vehicle.model} (${booking.vehicle.licensePlate})
+                                    ${booking.driver ? `<br>👤 Водитель: ${booking.driver.name}` : ''}
+                                </div>
+                            ` : `
+                                <div class="text-sm text-orange-600 mt-2">
+                                    🚗 Требуется: ${getVehicleTypeName(booking.vehicleType || 'SEDAN')}
+                                    <br><span class="text-xs text-gray-500">Ожидает назначения</span>
+                                </div>
+                            `}
+                        </div>
+                        <div class="flex flex-col space-y-2">
+                            ${booking.status === 'PENDING' ? `
+                                <select id="vehicleSelect_${booking.id}" class="text-sm border rounded px-2 py-1">
+                                    <option value="">Выберите автомобиль</option>
+                                    ${vehicles.filter(v => v.status === 'AVAILABLE').map(v =>
+        `<option value="${v.id}">${v.brand} ${v.model} (${v.licensePlate})</option>`
+      ).join('')}
+                                </select>
+                                <button onclick="assignVehicleFromSelect('${booking.id}')" 
+                                        class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
+                                    Назначить автомобиль
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+    }
+
+    // Назначение автомобиля из выпадающего списка
+    function assignVehicleFromSelect(bookingId) {
+      const select = document.getElementById(`vehicleSelect_${bookingId}`);
+      const vehicleId = select.value;
+
+      if (!vehicleId) {
+        alert('Выберите автомобиль');
+        return;
+      }
+
+      assignVehicle(bookingId, vehicleId);
+    }
+
+    // Отрисовка автомобилей
+    function renderVehicles() {
+      const container = document.getElementById('vehiclesList');
+
+      if (vehicles.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-4 col-span-2">Нет доступных автомобилей</p>';
+        return;
+      }
+
+      container.innerHTML = vehicles.map(vehicle => `
+                <div class="border rounded-lg p-4 ${vehicle.status === 'AVAILABLE' ? 'border-green-300 bg-green-50' : 'border-gray-300 bg-gray-50'}">
+                    <div class="font-semibold">${vehicle.brand} ${vehicle.model}</div>
+                    <div class="text-sm text-gray-600">Номер: ${vehicle.licensePlate}</div>
+                    <div class="text-sm text-gray-600">Тип: ${vehicle.type}</div>
+                    <div class="text-sm text-gray-600">Вместимость: ${vehicle.capacity} чел.</div>
+                    <div class="text-sm ${vehicle.status === 'AVAILABLE' ? 'text-green-600' : 'text-red-600'}">
+                        Статус: ${vehicle.status === 'AVAILABLE' ? 'Доступен' : 'Занят'}
+                    </div>
+                    ${vehicle.driver ? `
+                        <div class="text-sm text-blue-600 mt-2">
+                            👤 ${vehicle.driver.name}<br>
+                            📞 ${vehicle.driver.phone}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+    }
+
+    // Получение текста статуса
+    function getStatusText(status) {
+      const statusMap = {
+        'PENDING': 'Ожидает',
+        'CONFIRMED': 'Подтвержден',
+        'IN_PROGRESS': 'В пути',
+        'COMPLETED': 'Завершен',
+        'CANCELLED': 'Отменен'
+      };
+      return statusMap[status] || status;
+    }
+
+    // Получение названия типа автомобиля
+    function getVehicleTypeName(vehicleType) {
+      const typeMap = {
+        'SEDAN': 'Седан',
+        'PREMIUM': 'Премиум',
+        'MINIVAN': 'Минивэн',
+        'MICROBUS': 'Микроавтобус',
+        'BUS': 'Автобус'
+      };
+      return typeMap[vehicleType] || vehicleType;
+    }
+
+    // Инициализация при загрузке страницы
+    window.onload = async function () {
+      log('🚀 Инициализация тестового интерфейса...', 'info');
+
+      const connected = await checkConnection();
+      if (connected) {
+        await loadBookings();
+        await loadVehicles();
+      }
+
+      log('✅ Инициализация завершена', 'success');
+    };
+  </script>
+</body>
+
+</html>

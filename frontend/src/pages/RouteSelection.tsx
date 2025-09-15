@@ -1,56 +1,15 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAppStore } from '@/services/store'
-import { useCalculatePrice } from '@/hooks/useRoutes'
+import { useCalculatePrice, useAllLocations } from '@/hooks/useRoutes'
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
 import { ProgressBar } from '@/components/ProgressBar'
 import { NotificationToast } from '@/components/NotificationToast'
+import { LoadingScreen } from '@/components/LoadingScreen'
+import { LocationData } from '@/services/routeService'
 
 const BOOKING_STEPS = ['Язык', 'Транспорт', 'Маршрут', 'Данные', 'Подтверждение']
-
-// Локации для поля "Откуда" (только отели и достопримечательности в городе)
-const FROM_LOCATIONS = [
-  'Hilton Samarkand Regency',
-  'Silk Road by Minyoun',
-  'Savitsky Plaza',
-  'Lia! by Minyoun Stars of Ulugbek',
-  'Hilton Garden Inn Samarkand Afrosiyob',
-  'Hilton Garden Inn Samarkand Sogd',
-  'Wellness Park Hotel Bactria',
-  'Wellness Park Hotel Turon',
-  'Конгресс центр',
-  'Айван',
-  'Вечный Город',
-  'Фонтан',
-  'Другое'
-]
-
-// Локации для поля "Куда" (все направления)
-const TO_LOCATIONS = [
-  'Hilton Samarkand Regency',
-  'Silk Road by Minyoun',
-  'Savitsky Plaza',
-  'Lia! by Minyoun Stars of Ulugbek',
-  'Hilton Garden Inn Samarkand Afrosiyob',
-  'Hilton Garden Inn Samarkand Sogd',
-  'Wellness Park Hotel Bactria',
-  'Wellness Park Hotel Turon',
-  'Конгресс центр',
-  'Айван',
-  'Вечный Город',
-  'Фонтан',
-  'Аэропорт',
-  'Железнодорожный вокзал',
-  'Поездка по Самарканду',
-  'Экскурсия по Самарканду',
-  'Поездка в Шахрисабз',
-  'Поездка в Нурату',
-  'Поездка в Бухару',
-  'Поездка в Ташкент',
-  'Поездка в Хиву',
-  'Другое'
-]
 
 export function RouteSelection() {
   const navigate = useNavigate()
@@ -75,6 +34,45 @@ export function RouteSelection() {
   const [customToLocation, setCustomToLocation] = useState('')
 
   const calculatePriceMutation = useCalculatePrice()
+  const { data: allLocations, isLoading: locationsLoading, error: locationsError } = useAllLocations()
+
+  // Функция для получения иконки типа локации
+  const getLocationTypeIcon = (type: string) => {
+    switch (type) {
+      case 'city': return '🏙️'
+      case 'airport': return '✈️'
+      case 'station': return '🚉'
+      case 'attraction': return '🏛️'
+      default: return '📍'
+    }
+  }
+
+  // Мемоизированные списки локаций
+  const fromLocations = useMemo(() => {
+    if (!allLocations) return []
+
+    // Для поля "Откуда" показываем все локации + опцию "Другое"
+    const locations = allLocations.map(loc => ({
+      value: loc.name,
+      label: `${getLocationTypeIcon(loc.type)} ${loc.name}`,
+      type: loc.type
+    }))
+
+    return [...locations, { value: 'Другое', label: 'Другое', type: 'other' }]
+  }, [allLocations])
+
+  const toLocations = useMemo(() => {
+    if (!allLocations) return []
+
+    // Для поля "Куда" показываем все локации + опцию "Другое"
+    const locations = allLocations.map(loc => ({
+      value: loc.name,
+      label: `${getLocationTypeIcon(loc.type)} ${loc.name}`,
+      type: loc.type
+    }))
+
+    return [...locations, { value: 'Другое', label: 'Другое', type: 'other' }]
+  }, [allLocations])
 
   // Функция для проверки доступности направления в зависимости от типа транспорта
   const isDestinationAvailable = (destination: string, vehicleType: string | null): boolean => {
@@ -185,7 +183,32 @@ export function RouteSelection() {
     }
   }
 
+  // Показать экран загрузки если данные еще загружаются
+  if (locationsLoading) {
+    return <LoadingScreen />
+  }
 
+  // Показать ошибку если не удалось загрузить локации
+  if (locationsError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="text-center">
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">
+            Ошибка загрузки
+          </h1>
+          <p className="text-gray-600 mb-4">
+            Не удалось загрузить список локаций
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="btn-primary"
+          >
+            Попробовать снова
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 px-4 py-8">
@@ -238,9 +261,9 @@ export function RouteSelection() {
               className="input"
             >
               <option value="">Выберите место отправления</option>
-              {FROM_LOCATIONS.map((location) => (
-                <option key={location} value={location}>
-                  {location}
+              {fromLocations.map((location) => (
+                <option key={location.value} value={location.value}>
+                  {location.label}
                 </option>
               ))}
             </select>
@@ -264,19 +287,19 @@ export function RouteSelection() {
               className="input"
             >
               <option value="">Выберите место назначения</option>
-              {TO_LOCATIONS.map((location) => {
-                const isAvailable = isDestinationAvailable(location, selectedVehicleType)
+              {toLocations.map((location) => {
+                const isAvailable = isDestinationAvailable(location.value, selectedVehicleType)
                 return (
                   <option
-                    key={location}
-                    value={location}
+                    key={location.value}
+                    value={location.value}
                     disabled={!isAvailable}
                     style={{
                       color: isAvailable ? 'inherit' : '#999',
                       backgroundColor: isAvailable ? 'inherit' : '#f5f5f5'
                     }}
                   >
-                    {location} {!isAvailable ? '(недоступно)' : ''}
+                    {location.label} {!isAvailable ? '(недоступно)' : ''}
                   </option>
                 )
               })}
