@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест сохранения тарифов в БД</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    .test-section {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .test-section h3 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    .success {
+      background-color: #d4edda;
+      border-color: #c3e6cb;
+      color: #155724;
+    }
+
+    .error {
+      background-color: #f8d7da;
+      border-color: #f5c6cb;
+      color: #721c24;
+    }
+
+    .info {
+      background-color: #d1ecf1;
+      border-color: #bee5eb;
+      color: #0c5460;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    button:disabled {
+      background-color: #6c757d;
+      cursor: not-allowed;
+    }
+
+    input,
+    select {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: inline-block;
+      width: 150px;
+      font-weight: bold;
+    }
+
+    pre {
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      max-height: 300px;
+    }
+
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🧪 Тест сохранения тарифов в БД</h1>
+    <p>Этот тест проверяет все операции сохранения данных в разделе "Тарифы"</p>
+
+    <div id="status" class="status info">
+      <strong>Статус:</strong> Готов к тестированию
+    </div>
+  </div>
+
+  <!-- Тест 1: Создание локации -->
+  <div class="container">
+    <div class="test-section">
+      <h3>🏙️ Тест 1: Создание локации</h3>
+      <div class="form-group">
+        <label>Название:</label>
+        <input type="text" id="locationName" placeholder="Например: Тест Город" value="Тест Город">
+      </div>
+      <div class="form-group">
+        <label>Тип:</label>
+        <select id="locationType">
+          <option value="city">Город</option>
+          <option value="airport">Аэропорт</option>
+          <option value="station">Вокзал</option>
+          <option value="attraction">Достопримечательность</option>
+        </select>
+      </div>
+      <button onclick="testCreateLocation()">Создать локацию</button>
+      <div id="locationResult"></div>
+    </div>
+  </div>
+
+  <!-- Тест 2: Создание маршрута -->
+  <div class="container">
+    <div class="test-section">
+      <h3>🛣️ Тест 2: Создание маршрута</h3>
+      <div class="form-group">
+        <label>Откуда (ID):</label>
+        <input type="number" id="fromLocationId" placeholder="1" value="1">
+      </div>
+      <div class="form-group">
+        <label>Куда (ID):</label>
+        <input type="number" id="toLocationId" placeholder="2" value="2">
+      </div>
+      <div class="form-group">
+        <label>Расстояние (км):</label>
+        <input type="number" id="distanceKm" placeholder="50" value="50">
+      </div>
+      <div class="form-group">
+        <label>Время (мин):</label>
+        <input type="number" id="durationMin" placeholder="60" value="60">
+      </div>
+      <button onclick="testCreateRoute()">Создать маршрут</button>
+      <div id="routeResult"></div>
+    </div>
+  </div>
+
+  <!-- Тест 3: Создание тарифа -->
+  <div class="container">
+    <div class="test-section">
+      <h3>💰 Тест 3: Создание тарифа</h3>
+      <div class="form-group">
+        <label>Маршрут (ID):</label>
+        <input type="number" id="tariffRouteId" placeholder="1" value="1">
+      </div>
+      <div class="form-group">
+        <label>Марка:</label>
+        <input type="text" id="vehicleBrand" placeholder="Kia" value="Kia">
+      </div>
+      <div class="form-group">
+        <label>Модель:</label>
+        <input type="text" id="vehicleModel" placeholder="Carnival" value="Carnival">
+      </div>
+      <div class="form-group">
+        <label>Базовая цена:</label>
+        <input type="number" id="basePrice" placeholder="100000" value="100000">
+      </div>
+      <div class="form-group">
+        <label>Цена за км:</label>
+        <input type="number" id="pricePerKm" placeholder="3000" value="3000">
+      </div>
+      <button onclick="testCreateTariff()">Создать тариф</button>
+      <div id="tariffResult"></div>
+    </div>
+  </div>
+
+  <!-- Тест 4: Получение матрицы -->
+  <div class="container">
+    <div class="test-section">
+      <h3>📊 Тест 4: Получение матрицы тарифов</h3>
+      <button onclick="testGetMatrix()">Загрузить матрицу</button>
+      <button onclick="testGetLocations()">Загрузить локации</button>
+      <button onclick="testGetRoutes()">Загрузить маршруты</button>
+      <button onclick="testGetTariffs()">Загрузить тарифы</button>
+      <div id="matrixResult"></div>
+    </div>
+  </div>
+
+  <!-- Результаты -->
+  <div class="container">
+    <div class="test-section">
+      <h3>📋 Результаты тестов</h3>
+      <div id="testResults">
+        <p>Результаты тестов будут отображены здесь...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3001/api/admin/tariffs';
+    let testResults = [];
+
+    function updateStatus(message, type = 'info') {
+      const status = document.getElementById('status');
+      status.className = `status ${type}`;
+      status.innerHTML = `<strong>Статус:</strong> ${message}`;
+    }
+
+    function addTestResult(test, success, message, data = null) {
+      testResults.push({
+        test,
+        success,
+        message,
+        data,
+        timestamp: new Date().toLocaleTimeString()
+      });
+      updateTestResults();
+    }
+
+    function updateTestResults() {
+      const resultsDiv = document.getElementById('testResults');
+      resultsDiv.innerHTML = testResults.map(result => `
+                <div class="test-section ${result.success ? 'success' : 'error'}">
+                    <strong>${result.timestamp} - ${result.test}:</strong> ${result.message}
+                    ${result.data ? `<pre>${JSON.stringify(result.data, null, 2)}</pre>` : ''}
+                </div>
+            `).join('');
+    }
+
+    async function testCreateLocation() {
+      const name = document.getElementById('locationName').value;
+      const type = document.getElementById('locationType').value;
+
+      if (!name) {
+        addTestResult('Создание локации', false, 'Название не указано');
+        return;
+      }
+
+      try {
+        updateStatus('Создание локации...', 'info');
+
+        const response = await fetch(`${API_BASE}/locations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, type })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          addTestResult('Создание локации', true, `Локация "${name}" создана успешно`, result.data);
+          document.getElementById('locationResult').innerHTML = `
+                        <div class="success">✅ Локация создана! ID: ${result.data.id}</div>
+                    `;
+          updateStatus('Локация создана успешно', 'success');
+        } else {
+          throw new Error(result.error || 'Неизвестная ошибка');
+        }
+      } catch (error) {
+        addTestResult('Создание локации', false, error.message);
+        document.getElementById('locationResult').innerHTML = `
+                    <div class="error">❌ Ошибка: ${error.message}</div>
+                `;
+        updateStatus('Ошибка создания локации', 'error');
+      }
+    }
+
+    async function testCreateRoute() {
+      const fromLocationId = parseInt(document.getElementById('fromLocationId').value);
+      const toLocationId = parseInt(document.getElementById('toLocationId').value);
+      const distanceKm = parseFloat(document.getElementById('distanceKm').value);
+      const estimatedDurationMinutes = parseInt(document.getElementById('durationMin').value);
+
+      if (!fromLocationId || !toLocationId) {
+        addTestResult('Создание маршрута', false, 'Не указаны локации');
+        return;
+      }
+
+      try {
+        updateStatus('Создание маршрута...', 'info');
+
+        const response = await fetch(`${API_BASE}/routes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from_location_id: fromLocationId,
+            to_location_id: toLocationId,
+            distance_km: distanceKm,
+            estimated_duration_minutes: estimatedDurationMinutes
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          addTestResult('Создание маршрута', true, `Маршрут создан успешно`, result.data);
+          document.getElementById('routeResult').innerHTML = `
+                        <div class="success">✅ Маршрут создан! ID: ${result.data.id}</div>
+                    `;
+          updateStatus('Маршрут создан успешно', 'success');
+        } else {
+          throw new Error(result.error || 'Неизвестная ошибка');
+        }
+      } catch (error) {
+        addTestResult('Создание маршрута', false, error.message);
+        document.getElementById('routeResult').innerHTML = `
+                    <div class="error">❌ Ошибка: ${error.message}</div>
+                `;
+        updateStatus('Ошибка создания маршрута', 'error');
+      }
+    }
+
+    async function testCreateTariff() {
+      const routeId = parseInt(document.getElementById('tariffRouteId').value);
+      const vehicleBrand = document.getElementById('vehicleBrand').value;
+      const vehicleModel = document.getElementById('vehicleModel').value;
+      const basePrice = parseFloat(document.getElementById('basePrice').value);
+      const pricePerKm = parseFloat(document.getElementById('pricePerKm').value);
+
+      if (!routeId || !vehicleBrand || !vehicleModel) {
+        addTestResult('Создание тарифа', false, 'Не все обязательные поля заполнены');
+        return;
+      }
+
+      try {
+        updateStatus('Создание тарифа...', 'info');
+
+        const response = await fetch(`${API_BASE}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            route_id: routeId,
+            vehicle_brand: vehicleBrand,
+            vehicle_model: vehicleModel,
+            base_price: basePrice,
+            price_per_km: pricePerKm
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          addTestResult('Создание тарифа', true, `Тариф создан успешно`, result.data);
+          document.getElementById('tariffResult').innerHTML = `
+                        <div class="success">✅ Тариф создан! ID: ${result.data.id}</div>
+                    `;
+          updateStatus('Тариф создан успешно', 'success');
+        } else {
+          throw new Error(result.error || 'Неизвестная ошибка');
+        }
+      } catch (error) {
+        addTestResult('Создание тарифа', false, error.message);
+        document.getElementById('tariffResult').innerHTML = `
+                    <div class="error">❌ Ошибка: ${error.message}</div>
+                `;
+        updateStatus('Ошибка создания тарифа', 'error');
+      }
+    }
+
+    async function testGetMatrix() {
+      try {
+        updateStatus('Загрузка матрицы...', 'info');
+
+        const response = await fetch(`${API_BASE}/matrix`);
+        const result = await response.json();
+
+        if (result.success) {
+          const { routes, vehicleModels, tariffs } = result.data;
+          addTestResult('Загрузка матрицы', true,
+            `Матрица загружена: ${routes.length} маршрутов, ${vehicleModels.length} моделей, ${Object.keys(tariffs).length} групп тарифов`,
+            { routesCount: routes.length, vehicleModelsCount: vehicleModels.length, tariffsCount: Object.keys(tariffs).length }
+          );
+          document.getElementById('matrixResult').innerHTML = `
+                        <div class="success">✅ Матрица загружена: ${routes.length} маршрутов, ${vehicleModels.length} моделей</div>
+                    `;
+          updateStatus('Матрица загружена успешно', 'success');
+        } else {
+          throw new Error(result.error || 'Неизвестная ошибка');
+        }
+      } catch (error) {
+        addTestResult('Загрузка матрицы', false, error.message);
+        document.getElementById('matrixResult').innerHTML = `
+                    <div class="error">❌ Ошибка: ${error.message}</div>
+                `;
+        updateStatus('Ошибка загрузки матрицы', 'error');
+      }
+    }
+
+    async function testGetLocations() {
+      try {
+        const response = await fetch(`${API_BASE}/locations`);
+        const result = await response.json();
+
+        if (result.success) {
+          addTestResult('Загрузка локаций', true, `Загружено ${result.data.length} локаций`, result.data);
+          updateStatus(`Загружено ${result.data.length} локаций`, 'success');
+        } else {
+          throw new Error(result.error || 'Неизвестная ошибка');
+        }
+      } catch (error) {
+        addTestResult('Загрузка локаций', false, error.message);
+        updateStatus('Ошибка загрузки локаций', 'error');
+      }
+    }
+
+    async function testGetRoutes() {
+      try {
+        const response = await fetch(`${API_BASE}/routes`);
+        const result = await response.json();
+
+        if (result.success) {
+          addTestResult('Загрузка маршрутов', true, `Загружено ${result.data.length} маршрутов`, result.data);
+          updateStatus(`Загружено ${result.data.length} маршрутов`, 'success');
+        } else {
+          throw new Error(result.error || 'Неизвестная ошибка');
+        }
+      } catch (error) {
+        addTestResult('Загрузка маршрутов', false, error.message);
+        updateStatus('Ошибка загрузки маршрутов', 'error');
+      }
+    }
+
+    async function testGetTariffs() {
+      try {
+        const response = await fetch(`${API_BASE}`);
+        const result = await response.json();
+
+        if (result.success) {
+          addTestResult('Загрузка тарифов', true, `Загружено ${result.data.length} тарифов`, result.data);
+          updateStatus(`Загружено ${result.data.length} тарифов`, 'success');
+        } else {
+          throw new Error(result.error || 'Неизвестная ошибка');
+        }
+      } catch (error) {
+        addTestResult('Загрузка тарифов', false, error.message);
+        updateStatus('Ошибка загрузки тарифов', 'error');
+      }
+    }
+
+    // Автоматическая загрузка матрицы при загрузке страницы
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        testGetMatrix();
+      }, 1000);
+    });
+  </script>
+</body>
+
+</html>

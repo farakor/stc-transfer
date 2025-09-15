@@ -76,6 +76,7 @@ const TariffsManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [matrix, setMatrix] = useState<TariffMatrix | null>(null);
+  const [allLocations, setAllLocations] = useState<LocationData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRoute, setSelectedRoute] = useState<number | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
@@ -126,6 +127,29 @@ const TariffsManagement: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const loadAllLocations = async () => {
+    try {
+      console.log('📍 Загружаем все локации...');
+
+      const response = await fetch('http://localhost:3001/api/admin/tariffs/locations');
+
+      if (!response.ok) {
+        throw new Error('Ошибка загрузки локаций');
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setAllLocations(result.data);
+        console.log('✅ Загружено локаций:', result.data.length);
+      } else {
+        throw new Error(result.error || 'Ошибка загрузки локаций');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки локаций:', error);
+    }
+  };
+
   const loadTariffMatrix = async (silent = false) => {
     try {
       console.log('🔄 Начинаем загрузку матрицы тарифов...');
@@ -150,6 +174,9 @@ const TariffsManagement: React.FC = () => {
 
         setMatrix(data.data);
         console.log('✅ Матрица тарифов загружена успешно');
+
+        // Также загружаем все локации
+        await loadAllLocations();
 
         // Уведомляем о новых автомобилях
         if (oldVehicleCount > 0 && newVehicleCount > oldVehicleCount) {
@@ -259,37 +286,87 @@ const TariffsManagement: React.FC = () => {
 
   const createLocation = async () => {
     try {
+      console.log('🏙️ Начинаем создание локации:', locationForm);
+      setSaving(true);
+
+      if (!locationForm.name || !locationForm.type) {
+        throw new Error('Не заполнены обязательные поля');
+      }
+
       const response = await fetch('http://localhost:3001/api/admin/tariffs/locations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(locationForm)
       });
 
-      if (response.ok) {
+      console.log('📡 Ответ сервера:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Ошибка HTTP:', errorText);
+        throw new Error(`Ошибка создания локации: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Результат создания:', result);
+
+      if (result.success) {
+        console.log('🎉 Локация создана успешно, ID:', result.data.id);
+        console.log('🚪 Закрываем модальное окно...');
         setShowAddLocationModal(false);
+        console.log('🧹 Очищаем форму...');
         setLocationForm({ name: '', type: 'city' });
+        console.log('✅ Устанавливаем статус успеха...');
+        setSaveStatus('success');
+        console.log('🔄 Обновляем матрицу...');
         await loadTariffMatrix();
+        console.log('⏰ Устанавливаем таймер для сброса статуса...');
+        setTimeout(() => {
+          console.log('🔄 Сбрасываем статус на idle');
+          setSaveStatus('idle');
+        }, 3000);
+      } else {
+        throw new Error(result.error || 'Ошибка создания локации');
       }
     } catch (error) {
-      console.error('Ошибка создания локации:', error);
+      console.error('❌ Ошибка создания локации:', error);
+      alert(`Ошибка создания локации: ${error.message}`);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } finally {
+      setSaving(false);
     }
   };
 
   const createRoute = async () => {
     try {
+      setSaving(true);
       const response = await fetch('http://localhost:3001/api/admin/tariffs/routes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(routeForm)
       });
 
-      if (response.ok) {
+      if (!response.ok) {
+        throw new Error('Ошибка создания маршрута');
+      }
+
+      const result = await response.json();
+      if (result.success) {
         setShowAddRouteModal(false);
         setRouteForm({ from_location_id: 0, to_location_id: 0, distance_km: 0, estimated_duration_minutes: 0 });
+        setSaveStatus('success');
         await loadTariffMatrix();
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      } else {
+        throw new Error(result.error || 'Ошибка создания маршрута');
       }
     } catch (error) {
       console.error('Ошибка создания маршрута:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -456,7 +533,7 @@ const TariffsManagement: React.FC = () => {
               }`}
           >
             <MapPin className="w-4 h-4 mr-2" />
-            Локации
+            Локации ({allLocations.length})
           </button>
         </div>
 
@@ -647,25 +724,23 @@ const TariffsManagement: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Array.from(new Set(matrix.routes.flatMap(r => [r.from_location, r.to_location])))
-                  .filter((location, index, self) => self.findIndex(l => l.id === location.id) === index)
-                  .map((location) => (
-                    <div key={location.id} className="border border-gray-200 rounded-lg p-4 bg-white">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-2xl">{getLocationTypeIcon(location.type)}</span>
-                        <div>
-                          <div className="font-medium">{location.name}</div>
-                          <div className="text-sm text-gray-500 capitalize">{location.type}</div>
-                        </div>
-                      </div>
-
-                      <div className="text-xs text-gray-500">
-                        Маршрутов: {matrix.routes.filter(r =>
-                          r.from_location.id === location.id || r.to_location.id === location.id
-                        ).length}
+                {allLocations.map((location) => (
+                  <div key={location.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className="text-2xl">{getLocationTypeIcon(location.type)}</span>
+                      <div>
+                        <div className="font-medium">{location.name}</div>
+                        <div className="text-sm text-gray-500 capitalize">{location.type}</div>
                       </div>
                     </div>
-                  ))}
+
+                    <div className="text-xs text-gray-500">
+                      Маршрутов: {matrix.routes.filter(r =>
+                        r.from_location.id === location.id || r.to_location.id === location.id
+                      ).length}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -804,9 +879,13 @@ const TariffsManagement: React.FC = () => {
                 <input
                   type="text"
                   value={locationForm.name}
-                  onChange={(e) => setLocationForm({ ...locationForm, name: e.target.value })}
+                  onChange={(e) => {
+                    console.log('📝 Изменение названия локации:', e.target.value);
+                    setLocationForm({ ...locationForm, name: e.target.value });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Например: Ургенч"
+                  required
                 />
               </div>
 
@@ -816,8 +895,12 @@ const TariffsManagement: React.FC = () => {
                 </label>
                 <select
                   value={locationForm.type}
-                  onChange={(e) => setLocationForm({ ...locationForm, type: e.target.value })}
+                  onChange={(e) => {
+                    console.log('📝 Изменение типа локации:', e.target.value);
+                    setLocationForm({ ...locationForm, type: e.target.value });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
                 >
                   <option value="city">Город</option>
                   <option value="airport">Аэропорт</option>
@@ -838,11 +921,24 @@ const TariffsManagement: React.FC = () => {
                 Отмена
               </button>
               <button
-                onClick={createLocation}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                onClick={() => {
+                  console.log('🔘 Нажата кнопка создания локации');
+                  console.log('📋 Текущие данные формы:', locationForm);
+                  if (!saving) {
+                    createLocation();
+                  } else {
+                    console.log('⚠️ Операция уже выполняется, игнорируем клик');
+                  }
+                }}
+                disabled={saving || !locationForm.name.trim()}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Создать
+                {saving ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                ) : (
+                  <Plus className="w-4 h-4 mr-2" />
+                )}
+                {saving ? 'Создание...' : 'Создать'}
               </button>
             </div>
           </div>
@@ -936,11 +1032,15 @@ const TariffsManagement: React.FC = () => {
               </button>
               <button
                 onClick={createRoute}
-                disabled={!routeForm.from_location_id || !routeForm.to_location_id}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                disabled={saving || !routeForm.from_location_id || !routeForm.to_location_id}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Создать
+                {saving ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                ) : (
+                  <Plus className="w-4 h-4 mr-2" />
+                )}
+                {saving ? 'Создание...' : 'Создать'}
               </button>
             </div>
           </div>
