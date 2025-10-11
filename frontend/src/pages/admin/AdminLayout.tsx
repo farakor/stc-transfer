@@ -13,6 +13,8 @@ import {
   Search,
   DollarSign
 } from 'lucide-react';
+import Logo from '@/assets/STC-transfer.svg';
+import FarukBadge from '@/assets/faruk-badge.svg';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -167,17 +169,9 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ navigation, currentPage
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white border-r border-gray-200">
       <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-        <div className="flex items-center flex-shrink-0 px-4">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center">
-                <span className="text-sm font-bold text-white">STC</span>
-              </div>
-            </div>
-            <div className="ml-3">
-              <p className="text-lg font-semibold text-gray-900">Admin Panel</p>
-              <p className="text-xs text-gray-500">Панель диспетчера</p>
-            </div>
+        <div className="flex items-center flex-shrink-0 px-2">
+          <div className="w-full">
+            <img src={Logo} alt="STC Transfer" className="w-full h-auto max-h-12" />
           </div>
         </div>
 
@@ -204,7 +198,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ navigation, currentPage
         </nav>
       </div>
 
-      <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
+      <div className="flex-shrink-0 flex flex-col border-t border-gray-200 p-4 space-y-3">
         <button className="flex items-center w-full group">
           <div className="flex items-center">
             <LogOut className="h-5 w-5 text-gray-400 group-hover:text-gray-500" />
@@ -213,6 +207,13 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ navigation, currentPage
             </div>
           </div>
         </button>
+        
+        <div className="border-t border-gray-200 pt-3 -mx-4 px-4">
+          <div className="flex flex-col items-center">
+            <p className="text-xs text-gray-500 mb-2">Developed by</p>
+            <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
+          </div>
+        </div>
       </div>
     </div>
   );

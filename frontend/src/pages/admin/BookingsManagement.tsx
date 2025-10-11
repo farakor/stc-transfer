@@ -293,7 +293,7 @@ const BookingsManagement: React.FC = () => {
                 <tr key={booking.id} className="hover:bg-gray-50">
                   <td className="py-3 px-4">
                     <div className="font-mono text-sm text-blue-600">
-                      {booking.id.slice(0, 8)}...
+                      {booking.bookingNumber}
                     </div>
                   </td>
                   <td className="py-3 px-4">
@@ -520,8 +520,8 @@ const BookingsManagement: React.FC = () => {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">ID заказа</label>
-                  <p className="font-mono text-sm text-blue-600">{selectedBooking.id}</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Номер заказа</label>
+                  <p className="font-mono text-sm text-blue-600">{selectedBooking.bookingNumber}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Статус</label>

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, LogIn, AlertCircle } from 'lucide-react';
+import Logo from '@/assets/STC-transfer.svg';
+import FarukBadge from '@/assets/faruk-badge.svg';
 
 interface LoginResponse {
   success: boolean;
@@ -84,8 +86,8 @@ const DriverLogin: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <LogIn className="w-8 h-8 text-white" />
+          <div className="flex items-center justify-center mx-auto mb-4">
+            <img src={Logo} alt="STC Transfer" className="w-24 h-24" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Вход для водителей
@@ -137,10 +139,15 @@ const DriverLogin: React.FC = () => {
           </button>
         </form>
 
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center space-y-4">
           <p className="text-sm text-gray-500">
             Если у вас нет доступа, обратитесь к диспетчеру
           </p>
+          
+          <div className="flex flex-col items-center">
+            <p className="text-xs text-gray-400 mb-2">Developed by</p>
+            <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
+          </div>
         </div>
       </div>
     </div>

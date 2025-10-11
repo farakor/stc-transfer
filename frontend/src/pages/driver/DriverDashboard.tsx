@@ -18,6 +18,7 @@ import {
   BellRing
 } from 'lucide-react';
 import { useDriverNotifications } from '@/hooks/useDriverNotifications';
+import FarukBadge from '@/assets/faruk-badge.svg';
 
 interface Driver {
   id: number;
@@ -447,6 +448,14 @@ const DriverDashboard: React.FC = () => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-8 space-y-4">
+          <div className="flex flex-col items-center">
+            <p className="text-xs text-gray-400 mb-2">Developed by</p>
+            <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
+          </div>
         </div>
       </div>
     </div>

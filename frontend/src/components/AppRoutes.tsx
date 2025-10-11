@@ -5,6 +5,7 @@ import { RouteSelection } from '@/pages/RouteSelection'
 import { BookingForm } from '@/pages/BookingForm'
 import { BookingConfirmation } from '@/pages/BookingConfirmation'
 import { BookingStatus } from '@/pages/BookingStatus'
+import TrackingPage from '@/pages/TrackingPage'
 import AdminApp from '@/pages/admin/AdminApp'
 import DriverApp from '@/pages/DriverApp'
 import DriverLogin from '@/pages/driver/DriverLogin'
@@ -39,6 +40,7 @@ export function AppRoutes() {
       <Route path="/booking" element={<BookingForm />} />
       <Route path="/confirmation" element={<BookingConfirmation />} />
       <Route path="/status/:bookingId" element={<BookingStatus />} />
+      <Route path="/tracking/:bookingId" element={<TrackingPage />} />
 
       {/* Fallback for unknown routes */}
       <Route path="*" element={<Navigate to="/language" replace />} />

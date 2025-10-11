@@ -21,10 +21,12 @@ import {
   Upload,
   Image as ImageIcon,
   Wifi,
-  WifiOff
+  WifiOff,
+  Link as LinkIcon
 } from 'lucide-react';
 import LicensePlate from '../../components/LicensePlate';
 import LicensePlateInput from '../../components/LicensePlateInput';
+import WialonMappingModal from '../../components/WialonMappingModal';
 import { useThrottledApi, useApiQueue } from '../../hooks/useThrottledApi';
 import { useResilientApi } from '../../hooks/useApiRetry';
 
@@ -41,6 +43,7 @@ interface Vehicle {
   description?: string;
   features: string[];
   imageUrl?: string;
+  wialonUnitId?: string | null;
   createdAt: string;
   updatedAt: string;
   driver?: {
@@ -87,6 +90,8 @@ const VehiclesManagement: React.FC = () => {
   const [groupInstances, setGroupInstances] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'error' | 'retrying'>('connected');
+  const [showWialonModal, setShowWialonModal] = useState(false);
+  const [selectedVehicleForWialon, setSelectedVehicleForWialon] = useState<Vehicle | null>(null);
   
   // Используем ref для отслеживания загруженных данных, чтобы избежать перерендеров
   const dataLoadedRef = useRef({ vehicles: false, drivers: false });
@@ -1031,12 +1036,33 @@ const VehiclesManagement: React.FC = () => {
                           </div>
                         </td>
                         <td className="py-2 px-4">
-                          <div className="text-xs text-gray-400">
-                            —
+                          <div className="text-xs">
+                            {vehicle.wialonUnitId ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded">
+                                <CheckCircle className="w-3 h-3" />
+                                Wialon
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
                           </div>
                         </td>
                         <td className="py-2 px-4">
                           <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => {
+                                setSelectedVehicleForWialon(vehicle);
+                                setShowWialonModal(true);
+                              }}
+                              className={`p-1 rounded ${
+                                vehicle.wialonUnitId 
+                                  ? 'text-green-600 hover:bg-green-50' 
+                                  : 'text-blue-600 hover:bg-blue-50'
+                              }`}
+                              title={vehicle.wialonUnitId ? 'Изменить связь с Wialon' : 'Связать с Wialon'}
+                            >
+                              <LinkIcon className="w-3 h-3" />
+                            </button>
                             <button
                               onClick={() => handleDelete(vehicle.id)}
                               className="p-1 text-red-600 hover:bg-red-50 rounded"
@@ -1520,6 +1546,21 @@ const VehiclesManagement: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Модальное окно связывания с Wialon */}
+      {selectedVehicleForWialon && (
+        <WialonMappingModal
+          isOpen={showWialonModal}
+          onClose={() => {
+            setShowWialonModal(false);
+            setSelectedVehicleForWialon(null);
+          }}
+          vehicle={selectedVehicleForWialon}
+          onSuccess={() => {
+            fetchVehicles(true);
+          }}
+        />
       )}
     </div>
   );

@@ -224,6 +224,7 @@ const UsersManagement: React.FC = () => {
           updated_at: data.data.updatedAt || data.data.createdAt,
           bookings: data.data.bookings ? data.data.bookings.map((booking: any) => ({
             id: booking.id,
+            bookingNumber: booking.bookingNumber,
             from_location: booking.fromLocation,
             to_location: booking.toLocation,
             price: booking.price,

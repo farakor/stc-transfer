@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Language, LanguageOption } from '@/types'
 import { useAppStore } from '@/services/store'
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
+import Logo from '@/assets/STC-transfer.svg'
+import FarukBadge from '@/assets/faruk-badge.svg'
 
 const languages: LanguageOption[] = [
   { code: 'ru', name: 'Русский', flag: '🇷🇺' },
@@ -43,24 +45,12 @@ export function LanguageSelection() {
         {/* Logo and title */}
         <div className="text-center mb-12">
           <motion.div
-            className="w-20 h-20 bg-primary-500 rounded-2xl flex items-center justify-center mx-auto mb-6"
+            className="mx-auto mb-6 flex items-center justify-center"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
           >
-            <svg
-              className="w-10 h-10 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-              />
-            </svg>
+            <img src={Logo} alt="STC Transfer" className="w-32 h-32" />
           </motion.div>
 
           <motion.h1
@@ -112,7 +102,7 @@ export function LanguageSelection() {
 
         {/* Footer */}
         <motion.div
-          className="text-center mt-12"
+          className="text-center mt-12 space-y-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
@@ -120,6 +110,11 @@ export function LanguageSelection() {
           <p className="text-sm text-gray-500">
             Samarkand Touristic Centre
           </p>
+          
+          <div className="flex flex-col items-center">
+            <p className="text-xs text-gray-400 mb-2">Developed by</p>
+            <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
+          </div>
         </motion.div>
       </motion.div>
     </div>

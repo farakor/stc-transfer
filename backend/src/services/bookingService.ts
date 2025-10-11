@@ -16,6 +16,7 @@ export interface CreateBookingData {
 
 export interface BookingDetails {
   id: string
+  bookingNumber: string
   status: BookingStatus
   fromLocation: string
   toLocation: string
@@ -28,9 +29,12 @@ export interface BookingDetails {
     phone?: string
   }
   vehicle?: {
+    id: number
+    name: string
     brand: string
     model: string
     licensePlate: string
+    wialonUnitId?: string | null
   }
   driver?: {
     name: string
@@ -40,6 +44,12 @@ export interface BookingDetails {
 }
 
 export class BookingService {
+  // Генерация номера заказа в формате СТТ-00001
+  private static generateBookingNumber(sequenceNumber: number): string {
+    const paddedNumber = sequenceNumber.toString().padStart(5, '0')
+    return `СТТ-${paddedNumber}`
+  }
+
   // Проверить, существует ли маршрут в таблице Route
   private static async validateRouteId(routeId: number): Promise<boolean> {
     try {
@@ -83,6 +93,8 @@ export class BookingService {
 
       // 3. Создать заказ БЕЗ назначения конкретного автомобиля
       // Клиент выбирает только тип автомобиля, диспетчер назначает конкретный экземпляр
+      
+      // Сначала создаем заказ без booking_number для получения sequence_number
       const booking = await prisma.booking.create({
         data: {
           user_id: user.id,
@@ -102,7 +114,23 @@ export class BookingService {
           // Сохраняем выбранный клиентом тип автомобиля
           vehicle_type: data.vehicleType,
           // Только устанавливаем route_id если он существует и ссылается на таблицу Route
-          route_id: priceCalculation.routeId && await this.validateRouteId(priceCalculation.routeId) ? priceCalculation.routeId : null
+          route_id: priceCalculation.routeId && await this.validateRouteId(priceCalculation.routeId) ? priceCalculation.routeId : null,
+          // Генерируем номер заказа на основе sequence_number
+          booking_number: '' // Временное значение, будет обновлено
+        },
+        include: {
+          user: true,
+          vehicle: true,
+          driver: true,
+          route: true
+        }
+      })
+
+      // Обновляем booking_number на основе sequence_number
+      const updatedBooking = await prisma.booking.update({
+        where: { id: booking.id },
+        data: {
+          booking_number: this.generateBookingNumber(booking.sequence_number)
         },
         include: {
           user: true,
@@ -118,24 +146,24 @@ export class BookingService {
 
         // Уведомление клиенту
         await telegramBot.sendBookingNotification(Number(data.telegramId), {
-          fromLocation: booking.from_location,
-          toLocation: booking.to_location,
+          fromLocation: updatedBooking.from_location,
+          toLocation: updatedBooking.to_location,
           vehicleType: data.vehicleType,
-          price: booking.price
+          price: updatedBooking.price
         })
 
         // Уведомление диспетчеру
         await telegramBot.sendDispatcherNotification({
-          id: booking.id,
-          fromLocation: booking.from_location,
-          toLocation: booking.to_location,
+          id: updatedBooking.id,
+          fromLocation: updatedBooking.from_location,
+          toLocation: updatedBooking.to_location,
           vehicleType: data.vehicleType,
-          price: booking.price,
-          pickupTime: booking.pickup_time,
-          notes: booking.notes,
+          price: updatedBooking.price,
+          pickupTime: updatedBooking.pickup_time,
+          notes: updatedBooking.notes,
           user: {
-            name: booking.user.name || booking.user.first_name,
-            phone: booking.user.phone
+            name: updatedBooking.user.name || updatedBooking.user.first_name,
+            phone: updatedBooking.user.phone
           }
         })
 
@@ -144,7 +172,7 @@ export class BookingService {
         // Не прерываем процесс создания заказа из-за ошибок уведомлений
       }
 
-      return this.formatBookingDetails(booking)
+      return this.formatBookingDetails(updatedBooking)
     } catch (error) {
       console.error('❌ Error in createBooking:', error)
       throw error
@@ -471,6 +499,7 @@ export class BookingService {
   private static formatBookingDetails(booking: any): BookingDetails {
     return {
       id: booking.id,
+      bookingNumber: booking.booking_number,
       status: booking.status,
       fromLocation: booking.from_location,
       toLocation: booking.to_location,
@@ -483,9 +512,12 @@ export class BookingService {
         phone: booking.user?.phone
       },
       vehicle: booking.vehicle ? {
+        id: booking.vehicle.id,
+        name: booking.vehicle.name,
         brand: booking.vehicle.brand || booking.vehicle.name,
         model: booking.vehicle.model || '',
-        licensePlate: booking.vehicle.license_plate || ''
+        licensePlate: booking.vehicle.license_plate || '',
+        wialonUnitId: booking.vehicle.wialon_unit_id || null
       } : undefined,
       driver: booking.driver ? {
         name: booking.driver.name,

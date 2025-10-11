@@ -8,6 +8,7 @@ import { ProgressBar } from '@/components/ProgressBar'
 import { NotificationToast } from '@/components/NotificationToast'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { LocationData } from '@/services/routeService'
+import FarukBadge from '@/assets/faruk-badge.svg'
 
 const BOOKING_STEPS = ['Язык', 'Транспорт', 'Маршрут', 'Данные', 'Подтверждение']
 
@@ -345,6 +346,19 @@ export function RouteSelection() {
           >
             ← Назад к выбору транспорта
           </button>
+        </motion.div>
+
+        {/* Footer */}
+        <motion.div
+          className="text-center mt-8 space-y-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.0 }}
+        >
+          <div className="flex flex-col items-center">
+            <p className="text-xs text-gray-400 mb-2">Developed by</p>
+            <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
+          </div>
         </motion.div>
       </motion.div>
 

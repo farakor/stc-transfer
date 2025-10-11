@@ -76,7 +76,8 @@ export class VehicleService {
         status: vehicleData.status || VehicleStatus.AVAILABLE,
         description: vehicleData.description,
         features: vehicleData.features || [],
-        image_url: vehicleData.imageUrl
+        image_url: vehicleData.imageUrl,
+        wialon_unit_id: vehicleData.wialonUnitId || null
       }
     })
 
@@ -119,6 +120,7 @@ export class VehicleService {
           description: vehicleData.description,
           features: vehicleData.features || [],
           image_url: vehicleData.imageUrl,
+          wialon_unit_id: vehicleData.wialonUnitId || null,
           updated_at: new Date()
         }
       })
@@ -192,6 +194,44 @@ export class VehicleService {
       data: {
         status,
         updated_at: new Date()
+      }
+    })
+  }
+
+  // Связать автомобиль с Wialon unit
+  static async linkWialonUnit(vehicleId: number, wialonUnitId: string | null) {
+    return await prisma.vehicle.update({
+      where: { id: vehicleId },
+      data: {
+        wialon_unit_id: wialonUnitId,
+        updated_at: new Date()
+      }
+    })
+  }
+
+  // Получить автомобиль по Wialon unit ID
+  static async getVehicleByWialonUnitId(wialonUnitId: string) {
+    return await prisma.vehicle.findUnique({
+      where: { wialon_unit_id: wialonUnitId },
+      include: {
+        driver: true
+      }
+    })
+  }
+
+  // Получить все автомобили с привязкой к Wialon
+  static async getVehiclesWithWialonMapping() {
+    return await prisma.vehicle.findMany({
+      where: {
+        wialon_unit_id: {
+          not: null
+        }
+      },
+      include: {
+        driver: true
+      },
+      orderBy: {
+        name: 'asc'
       }
     })
   }

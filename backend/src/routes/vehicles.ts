@@ -12,6 +12,9 @@ router.get('/all', VehicleController.getAllVehicles)
 // GET /api/vehicles/types - Получить типы автомобилей с описанием
 router.get('/types', VehicleController.getVehicleTypes)
 
+// GET /api/vehicles/wialon/mapped - Получить все автомобили с привязкой к Wialon
+router.get('/wialon/mapped', VehicleController.getVehiclesWithWialonMapping)
+
 // POST /api/vehicles - Создать новый автомобиль
 router.post('/', VehicleController.createVehicle)
 
@@ -26,5 +29,8 @@ router.delete('/:id', VehicleController.deleteVehicle)
 
 // PUT /api/vehicles/:id/status - Обновить статус автомобиля
 router.put('/:id/status', VehicleController.updateVehicleStatus)
+
+// PUT /api/vehicles/:id/wialon - Связать автомобиль с Wialon unit
+router.put('/:id/wialon', VehicleController.linkWialonUnit)
 
 export default router

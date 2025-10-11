@@ -5,6 +5,7 @@ import { useAppStore } from '@/services/store'
 import { VehicleType } from '@/types'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { VehicleIcon } from '@/components/VehicleIcon'
+import FarukBadge from '@/assets/faruk-badge.svg'
 
 export function VehicleSelection() {
   const navigate = useNavigate()
@@ -184,6 +185,19 @@ export function VehicleSelection() {
           >
             ← Назад к выбору языка
           </button>
+        </motion.div>
+
+        {/* Footer */}
+        <motion.div
+          className="text-center mt-8 space-y-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.0 }}
+        >
+          <div className="flex flex-col items-center">
+            <p className="text-xs text-gray-400 mb-2">Developed by</p>
+            <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
+          </div>
         </motion.div>
       </motion.div>
     </div>

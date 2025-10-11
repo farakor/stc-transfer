@@ -38,8 +38,8 @@ export function BookingCard({ booking, onClick, className }: BookingCardProps) {
             model={booking.vehicle?.model}
             size="md"
           />
-          <span className="text-xs text-gray-500">
-            ID: {booking.id.slice(-8).toUpperCase()}
+          <span className="text-xs text-gray-500 font-mono">
+            {booking.bookingNumber}
           </span>
         </div>
 

@@ -24,22 +24,23 @@ model User {
 }
 
 model Vehicle {
-  id            Int           @id @default(autoincrement())
-  type          VehicleType
-  name          String
-  capacity      Int
-  price_per_km  Decimal       @db.Decimal(10, 2)
-  image_url     String?
-  description   String?
-  features      String[]
-  status        VehicleStatus @default(AVAILABLE)
-  created_at    DateTime      @default(now())
-  updated_at    DateTime      @default(now())
-  brand         String?
-  license_plate String?
-  model         String?
-  bookings      Booking[]
-  driver        Driver?
+  id             Int           @id @default(autoincrement())
+  type           VehicleType
+  name           String
+  capacity       Int
+  price_per_km   Decimal       @db.Decimal(10, 2)
+  image_url      String?
+  description    String?
+  features       String[]
+  status         VehicleStatus @default(AVAILABLE)
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @default(now())
+  brand          String?
+  license_plate  String?
+  model          String?
+  wialon_unit_id String?       @unique // ID юнита в Wialon для отслеживания
+  bookings       Booking[]
+  driver         Driver?
 
   @@map("Vehicle")
 }
@@ -77,6 +78,8 @@ model Driver {
 
 model Booking {
   id               String        @id @default(cuid())
+  booking_number   String        @unique // Форматированный номер заказа СТТ-00001
+  sequence_number  Int           @unique @default(autoincrement()) // Порядковый номер для генерации
   user_id          Int
   vehicle_id       Int?
   route_id         Int?

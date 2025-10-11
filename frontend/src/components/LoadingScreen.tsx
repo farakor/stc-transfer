@@ -1,4 +1,6 @@
 import { motion } from 'framer-motion'
+import Logo from '@/assets/STC-transfer.svg'
+import FarukBadge from '@/assets/faruk-badge.svg'
 
 export function LoadingScreen() {
   return (
@@ -11,10 +13,9 @@ export function LoadingScreen() {
       >
         {/* Logo */}
         <motion.div
-          className="w-20 h-20 bg-primary-500 rounded-2xl flex items-center justify-center mx-auto mb-6"
+          className="mx-auto mb-6 flex items-center justify-center"
           animate={{
-            rotate: [0, 360],
-            scale: [1, 1.1, 1]
+            scale: [1, 1.05, 1]
           }}
           transition={{
             duration: 2,
@@ -22,19 +23,7 @@ export function LoadingScreen() {
             repeatType: "reverse"
           }}
         >
-          <svg
-            className="w-10 h-10 text-white"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+          <img src={Logo} alt="STC Transfer" className="w-32 h-32" />
         </motion.div>
 
         {/* Title */}
@@ -90,6 +79,19 @@ export function LoadingScreen() {
         >
           Загрузка приложения...
         </motion.p>
+
+        {/* Footer */}
+        <motion.div
+          className="text-center mt-8 space-y-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+        >
+          <div className="flex flex-col items-center">
+            <p className="text-xs text-gray-400 mb-2">Developed by</p>
+            <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
+          </div>
+        </motion.div>
       </motion.div>
     </div>
   )

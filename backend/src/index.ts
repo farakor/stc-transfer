@@ -11,6 +11,7 @@ import userRoutes from './routes/users';
 import routeRoutes from './routes/routes';
 import adminRoutes from './routes/admin';
 import driverRoutes from './routes/drivers';
+import wialonRoutes from './routes/wialonRoutes';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -97,6 +98,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/routes', routeRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/wialon', wialonRoutes);
 
 // Telegram webhook endpoint
 app.use('/webhook', (req, res, next) => {

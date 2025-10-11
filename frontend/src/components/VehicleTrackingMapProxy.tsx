@@ -295,8 +295,8 @@ const VehicleTrackingMapProxy: React.FC<VehicleTrackingMapProxyProps> = ({
           {!isDemoMode && isConnected && currentProxy && (
             <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
               <p className="text-sm text-green-800">
-                ✅ Подключение через CORS-прокси работает!<br>
-                  <span className="text-xs">Прокси: {currentProxy}</span>
+                ✅ Подключение через CORS-прокси работает!<br />
+                <span className="text-xs">Прокси: {currentProxy}</span>
               </p>
             </div>
           )}

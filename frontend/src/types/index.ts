@@ -104,6 +104,7 @@ export enum BookingStatus {
 
 export interface Booking {
   id: string
+  bookingNumber: string // Номер заказа в формате СТТ-00001
   userId: string
   vehicleId?: string
   driverId?: string

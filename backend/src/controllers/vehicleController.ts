@@ -100,6 +100,7 @@ export class VehicleController {
         description: vehicle.description,
         features: vehicle.features || [],
         imageUrl: vehicle.image_url,
+        wialonUnitId: vehicle.wialon_unit_id,
         driver: (vehicle as any).driver ? {
           id: (vehicle as any).driver.id,
           name: (vehicle as any).driver.name,
@@ -146,6 +147,7 @@ export class VehicleController {
           description: vehicle.description,
           features: vehicle.features || [],
           imageUrl: vehicle.image_url,
+          wialonUnitId: vehicle.wialon_unit_id,
           createdAt: vehicle.created_at,
           updatedAt: vehicle.updated_at
         }
@@ -191,6 +193,7 @@ export class VehicleController {
           description: vehicle.description,
           features: vehicle.features || [],
           imageUrl: vehicle.image_url,
+          wialonUnitId: vehicle.wialon_unit_id,
           createdAt: vehicle.created_at,
           updatedAt: vehicle.updated_at
         }
@@ -311,6 +314,63 @@ export class VehicleController {
       res.status(500).json({
         success: false,
         error: 'Failed to fetch vehicle types'
+      })
+    }
+  }
+
+  // PUT /api/vehicles/:id/wialon - Связать автомобиль с Wialon unit
+  static async linkWialonUnit(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+      const { wialonUnitId } = req.body
+      console.log(`🔗 Связывание автомобиля ${id} с Wialon unit ${wialonUnitId}`)
+
+      const vehicle = await VehicleService.linkWialonUnit(parseInt(id), wialonUnitId)
+
+      res.json({
+        success: true,
+        data: {
+          id: vehicle.id,
+          wialonUnitId: vehicle.wialon_unit_id
+        }
+      })
+    } catch (error) {
+      console.error('❌ Error linking Wialon unit:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to link Wialon unit'
+      })
+    }
+  }
+
+  // GET /api/vehicles/wialon/mapped - Получить все автомобили с привязкой к Wialon
+  static async getVehiclesWithWialonMapping(req: Request, res: Response): Promise<void> {
+    try {
+      const vehicles = await VehicleService.getVehiclesWithWialonMapping()
+
+      const vehicleData = vehicles.map(vehicle => ({
+        id: vehicle.id,
+        name: vehicle.name,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        license_plate: vehicle.license_plate,
+        wialonUnitId: vehicle.wialon_unit_id,
+        driver: (vehicle as any).driver ? {
+          id: (vehicle as any).driver.id,
+          name: (vehicle as any).driver.name,
+          phone: (vehicle as any).driver.phone
+        } : null
+      }))
+
+      res.json({
+        success: true,
+        data: vehicleData
+      })
+    } catch (error) {
+      console.error('❌ Error fetching vehicles with Wialon mapping:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch vehicles with Wialon mapping'
       })
     }
   }
