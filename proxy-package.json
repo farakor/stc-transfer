@@ -1,0 +1,26 @@
+{
+  "name": "wialon-proxy-server",
+  "version": "1.0.0",
+  "description": "Прокси-сервер для обхода CORS при подключении к Wialon API",
+  "main": "wialon-proxy-server.js",
+  "scripts": {
+    "start": "node wialon-proxy-server.js",
+    "dev": "nodemon wialon-proxy-server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "http-proxy-middleware": "^2.0.6",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "wialon",
+    "proxy",
+    "cors",
+    "api"
+  ],
+  "author": "STC Transfer",
+  "license": "MIT"
+}

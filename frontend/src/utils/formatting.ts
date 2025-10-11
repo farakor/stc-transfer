@@ -193,6 +193,8 @@ export function getBookingStatusColor(status: string): string {
   switch (status) {
     case 'PENDING':
       return 'text-yellow-600 bg-yellow-50'
+    case 'VEHICLE_ASSIGNED':
+      return 'text-orange-600 bg-orange-50'
     case 'CONFIRMED':
       return 'text-blue-600 bg-blue-50'
     case 'IN_PROGRESS':
@@ -211,10 +213,12 @@ export function getBookingStatusName(status: string): string {
   switch (status) {
     case 'PENDING':
       return 'Ожидает подтверждения'
+    case 'VEHICLE_ASSIGNED':
+      return 'Машина назначена'
     case 'CONFIRMED':
       return 'Подтвержден'
     case 'IN_PROGRESS':
-      return 'Выполняется'
+      return 'В пути'
     case 'COMPLETED':
       return 'Завершен'
     case 'CANCELLED':
@@ -286,15 +290,17 @@ export function formatTripPrice(price: number, toLocation: string, currency = 'U
   return formatPrice(price, currency)
 }
 
-// Получить статические тарифы для поездок по Самарканду
+// Получить тарифы для поездок по Самарканду (теперь будет получать из API)
+// Эта функция оставлена для обратной совместимости, но рекомендуется использовать API
 export function getSamarkandTariffs(vehicleType: string): { perKm: number; hourly: number } {
-  const tariffs: Record<string, { perKm: number; hourly: number }> = {
-    'SEDAN': { perKm: 15000, hourly: 150000 },     // Электромобиль Hongqi EHS 5
-    'PREMIUM': { perKm: 40000, hourly: 400000 },   // Электромобиль Hongqi EHS 9
-    'BUS': { perKm: 0, hourly: 325000 },           // Автобус Higer
-    'MICROBUS': { perKm: 25000, hourly: 200000 },  // Mercedes-Benz Sprinter (примерные значения)
-    'MINIVAN': { perKm: 20000, hourly: 180000 },   // KIA Carnival (примерные значения)
+  // Fallback значения если API недоступен
+  const fallbackTariffs: Record<string, { perKm: number; hourly: number }> = {
+    'SEDAN': { perKm: 15000, hourly: 150000 },
+    'PREMIUM': { perKm: 40000, hourly: 400000 },
+    'BUS': { perKm: 0, hourly: 325000 },
+    'MICROBUS': { perKm: 25000, hourly: 200000 },
+    'MINIVAN': { perKm: 20000, hourly: 180000 },
   }
 
-  return tariffs[vehicleType] || { perKm: 0, hourly: 0 }
+  return fallbackTariffs[vehicleType] || { perKm: 0, hourly: 0 }
 }

@@ -18,6 +18,7 @@ import { Booking, BookingStatus, Vehicle } from '../../types';
 import { adminService } from '../../services/adminService';
 import { BookingService } from '../../services/bookingService';
 import { VehicleService } from '../../services/vehicleService';
+import LicensePlate from '../../components/LicensePlate';
 
 interface BookingWithDetails extends Booking {
   user: {
@@ -60,9 +61,9 @@ const BookingsManagement: React.FC = () => {
 
   const fetchBookings = async () => {
     try {
-      console.log('📋 Начинаем загрузку заказов...');
+      console.log('📋 Начинаем загрузку всех заказов...');
       setLoading(true);
-      const response = await adminService.getActiveBookings();
+      const response = await adminService.getAllBookingsForAdmin();
       console.log('📦 Получен ответ от API:', response);
       console.log('📊 Данные заказов:', response.data);
       setBookings(response.data || []);
@@ -153,22 +154,9 @@ const BookingsManagement: React.FC = () => {
     }
 
     try {
-      // Используем прямой API endpoint для обновления статуса
-      const response = await fetch(`/api/bookings/${bookingId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'cancelled',
-          notes: 'Отменено диспетчером'
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to cancel booking');
-      }
-
+      // Используем BookingService для обновления статуса
+      await BookingService.updateBookingStatus(bookingId, 'cancelled', 'Отменено диспетчером');
+      
       fetchBookings();
       alert('Заказ отменен! Клиент получил уведомление.');
     } catch (error) {
@@ -180,6 +168,7 @@ const BookingsManagement: React.FC = () => {
   const getStatusColor = (status: BookingStatus) => {
     switch (status) {
       case 'PENDING': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'VEHICLE_ASSIGNED': return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'CONFIRMED': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'IN_PROGRESS': return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'COMPLETED': return 'bg-green-100 text-green-800 border-green-200';
@@ -191,6 +180,7 @@ const BookingsManagement: React.FC = () => {
   const getStatusText = (status: BookingStatus) => {
     switch (status) {
       case 'PENDING': return 'Ожидает';
+      case 'VEHICLE_ASSIGNED': return 'Машина назначена';
       case 'CONFIRMED': return 'Подтвержден';
       case 'IN_PROGRESS': return 'В пути';
       case 'COMPLETED': return 'Завершен';
@@ -272,6 +262,7 @@ const BookingsManagement: React.FC = () => {
             >
               <option value="ALL">Все статусы</option>
               <option value="PENDING">Ожидают</option>
+              <option value="VEHICLE_ASSIGNED">Машина назначена</option>
               <option value="CONFIRMED">Подтверждены</option>
               <option value="IN_PROGRESS">В пути</option>
               <option value="COMPLETED">Завершены</option>
@@ -342,8 +333,11 @@ const BookingsManagement: React.FC = () => {
                           <div className="text-sm font-medium text-gray-900">
                             {booking.vehicle.brand} {booking.vehicle.model}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            {booking.vehicle.licensePlate}
+                          <div className="my-1">
+                            <LicensePlate
+                              plateNumber={booking.vehicle.licensePlate}
+                              size="small"
+                            />
                           </div>
                           {booking.driver && (
                             <div className="text-xs text-gray-500">
@@ -407,7 +401,7 @@ const BookingsManagement: React.FC = () => {
                         </button>
                       )}
 
-                      {['PENDING', 'CONFIRMED'].includes(booking.status) && (
+                      {['PENDING', 'VEHICLE_ASSIGNED', 'CONFIRMED'].includes(booking.status) && (
                         <button
                           onClick={() => handleCancelBooking(booking.id)}
                           className="p-1 text-red-600 hover:bg-red-50 rounded"
@@ -460,7 +454,12 @@ const BookingsManagement: React.FC = () => {
                           <div className="font-medium text-gray-900">
                             {vehicle.brand} {vehicle.model}
                           </div>
-                          <div className="text-sm text-gray-600">{vehicle.licensePlate}</div>
+                          <div className="my-1">
+                            <LicensePlate
+                              plateNumber={vehicle.licensePlate}
+                              size="small"
+                            />
+                          </div>
                           {vehicle.driver && (
                             <div className="text-xs text-gray-500">
                               Водитель: {vehicle.driver.name}
@@ -559,9 +558,15 @@ const BookingsManagement: React.FC = () => {
               {selectedBooking.vehicle && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Транспорт</label>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <p className="font-medium">{selectedBooking.vehicle.brand} {selectedBooking.vehicle.model}</p>
-                    <p className="text-sm text-gray-600">Госномер: {selectedBooking.vehicle.licensePlate}</p>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Госномер:</p>
+                      <LicensePlate
+                        plateNumber={selectedBooking.vehicle.licensePlate}
+                        size="medium"
+                      />
+                    </div>
                     {selectedBooking.driver && (
                       <div className="text-sm text-gray-600">
                         <p>Водитель: {selectedBooking.driver.name}</p>

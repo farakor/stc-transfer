@@ -210,7 +210,7 @@ export class AdminService {
         ...(data.phone && { phone: data.phone }),
         ...(data.license && { license: data.license }),
         ...(data.status && { status: data.status }),
-        ...(data.vehicleId && { vehicle_id: data.vehicleId }),
+        ...(data.vehicleId && { vehicle_id: parseInt(data.vehicleId) }),
         updated_at: new Date()
       },
       include: {
@@ -501,6 +501,12 @@ export class AdminService {
   static async bulkUpdateBookings(bookingIds: string[], action: string, driverId?: string) {
     switch (action) {
       case 'cancel':
+        // Получаем заказы с информацией о водителях и автомобилях
+        const bookingsToCancel = await prisma.booking.findMany({
+          where: { id: { in: bookingIds } },
+          include: { user: true, vehicle: true, driver: true }
+        })
+
         await prisma.booking.updateMany({
           where: {
             id: { in: bookingIds }
@@ -510,14 +516,35 @@ export class AdminService {
           }
         })
 
-        // Отправить уведомления клиентам
-        const cancelledBookings = await prisma.booking.findMany({
-          where: { id: { in: bookingIds } },
-          include: { user: true }
-        })
+        // Освобождаем ресурсы (автомобили и водителей)
+        const vehicleUpdates = []
+        const driverUpdates = []
+        
+        for (const booking of bookingsToCancel) {
+          if (booking.vehicle_id) {
+            vehicleUpdates.push(
+              prisma.vehicle.update({
+                where: { id: booking.vehicle_id },
+                data: { status: VehicleStatus.AVAILABLE, updated_at: new Date() }
+              })
+            )
+          }
+          if (booking.driver_id) {
+            driverUpdates.push(
+              prisma.driver.update({
+                where: { id: booking.driver_id },
+                data: { status: DriverStatus.AVAILABLE, updated_at: new Date() }
+              })
+            )
+          }
+        }
 
+        // Выполняем все обновления параллельно
+        await Promise.all([...vehicleUpdates, ...driverUpdates])
+
+        // Отправить уведомления клиентам
         const telegramBot = TelegramBotService.getInstance()
-        for (const booking of cancelledBookings) {
+        for (const booking of bookingsToCancel) {
           try {
             await telegramBot.sendNotification(
               Number(booking.user.telegram_id),

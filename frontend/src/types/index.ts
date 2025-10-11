@@ -95,6 +95,7 @@ export interface Pricing {
 // Booking types
 export enum BookingStatus {
   PENDING = 'PENDING',
+  VEHICLE_ASSIGNED = 'VEHICLE_ASSIGNED',
   CONFIRMED = 'CONFIRMED',
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',

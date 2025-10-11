@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест подключения к Wialon - Логин/Пароль</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-weight: 500;
+    }
+
+    .status.loading {
+      background: #e0f2fe;
+      color: #0277bd;
+      border: 1px solid #81d4fa;
+    }
+
+    .status.success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #81c784;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+
+    .login-form {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 6px;
+      margin: 20px 0;
+      border-left: 4px solid #007bff;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+
+    .btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .btn.success {
+      background: #28a745;
+    }
+
+    .btn.success:hover {
+      background: #218838;
+    }
+
+    .vehicle-list {
+      margin-top: 20px;
+    }
+
+    .vehicle-item {
+      background: #f8f9fa;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      border-left: 3px solid #28a745;
+    }
+
+    .vehicle-offline {
+      border-left-color: #dc3545;
+    }
+
+    .info-block {
+      background: #e3f2fd;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #2196f3;
+    }
+
+    .warning-block {
+      background: #fff3cd;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #ffc107;
+      color: #856404;
+    }
+
+    pre {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+
+    .server-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .server-option {
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .server-option:hover {
+      background: #f3f4f6;
+    }
+
+    .server-option.active {
+      background: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🔐 Тест подключения к Wialon - Логин/Пароль</h1>
+    <p>Авторизация в системе Wialon с использованием логина и пароля от личного кабинета</p>
+
+    <div class="info-block">
+      <strong>Преимущества авторизации по логину/паролю:</strong><br>
+      ✅ Не нужно создавать токены<br>
+      ✅ Полный доступ ко всем функциям<br>
+      ✅ Простота настройки<br>
+      ✅ Автоматическое управление сессиями
+    </div>
+
+    <!-- Выбор сервера -->
+    <div class="login-form">
+      <h3>Выберите сервер Wialon:</h3>
+      <div class="server-options">
+        <div class="server-option active" data-url="http://176.74.220.111">
+          HTTP<br><small>176.74.220.111</small>
+        </div>
+        <div class="server-option" data-url="https://176.74.220.111">
+          HTTPS<br><small>176.74.220.111</small>
+        </div>
+        <div class="server-option" data-url="http://176.74.220.111:8080">
+          HTTP:8080<br><small>176.74.220.111:8080</small>
+        </div>
+        <div class="server-option" data-url="https://hst-api.wialon.com">
+          Wialon Hosting<br><small>hst-api.wialon.com</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Форма входа -->
+    <div class="login-form">
+      <h3>Данные для входа в Wialon:</h3>
+      <div class="form-group">
+        <label for="username">Логин (имя пользователя):</label>
+        <input type="text" id="username" placeholder="Введите ваш логин" />
+      </div>
+      <div class="form-group">
+        <label for="password">Пароль:</label>
+        <input type="password" id="password" placeholder="Введите ваш пароль" />
+      </div>
+    </div>
+
+    <div class="warning-block">
+      <strong>Внимание:</strong> Данные передаются в открытом виде для тестирования.
+      В production используйте HTTPS и безопасное хранение паролей.
+    </div>
+
+    <!-- Кнопки управления -->
+    <button class="btn" onclick="testLogin()">🔐 Войти в систему</button>
+    <button class="btn" onclick="testServerAvailability()">🌐 Проверить сервер</button>
+    <button class="btn success" onclick="getVehicles()" id="vehiclesBtn" disabled>🚌 Получить транспорт</button>
+    <button class="btn" onclick="logout()" id="logoutBtn" disabled>🚪 Выйти</button>
+    <button class="btn" onclick="clearLog()">🗑️ Очистить лог</button>
+
+    <!-- Статус и результаты -->
+    <div id="status"></div>
+    <div id="results"></div>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    let currentServerUrl = 'http://176.74.220.111';
+    let session = null;
+
+    // Обработка выбора сервера
+    document.querySelectorAll('.server-option').forEach(option => {
+      option.addEventListener('click', function () {
+        document.querySelectorAll('.server-option').forEach(opt => opt.classList.remove('active'));
+        this.classList.add('active');
+        currentServerUrl = this.dataset.url;
+        log(`Выбран сервер: ${currentServerUrl}`, 'info');
+      });
+    });
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+      logEntry.style.margin = '5px 0';
+      logEntry.style.padding = '5px';
+      logEntry.style.borderRadius = '3px';
+
+      switch (type) {
+        case 'error':
+          logEntry.style.background = '#ffebee';
+          logEntry.style.color = '#c62828';
+          break;
+        case 'success':
+          logEntry.style.background = '#e8f5e8';
+          logEntry.style.color = '#2e7d32';
+          break;
+        default:
+          logEntry.style.background = '#f8f9fa';
+          logEntry.style.color = '#495057';
+      }
+
+      logDiv.appendChild(logEntry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+    }
+
+    async function makeRequest(svc, params = {}) {
+      const baseApiUrl = currentServerUrl.includes('/wialon/ajax.html')
+        ? currentServerUrl
+        : `${currentServerUrl}/wialon/ajax.html`;
+
+      const url = new URL(baseApiUrl);
+      url.searchParams.set('svc', svc);
+
+      if (session) {
+        url.searchParams.set('sid', session.sid);
+      }
+
+      const body = new URLSearchParams();
+      body.append('params', JSON.stringify(params));
+
+      log(`Запрос: ${svc} к ${currentServerUrl}`);
+      log(`Параметры: ${JSON.stringify(params)}`);
+
+      try {
+        const response = await fetch(url.toString(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: body.toString()
+        });
+
+        log(`Статус: ${response.status} ${response.statusText}`);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        log(`Ответ: ${JSON.stringify(data, null, 2)}`);
+        return data;
+      } catch (error) {
+        log(`Ошибка: ${error.message}`, 'error');
+        throw error;
+      }
+    }
+
+    async function testServerAvailability() {
+      log('=== ПРОВЕРКА ДОСТУПНОСТИ СЕРВЕРА ===');
+      showStatus('🔄 Проверка сервера...', 'loading');
+
+      try {
+        const response = await fetch(currentServerUrl, {
+          method: 'HEAD',
+          mode: 'no-cors'
+        });
+        log(`✅ Сервер ${currentServerUrl} доступен`, 'success');
+        showStatus(`✅ Сервер ${currentServerUrl} доступен`, 'success');
+      } catch (error) {
+        log(`❌ Сервер ${currentServerUrl} недоступен: ${error.message}`, 'error');
+        showStatus(`❌ Сервер недоступен`, 'error');
+      }
+    }
+
+    async function testLogin() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      if (!username || !password) {
+        showStatus('❌ Введите логин и пароль', 'error');
+        return;
+      }
+
+      log('=== АВТОРИЗАЦИЯ В WIALON ===');
+      showStatus('🔄 Авторизация...', 'loading');
+
+      try {
+        // Попытка авторизации
+        const loginResponse = await makeRequest('core/login', {
+          user: username,
+          password: password
+        });
+
+        if (loginResponse.error) {
+          throw new Error(`Ошибка авторизации: ${loginResponse.error}`);
+        }
+
+        session = {
+          sid: loginResponse.eid,
+          userId: loginResponse.user?.id || 0,
+          userName: loginResponse.user?.nm || 'Unknown'
+        };
+
+        log(`✅ Авторизация успешна!`, 'success');
+        log(`SID: ${session.sid}`, 'success');
+        log(`Пользователь: ${session.userName} (ID: ${session.userId})`, 'success');
+
+        // Устанавливаем часовой пояс
+        const tzOffset = new Date().getTimezoneOffset() * -60;
+        await makeRequest('render/set_locale', {
+          tzOffset,
+          language: 'ru'
+        });
+
+        showStatus(`✅ Добро пожаловать, ${session.userName}!`, 'success');
+
+        // Активируем кнопки
+        document.getElementById('vehiclesBtn').disabled = false;
+        document.getElementById('logoutBtn').disabled = false;
+
+        log('=== АВТОРИЗАЦИЯ ЗАВЕРШЕНА ===', 'success');
+
+      } catch (error) {
+        showStatus(`❌ Ошибка авторизации: ${error.message}`, 'error');
+        log(`ОШИБКА: ${error.message}`, 'error');
+      }
+    }
+
+    async function getVehicles() {
+      if (!session) {
+        showStatus('❌ Сначала войдите в систему', 'error');
+        return;
+      }
+
+      log('=== ПОЛУЧЕНИЕ СПИСКА ТРАНСПОРТА ===');
+      showStatus('🔄 Загрузка транспорта...', 'loading');
+
+      try {
+        // Получаем список объектов мониторинга
+        const searchResponse = await makeRequest('core/search_items', {
+          spec: {
+            itemsType: 'avl_unit',
+            propName: 'sys_name',
+            propValueMask: '*',
+            sortType: 'sys_name'
+          },
+          force: 1,
+          flags: 0x1,
+          from: 0,
+          to: 0
+        });
+
+        const vehicles = searchResponse.items || [];
+        log(`Найдено транспортных средств: ${vehicles.length}`, 'success');
+
+        if (vehicles.length === 0) {
+          showStatus('⚠️ Транспортные средства не найдены', 'error');
+          return;
+        }
+
+        // Получаем данные о позициях
+        const vehicleIds = vehicles.map(v => v.id);
+        await makeRequest('core/update_data_flags', {
+          spec: vehicleIds.map(id => ({
+            type: 'id',
+            data: id,
+            flags: 0x1 | 0x2
+          }))
+        });
+
+        // Отображаем результаты
+        displayVehicles(vehicles);
+        showStatus(`✅ Загружено ${vehicles.length} транспортных средств`, 'success');
+
+      } catch (error) {
+        showStatus(`❌ Ошибка: ${error.message}`, 'error');
+        log(`ОШИБКА: ${error.message}`, 'error');
+      }
+    }
+
+    function displayVehicles(vehicles) {
+      const resultsDiv = document.getElementById('results');
+
+      let html = '<div class="vehicle-list"><h3>🚌 Список транспортных средств:</h3>';
+
+      vehicles.forEach((vehicle, index) => {
+        const pos = vehicle.pos;
+        const isOnline = pos && (Math.floor(Date.now() / 1000) - pos.t) < 600;
+        const speed = pos?.s || 0;
+        const status = !isOnline ? 'Оффлайн' : speed > 5 ? 'В движении' : 'Остановка';
+
+        html += `
+          <div class="vehicle-item ${!isOnline ? 'vehicle-offline' : ''}">
+            <strong>${vehicle.nm || `Транспорт ${vehicle.id}`}</strong><br>
+            <small>
+              ID: ${vehicle.id} | 
+              Статус: ${status} | 
+              Скорость: ${speed} км/ч<br>
+              ${pos ? `Координаты: ${pos.y?.toFixed(6)}, ${pos.x?.toFixed(6)}` : 'Нет данных о позиции'}<br>
+              ${pos ? `Обновлено: ${new Date(pos.t * 1000).toLocaleString()}` : ''}
+            </small>
+          </div>
+        `;
+      });
+
+      html += '</div>';
+      resultsDiv.innerHTML = html;
+    }
+
+    async function logout() {
+      if (!session) return;
+
+      try {
+        await makeRequest('core/logout');
+        session = null;
+
+        document.getElementById('vehiclesBtn').disabled = true;
+        document.getElementById('logoutBtn').disabled = true;
+
+        showStatus('✅ Выход выполнен', 'success');
+        log('Выход из системы выполнен', 'success');
+
+        document.getElementById('results').innerHTML = '';
+      } catch (error) {
+        log(`Ошибка при выходе: ${error.message}`, 'error');
+      }
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+      document.getElementById('results').innerHTML = '';
+      document.getElementById('status').innerHTML = '';
+    }
+
+    // Инициализация
+    window.onload = function () {
+      log('Страница загружена. Введите логин и пароль для авторизации в Wialon.');
+      log(`Выбранный сервер: ${currentServerUrl}`);
+    };
+  </script>
+</body>
+
+</html>

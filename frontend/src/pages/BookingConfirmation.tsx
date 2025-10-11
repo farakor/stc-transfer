@@ -9,10 +9,9 @@ import {
   formatDateTime,
   getBookingStatusName,
   getBookingStatusColor,
-  getVehicleModelName,
-  formatTripPrice,
-  getRepresentativeVehicle
+  formatTripPrice
 } from '@/utils/formatting'
+import { useVehicleTypes } from '@/hooks/useVehicles'
 import { VehicleIcon } from '@/components/VehicleIcon'
 
 const BOOKING_STEPS = ['Язык', 'Транспорт', 'Маршрут', 'Данные', 'Подтверждение']
@@ -25,6 +24,12 @@ export function BookingConfirmation() {
     selectedVehicleType,
     resetBookingFlow
   } = useAppStore()
+  
+  // Получаем типы машин из API
+  const { data: vehicleTypes } = useVehicleTypes()
+  
+  // Находим выбранную машину
+  const selectedVehicle = vehicleTypes?.find(v => v.type === selectedVehicleType)
 
   const [showNotification, setShowNotification] = useState(false)
   const [isOrderConfirmed, setIsOrderConfirmed] = useState(false)
@@ -149,24 +154,17 @@ export function BookingConfirmation() {
 
           {/* Vehicle Type */}
           <div className="flex items-center space-x-3 mb-4 p-3 bg-gray-50 rounded-lg">
-            {(() => {
-              const vehicleType = currentBooking.vehicle?.type || selectedVehicleType!
-              const representativeVehicle = getRepresentativeVehicle(vehicleType)
-
-              return (
-                <VehicleIcon
-                  type={vehicleType}
-                  brand={currentBooking.vehicle?.brand || representativeVehicle.brand}
-                  model={currentBooking.vehicle?.model || representativeVehicle.model}
-                  size="lg"
-                />
-              )
-            })()}
+            <VehicleIcon
+              type={currentBooking.vehicle?.type || selectedVehicleType!}
+              brand={currentBooking.vehicle?.brand || selectedVehicle?.name?.split(' ')[0] || ''}
+              model={currentBooking.vehicle?.model || selectedVehicle?.name?.split(' ').slice(1).join(' ') || ''}
+              size="lg"
+            />
             <div>
               <div className="font-medium text-gray-900">
                 {currentBooking.vehicle ?
                   `${currentBooking.vehicle.brand} ${currentBooking.vehicle.model}` :
-                  getVehicleModelName(selectedVehicleType!)
+                  (selectedVehicle?.name || 'Загрузка...')
                 }
               </div>
               <div className="text-sm text-gray-600">

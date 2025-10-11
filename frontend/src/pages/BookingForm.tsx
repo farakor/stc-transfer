@@ -7,7 +7,9 @@ import { useCreateBooking } from '@/hooks/useBookings'
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
 import { ProgressBar } from '@/components/ProgressBar'
 import { NotificationToast } from '@/components/NotificationToast'
-import { formatPrice, getRepresentativeVehicle, getVehicleModelName, isSamarkandTrip, getSamarkandTariffs } from '@/utils/formatting'
+import { formatPrice, isSamarkandTrip } from '@/utils/formatting'
+import { useSamarkandTariffs } from '@/hooks/useTariffs'
+import { useVehicleTypes } from '@/hooks/useVehicles'
 import { VehicleIcon } from '@/components/VehicleIcon'
 
 const BOOKING_STEPS = ['Язык', 'Транспорт', 'Маршрут', 'Данные', 'Подтверждение']
@@ -37,6 +39,15 @@ export function BookingForm() {
 
   const createBookingMutation = useCreateBooking()
   const { register, handleSubmit, watch, formState: { errors } } = useForm<BookingFormData>()
+  
+  // Получаем тарифы для поездок по Самарканду из API
+  const { data: samarkandTariffs } = useSamarkandTariffs(selectedVehicleType || '')
+  
+  // Получаем типы машин из API
+  const { data: vehicleTypes } = useVehicleTypes()
+  
+  // Находим выбранную машину
+  const selectedVehicle = vehicleTypes?.find(v => v.type === selectedVehicleType)
 
   // Redirect if missing required data
   useEffect(() => {
@@ -164,13 +175,13 @@ export function BookingForm() {
           <div className="flex items-center space-x-3 mb-4 p-3 bg-gray-50 rounded-lg">
             <VehicleIcon
               type={selectedVehicleType!}
-              brand={getRepresentativeVehicle(selectedVehicleType!).brand}
-              model={getRepresentativeVehicle(selectedVehicleType!).model}
+              brand={selectedVehicle?.name?.split(' ')[0] || ''}
+              model={selectedVehicle?.name?.split(' ').slice(1).join(' ') || ''}
               size="lg"
             />
             <div>
               <div className="font-medium text-gray-900">
-                {getVehicleModelName(selectedVehicleType!)}
+                {selectedVehicle?.name || 'Загрузка...'}
               </div>
               <div className="text-sm text-gray-600">
                 Выбранный транспорт
@@ -204,10 +215,11 @@ export function BookingForm() {
                   Сумма вычисляется после окончания поездки
                 </div>
                 <div className="text-sm text-gray-500 mt-2">
-                  {(() => {
-                    const tariffs = getSamarkandTariffs(selectedVehicleType || '')
-                    return `Тариф: ${formatPrice(tariffs.perKm)} за 1 км | ${formatPrice(tariffs.hourly)} за 1 час ожидания`
-                  })()}
+                  {samarkandTariffs ? (
+                    `Тариф: ${formatPrice(samarkandTariffs.perKm)} за 1 км | ${formatPrice(samarkandTariffs.hourly)} за 1 час ожидания`
+                  ) : (
+                    'Загрузка тарифов...'
+                  )}
                 </div>
               </div>
             ) : (

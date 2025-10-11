@@ -43,6 +43,19 @@ class AdminService {
     }
   }
 
+  // Получить все заказы (включая завершенные и отмененные)
+  async getAllBookingsForAdmin(): Promise<AdminApiResponse<any[]>> {
+    console.log('🔍 AdminService.getAllBookingsForAdmin - вызов API...');
+    try {
+      const response = await api.get('/bookings/all');
+      console.log('📦 AdminService.getAllBookingsForAdmin - ответ:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ AdminService.getAllBookingsForAdmin - ошибка:', error);
+      throw error;
+    }
+  }
+
 
   // Обновить статус заказа
   async updateBookingStatus(

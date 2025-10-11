@@ -6,6 +6,9 @@ const router = Router()
 // GET /api/bookings/active - Получить активные заказы (для диспетчера)
 router.get('/active', BookingController.getActiveBookings)
 
+// GET /api/bookings/all - Получить все заказы (включая завершенные и отмененные)
+router.get('/all', BookingController.getAllBookings)
+
 // GET /api/bookings/stats - Получить статистику заказов
 router.get('/stats', BookingController.getBookingStats)
 

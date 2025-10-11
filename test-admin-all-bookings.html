@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест отображения всех заказов в админ панели</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+        .log {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .status-card {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-vehicle-assigned { background: #ffeaa7; color: #d63031; }
+        .status-confirmed { background: #d1ecf1; color: #0c5460; }
+        .status-in-progress { background: #e2e3ff; color: #383d41; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-cancelled { background: #f8d7da; color: #721c24; }
+        .bookings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .bookings-table th,
+        .bookings-table td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            text-align: left;
+        }
+        .bookings-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚗 Тест отображения всех заказов в админ панели</h1>
+        
+        <div class="test-section">
+            <h3>✅ Что изменилось:</h3>
+            <ul>
+                <li><strong>Добавлен новый API endpoint</strong> <code>/api/bookings/all</code> для получения всех заказов</li>
+                <li><strong>Обновлен adminService</strong> с методом <code>getAllBookingsForAdmin()</code></li>
+                <li><strong>Изменена страница управления заказами</strong> для отображения всех статусов</li>
+                <li><strong>Добавлен статус VEHICLE_ASSIGNED</strong> в фильтры и отображение</li>
+                <li><strong>Обновлены цвета и названия статусов</strong></li>
+            </ul>
+        </div>
+
+        <div class="status-grid">
+            <div class="status-card status-pending">PENDING<br><small>Ожидает</small></div>
+            <div class="status-card status-vehicle-assigned">VEHICLE_ASSIGNED<br><small>Машина назначена</small></div>
+            <div class="status-card status-confirmed">CONFIRMED<br><small>Подтвержден</small></div>
+            <div class="status-card status-in-progress">IN_PROGRESS<br><small>В пути</small></div>
+            <div class="status-card status-completed">COMPLETED<br><small>Завершен</small></div>
+            <div class="status-card status-cancelled">CANCELLED<br><small>Отменен</small></div>
+        </div>
+
+        <h2>Тестирование API</h2>
+        <div class="test-section">
+            <h3>1. Проверить новый API endpoint</h3>
+            <button class="test-button" onclick="testAllBookingsAPI()">Тест /api/bookings/all</button>
+            <div id="api-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Сравнить активные и все заказы</h3>
+            <button class="test-button" onclick="compareBookingsAPI()">Сравнить API</button>
+            <div id="compare-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Создать тестовые заказы разных статусов</h3>
+            <button class="test-button" onclick="createTestBookings()">Создать тестовые заказы</button>
+            <div id="create-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Отобразить все заказы</h3>
+            <button class="test-button" onclick="displayAllBookings()">Показать все заказы</button>
+            <div id="display-result"></div>
+        </div>
+
+        <h2>Лог тестирования</h2>
+        <div id="test-log" class="log"></div>
+
+        <h2>Инструкции для проверки</h2>
+        <div class="test-section">
+            <ol>
+                <li>Откройте <a href="http://localhost:3003/admin/bookings" target="_blank">http://localhost:3003/admin/bookings</a></li>
+                <li>Проверьте, что отображаются заказы всех статусов</li>
+                <li>Проверьте фильтр по статусам - должен включать "Машина назначена"</li>
+                <li>Проверьте цвета статусов:
+                    <ul>
+                        <li>PENDING - желтый</li>
+                        <li>VEHICLE_ASSIGNED - оранжевый</li>
+                        <li>CONFIRMED - синий</li>
+                        <li>IN_PROGRESS - фиолетовый</li>
+                        <li>COMPLETED - зеленый</li>
+                        <li>CANCELLED - красный</li>
+                    </ul>
+                </li>
+                <li>Проверьте, что для завершенных и отмененных заказов нет кнопок действий</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function testAllBookingsAPI() {
+            try {
+                log('Тестируем новый API endpoint /api/bookings/all...');
+                const response = await fetch('/api/bookings/all');
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ API работает! Получено ${data.data.length} заказов`, 'success');
+                    log(`📊 Статусы заказов: ${[...new Set(data.data.map(b => b.status))].join(', ')}`);
+                    document.getElementById('api-result').innerHTML = 
+                        `<div class="success">✅ API работает!<br>Заказов: ${data.data.length}<br>Статусы: ${[...new Set(data.data.map(b => b.status))].join(', ')}</div>`;
+                } else {
+                    log(`❌ Ошибка API: ${data.error}`, 'error');
+                    document.getElementById('api-result').innerHTML = 
+                        `<div class="error">❌ Ошибка: ${data.error}</div>`;
+                }
+            } catch (error) {
+                log(`❌ Ошибка запроса: ${error.message}`, 'error');
+                document.getElementById('api-result').innerHTML = 
+                    `<div class="error">❌ Ошибка: ${error.message}</div>`;
+            }
+        }
+
+        async function compareBookingsAPI() {
+            try {
+                log('Сравниваем активные и все заказы...');
+                
+                const [activeResponse, allResponse] = await Promise.all([
+                    fetch('/api/bookings/active'),
+                    fetch('/api/bookings/all')
+                ]);
+                
+                const activeData = await activeResponse.json();
+                const allData = await allResponse.json();
+                
+                if (activeData.success && allData.success) {
+                    const activeCount = activeData.data.length;
+                    const allCount = allData.data.length;
+                    const completedCount = allData.data.filter(b => b.status === 'COMPLETED').length;
+                    const cancelledCount = allData.data.filter(b => b.status === 'CANCELLED').length;
+                    
+                    log(`✅ Активных заказов: ${activeCount}`, 'success');
+                    log(`✅ Всего заказов: ${allCount}`, 'success');
+                    log(`✅ Завершенных: ${completedCount}`, 'success');
+                    log(`✅ Отмененных: ${cancelledCount}`, 'success');
+                    
+                    document.getElementById('compare-result').innerHTML = `
+                        <div class="success">
+                            <h4>Сравнение API:</h4>
+                            <ul>
+                                <li>Активных заказов: ${activeCount}</li>
+                                <li>Всего заказов: ${allCount}</li>
+                                <li>Завершенных: ${completedCount}</li>
+                                <li>Отмененных: ${cancelledCount}</li>
+                            </ul>
+                        </div>`;
+                } else {
+                    log('❌ Ошибка при сравнении API', 'error');
+                }
+            } catch (error) {
+                log(`❌ Ошибка сравнения: ${error.message}`, 'error');
+            }
+        }
+
+        async function createTestBookings() {
+            try {
+                log('Создаем тестовые заказы разных статусов...');
+                
+                // Создаем заказ
+                const booking = await createSingleBooking();
+                if (!booking) return;
+                
+                log(`✅ Создан заказ ${booking.id} со статусом ${booking.status}`, 'success');
+                
+                // Можно добавить логику для изменения статусов заказа
+                document.getElementById('create-result').innerHTML = `
+                    <div class="success">
+                        ✅ Создан тестовый заказ: ${booking.id}<br>
+                        Статус: ${booking.status}
+                    </div>`;
+                    
+            } catch (error) {
+                log(`❌ Ошибка создания заказов: ${error.message}`, 'error');
+            }
+        }
+
+        async function createSingleBooking() {
+            const response = await fetch('/api/bookings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    telegramId: Math.floor(Math.random() * 1000000),
+                    fromLocation: 'Тестовая точка А',
+                    toLocation: 'Тестовая точка Б',
+                    vehicleType: 'SEDAN',
+                    notes: 'Тестовый заказ для проверки админ панели'
+                })
+            });
+            
+            const data = await response.json();
+            return data.success ? data.data : null;
+        }
+
+        async function displayAllBookings() {
+            try {
+                log('Загружаем все заказы для отображения...');
+                const response = await fetch('/api/bookings/all');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const bookings = data.data;
+                    const statusCounts = {};
+                    
+                    bookings.forEach(booking => {
+                        statusCounts[booking.status] = (statusCounts[booking.status] || 0) + 1;
+                    });
+                    
+                    let tableHTML = `
+                        <table class="bookings-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Статус</th>
+                                    <th>Маршрут</th>
+                                    <th>Цена</th>
+                                    <th>Дата</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    
+                    bookings.slice(0, 10).forEach(booking => {
+                        tableHTML += `
+                            <tr>
+                                <td>${booking.id.slice(0, 8)}...</td>
+                                <td><span class="status-${booking.status.toLowerCase().replace('_', '-')}">${booking.status}</span></td>
+                                <td>${booking.fromLocation} → ${booking.toLocation}</td>
+                                <td>${booking.price} сум</td>
+                                <td>${new Date(booking.createdAt).toLocaleDateString('ru-RU')}</td>
+                            </tr>`;
+                    });
+                    
+                    tableHTML += '</tbody></table>';
+                    
+                    document.getElementById('display-result').innerHTML = `
+                        <div class="success">
+                            <h4>Статистика по статусам:</h4>
+                            <ul>
+                                ${Object.entries(statusCounts).map(([status, count]) => 
+                                    `<li>${status}: ${count}</li>`
+                                ).join('')}
+                            </ul>
+                            <h4>Последние 10 заказов:</h4>
+                            ${tableHTML}
+                        </div>`;
+                    
+                    log(`✅ Отображено ${bookings.length} заказов`, 'success');
+                } else {
+                    log(`❌ Ошибка загрузки: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Ошибка отображения: ${error.message}`, 'error');
+            }
+        }
+
+        // Инициализация
+        log('🚀 Тест отображения всех заказов готов к запуску');
+        log('📋 Проверим новый функционал загрузки всех заказов в админ панели');
+    </script>
+</body>
+</html>

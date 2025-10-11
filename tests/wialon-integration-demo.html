@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Демо интеграции Wialon - Мониторинг транспорта</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f3f4f6;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      color: #1f2937;
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #6b7280;
+      text-transform: uppercase;
+    }
+
+    .moving {
+      color: #10b981;
+    }
+
+    .stopped {
+      color: #f59e0b;
+    }
+
+    .offline {
+      color: #ef4444;
+    }
+
+    .total {
+      color: #3b82f6;
+    }
+
+    .map-container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .map-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: between;
+      align-items: center;
+    }
+
+    .map-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .map-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background: white;
+      color: #374151;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #f9fafb;
+    }
+
+    .btn.active {
+      background: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+
+    #map {
+      height: 500px;
+      width: 100%;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+
+    .config-section {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    .config-section h2 {
+      color: #1f2937;
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    .config-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      color: #374151;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .form-group input {
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .alert-info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+    }
+
+    .alert-warning {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+    }
+
+    .code-block {
+      background: #f3f4f6;
+      padding: 12px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      color: #374151;
+      margin-top: 8px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Заголовок -->
+    <div class="header">
+      <h1>🚌 Демо интеграции Wialon - Мониторинг транспорта в реальном времени</h1>
+      <p>Демонстрация работы карты с отслеживанием транспорта для панели управления STC Transfer</p>
+    </div>
+
+    <!-- Конфигурация Wialon -->
+    <div class="config-section">
+      <h2>⚙️ Настройка подключения к Wialon</h2>
+
+      <div class="alert alert-info">
+        <strong>Информация:</strong> Сейчас используется демо-режим с тестовыми данными.
+        Для подключения к реальному Wialon API заполните поля ниже.
+      </div>
+
+      <div class="config-form">
+        <div class="form-group">
+          <label>URL сервера Wialon</label>
+          <input type="text" id="wialonUrl" placeholder="https://hst-api.wialon.com" />
+        </div>
+        <div class="form-group">
+          <label>Токен доступа</label>
+          <input type="text" id="wialonToken" placeholder="Ваш токен доступа к Wialon API" />
+        </div>
+      </div>
+
+      <div class="code-block">
+        // Пример конфигурации в коде:
+        export const wialonConfig: WialonConfig = {
+        baseUrl: 'https://hst-api.wialon.com',
+        token: 'ВАШ_ТОКЕН_ДОСТУПА'
+        };
+      </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value moving" id="movingCount">2</div>
+        <div class="stat-label">В движении</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value stopped" id="stoppedCount">1</div>
+        <div class="stat-label">На остановке</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value offline" id="offlineCount">1</div>
+        <div class="stat-label">Оффлайн</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value total" id="totalCount">4</div>
+        <div class="stat-label">Всего транспорта</div>
+      </div>
+    </div>
+
+    <!-- Карта -->
+    <div class="map-container">
+      <div class="map-header">
+        <div class="map-title">🗺️ Карта мониторинга транспорта</div>
+        <div class="map-controls">
+          <span class="status-indicator" style="background: #10b981;"></span>
+          <span style="font-size: 12px; color: #6b7280;">Демо-режим активен</span>
+          <button class="btn" onclick="refreshMap()">🔄 Обновить</button>
+          <button class="btn active" onclick="toggleMode()">Демо</button>
+        </div>
+      </div>
+      <div id="map"></div>
+    </div>
+
+    <!-- Инструкции -->
+    <div class="config-section">
+      <h2>📋 Инструкции по интеграции</h2>
+
+      <div class="alert alert-warning">
+        <strong>Что нужно для подключения к реальному Wialon:</strong>
+      </div>
+
+      <ol style="margin-left: 20px; color: #374151; line-height: 1.6;">
+        <li><strong>Токен доступа:</strong> Получите в личном кабинете Wialon (Настройки → Доступ → Токены)</li>
+        <li><strong>URL сервера:</strong> Обычно https://hst-api.wialon.com или адрес вашего локального сервера</li>
+        <li><strong>Права доступа:</strong> Убедитесь, что токен имеет права на чтение данных о транспорте</li>
+        <li><strong>Настройка CORS:</strong> Возможно потребуется настроить CORS на сервере Wialon</li>
+      </ol>
+
+      <h3 style="margin: 16px 0 8px 0; color: #1f2937;">Возможности системы:</h3>
+      <ul style="margin-left: 20px; color: #374151; line-height: 1.6;">
+        <li>✅ Отображение транспорта в реальном времени</li>
+        <li>✅ Статусы: в движении, остановка, оффлайн</li>
+        <li>✅ Информация о скорости, топливе, водителе</li>
+        <li>✅ Автообновление каждые 30 секунд</li>
+        <li>✅ Адаптивный дизайн для всех устройств</li>
+        <li>✅ Демо-режим для тестирования</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script>
+    // Инициализация карты
+    const map = L.map('map').setView([41.2995, 69.2401], 11);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Демо-данные транспорта
+    const demoVehicles = [
+      {
+        id: 'demo-1',
+        name: 'Автобус №1 (А123БВ)',
+        lat: 41.2995,
+        lng: 69.2401,
+        speed: 45,
+        status: 'moving',
+        driver: 'Иванов И.И.',
+        fuel: 75
+      },
+      {
+        id: 'demo-2',
+        name: 'Автобус №2 (В456ГД)',
+        lat: 41.3111,
+        lng: 69.2797,
+        speed: 0,
+        status: 'stopped',
+        driver: 'Петров П.П.',
+        fuel: 60
+      },
+      {
+        id: 'demo-3',
+        name: 'Автобус №3 (Г789ЕЖ)',
+        lat: 41.2647,
+        lng: 69.2163,
+        speed: 30,
+        status: 'moving',
+        driver: 'Сидоров С.С.',
+        fuel: 40
+      },
+      {
+        id: 'demo-4',
+        name: 'Автобус №4 (Д012ЗИ)',
+        lat: 41.3258,
+        lng: 69.2516,
+        speed: 0,
+        status: 'offline',
+        driver: 'Козлов К.К.',
+        fuel: 20
+      }
+    ];
+
+    let markers = [];
+
+    // Создание иконки для транспорта
+    function createVehicleIcon(status) {
+      const colors = {
+        moving: '#10b981',
+        stopped: '#f59e0b',
+        offline: '#ef4444'
+      };
+
+      return L.divIcon({
+        html: `<div style="
+                    width: 20px; 
+                    height: 20px; 
+                    background: ${colors[status]}; 
+                    border: 2px solid white;
+                    border-radius: 50%;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                "></div>`,
+        className: 'custom-vehicle-icon',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+    }
+
+    // Отображение транспорта на карте
+    function displayVehicles() {
+      // Очищаем предыдущие маркеры
+      markers.forEach(marker => map.removeLayer(marker));
+      markers = [];
+
+      // Добавляем новые маркеры
+      demoVehicles.forEach(vehicle => {
+        const marker = L.marker([vehicle.lat, vehicle.lng], {
+          icon: createVehicleIcon(vehicle.status)
+        }).addTo(map);
+
+        const statusText = {
+          moving: 'В движении',
+          stopped: 'Остановка',
+          offline: 'Оффлайн'
+        };
+
+        marker.bindPopup(`
+                    <div style="min-width: 200px;">
+                        <h4 style="margin: 0 0 8px 0; color: #1f2937;">${vehicle.name}</h4>
+                        <div style="font-size: 12px; color: #6b7280; line-height: 1.4;">
+                            <div><strong>Статус:</strong> ${statusText[vehicle.status]}</div>
+                            <div><strong>Скорость:</strong> ${vehicle.speed} км/ч</div>
+                            <div><strong>Водитель:</strong> ${vehicle.driver}</div>
+                            <div><strong>Топливо:</strong> ${vehicle.fuel}%</div>
+                        </div>
+                    </div>
+                `);
+
+        markers.push(marker);
+      });
+
+      // Обновляем статистику
+      updateStats();
+    }
+
+    // Обновление статистики
+    function updateStats() {
+      const stats = {
+        moving: demoVehicles.filter(v => v.status === 'moving').length,
+        stopped: demoVehicles.filter(v => v.status === 'stopped').length,
+        offline: demoVehicles.filter(v => v.status === 'offline').length,
+        total: demoVehicles.length
+      };
+
+      document.getElementById('movingCount').textContent = stats.moving;
+      document.getElementById('stoppedCount').textContent = stats.stopped;
+      document.getElementById('offlineCount').textContent = stats.offline;
+      document.getElementById('totalCount').textContent = stats.total;
+    }
+
+    // Обновление карты
+    function refreshMap() {
+      // Имитируем небольшие изменения в позициях
+      demoVehicles.forEach(vehicle => {
+        if (vehicle.status === 'moving') {
+          vehicle.lat += (Math.random() - 0.5) * 0.001;
+          vehicle.lng += (Math.random() - 0.5) * 0.001;
+          vehicle.speed = Math.floor(Math.random() * 60) + 10;
+        }
+      });
+
+      displayVehicles();
+    }
+
+    // Переключение режима
+    function toggleMode() {
+      alert('В реальном приложении здесь будет переключение между демо-режимом и реальными данными Wialon');
+    }
+
+    // Инициализация
+    displayVehicles();
+
+    // Автообновление каждые 30 секунд
+    setInterval(refreshMap, 30000);
+
+    console.log('🚌 Демо интеграции Wialon загружено успешно!');
+    console.log('📍 Показано транспортных средств:', demoVehicles.length);
+  </script>
+</body>
+
+</html>

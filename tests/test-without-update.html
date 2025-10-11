@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест без update_data_flags</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-weight: 500;
+    }
+
+    .status.loading {
+      background: #e0f2fe;
+      color: #0277bd;
+      border: 1px solid #81d4fa;
+    }
+
+    .status.success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #81c784;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+
+    .btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+
+    .btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .btn.success {
+      background: #28a745;
+    }
+
+    .btn.large {
+      padding: 15px 30px;
+      font-size: 16px;
+    }
+
+    .info-block {
+      background: #e3f2fd;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #2196f3;
+    }
+
+    .success-block {
+      background: #d4edda;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #28a745;
+    }
+
+    .vehicle-list {
+      max-height: 300px;
+      overflow-y: auto;
+      margin: 20px 0;
+    }
+
+    .vehicle-item {
+      background: #f8f9fa;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 4px;
+      border-left: 3px solid #007bff;
+      font-size: 12px;
+    }
+
+    .vehicle-online {
+      border-left-color: #28a745;
+    }
+
+    .vehicle-offline {
+      border-left-color: #dc3545;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🚌 Тест без update_data_flags</h1>
+    
+    <div class="success-block">
+      <strong>✅ Решение найдено!</strong><br>
+      Проблема: Токен не имеет прав на <code>core/update_data_flags</code><br>
+      Решение: Получаем транспорт без обновления данных
+    </div>
+
+    <div class="info-block">
+      <strong>🎯 Что тестируем:</strong><br>
+      1. Авторизация с токеном<br>
+      2. Получение списка транспорта (48 единиц)<br>
+      3. Отображение без обновления позиций<br>
+      4. Проверка стабильности
+    </div>
+
+    <div style="text-align: center; margin: 20px 0;">
+      <button class="btn large success" onclick="testWithoutUpdate()">🚀 Тест без обновления данных</button>
+      <button class="btn" onclick="clearResults()">🗑️ Очистить</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="vehicleList"></div>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    const serverHost = 'gps.ent-en.com';
+    const token = '85991e5f06896e98fe3c0bd49d2fe6d825770468546E156C3088DF44EB44163B2A478841';
+    let session = null;
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+      logEntry.style.margin = '2px 0';
+      logEntry.style.padding = '3px';
+      logEntry.style.borderRadius = '3px';
+      logEntry.style.fontSize = '12px';
+
+      switch (type) {
+        case 'error':
+          logEntry.style.background = '#ffebee';
+          logEntry.style.color = '#c62828';
+          break;
+        case 'success':
+          logEntry.style.background = '#e8f5e8';
+          logEntry.style.color = '#2e7d32';
+          break;
+        default:
+          logEntry.style.background = '#f8f9fa';
+          logEntry.style.color = '#495057';
+      }
+
+      logDiv.appendChild(logEntry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+    }
+
+    // JSONP запрос
+    function makeJsonpRequest(service, params, sid) {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'wialonCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        window[callbackName] = function(data) {
+          try {
+            if (data.error) {
+              reject(new Error(`Wialon API Error: ${data.error}`));
+            } else {
+              resolve(data);
+            }
+          } catch (error) {
+            reject(error);
+          } finally {
+            delete window[callbackName];
+            const script = document.getElementById(`jsonp-${callbackName}`);
+            if (script) script.remove();
+          }
+        };
+
+        let url = `https://${serverHost}/wialon/ajax.html?svc=${service}`;
+        if (sid) url += `&sid=${sid}`;
+        url += `&params=${encodeURIComponent(JSON.stringify(params))}`;
+        url += `&callback=${callbackName}`;
+
+        const script = document.createElement('script');
+        script.id = `jsonp-${callbackName}`;
+        script.src = url;
+        
+        script.onerror = () => {
+          delete window[callbackName];
+          reject(new Error('JSONP request failed'));
+        };
+
+        setTimeout(() => {
+          if (window[callbackName]) {
+            delete window[callbackName];
+            if (script) script.remove();
+            reject(new Error('JSONP timeout'));
+          }
+        }, 10000);
+
+        document.head.appendChild(script);
+      });
+    }
+
+    // Авторизация
+    async function login() {
+      log('Авторизация...');
+      try {
+        const response = await makeJsonpRequest('token/login', { token: token });
+        session = {
+          sid: response.eid,
+          userName: response.user?.nm || 'Unknown'
+        };
+        log(`✅ Авторизация успешна! SID: ${session.sid}`, 'success');
+        return session;
+      } catch (error) {
+        log(`❌ Ошибка авторизации: ${error.message}`, 'error');
+        throw error;
+      }
+    }
+
+    // Получение транспорта БЕЗ обновления данных
+    async function getVehiclesOnly() {
+      log('Получение списка транспорта...');
+      try {
+        const response = await makeJsonpRequest('core/search_items', {
+          spec: {
+            itemsType: 'avl_unit',
+            propName: 'sys_name',
+            propValueMask: '*',
+            sortType: 'sys_name'
+          },
+          force: 1,
+          flags: 1,
+          from: 0,
+          to: 0
+        }, session.sid);
+
+        const vehicles = response.items || [];
+        log(`✅ Получено транспорта: ${vehicles.length}`, 'success');
+        log(`ℹ️ Пропускаем update_data_flags (нет прав доступа)`, 'info');
+        
+        return vehicles;
+      } catch (error) {
+        log(`❌ Ошибка получения транспорта: ${error.message}`, 'error');
+        throw error;
+      }
+    }
+
+    // Отображение транспорта
+    function displayVehicles(vehicles) {
+      const vehicleListDiv = document.getElementById('vehicleList');
+      
+      if (!vehicles || vehicles.length === 0) {
+        vehicleListDiv.innerHTML = '<p>Транспорт не найден</p>';
+        return;
+      }
+
+      let html = `<h3>🚌 Найдено транспорта: ${vehicles.length}</h3><div class="vehicle-list">`;
+      
+      const now = Math.floor(Date.now() / 1000);
+      let online = 0, offline = 0;
+
+      vehicles.forEach(vehicle => {
+        const pos = vehicle.pos;
+        const isOnline = pos && (now - pos.t) < 600; // 10 минут
+        const speed = pos?.s || 0;
+        
+        if (isOnline) online++;
+        else offline++;
+
+        const statusClass = isOnline ? 'vehicle-online' : 'vehicle-offline';
+        const status = isOnline ? (speed > 5 ? 'В движении' : 'Остановка') : 'Оффлайн';
+
+        html += `
+          <div class="vehicle-item ${statusClass}">
+            <strong>${vehicle.nm || `Транспорт ${vehicle.id}`}</strong><br>
+            Статус: ${status} | Скорость: ${speed} км/ч<br>
+            ${pos ? `Координаты: ${pos.y?.toFixed(6)}, ${pos.x?.toFixed(6)}` : 'Нет данных о позиции'}<br>
+            ${pos ? `Обновлено: ${new Date(pos.t * 1000).toLocaleString()}` : 'Нет данных о времени'}
+          </div>
+        `;
+      });
+
+      html += '</div>';
+      
+      html += `
+        <div style="margin-top: 15px; padding: 15px; background: #e3f2fd; border-radius: 6px;">
+          <strong>📊 Статистика:</strong><br>
+          Всего: ${vehicles.length} | Онлайн: ${online} | Оффлайн: ${offline}
+        </div>
+      `;
+      
+      vehicleListDiv.innerHTML = html;
+    }
+
+    // Основной тест
+    async function testWithoutUpdate() {
+      log('=== ТЕСТ БЕЗ UPDATE_DATA_FLAGS ===');
+      showStatus('🚀 Тестирование без обновления данных...', 'loading');
+
+      try {
+        // Шаг 1: Авторизация
+        await login();
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Шаг 2: Получение транспорта (БЕЗ обновления)
+        const vehicles = await getVehiclesOnly();
+        
+        // Шаг 3: Отображение
+        displayVehicles(vehicles);
+        
+        showStatus(`✅ Тест успешен! Найдено ${vehicles.length} единиц транспорта`, 'success');
+        log(`🎉 ТЕСТ УСПЕШЕН! Проблема решена - работаем без update_data_flags`, 'success');
+        
+      } catch (error) {
+        showStatus(`❌ Тест провален: ${error.message}`, 'error');
+        log(`💥 ОШИБКА: ${error.message}`, 'error');
+      }
+    }
+
+    // Очистка результатов
+    function clearResults() {
+      document.getElementById('log').innerHTML = '';
+      document.getElementById('status').innerHTML = '';
+      document.getElementById('vehicleList').innerHTML = '';
+      session = null;
+    }
+
+    // Инициализация
+    window.onload = function() {
+      log('🚌 Тест без update_data_flags готов!');
+      log(`Токен: ${token.substring(0, 30)}...`);
+      log(`Сервер: ${serverHost}`);
+      log('Нажмите "Тест без обновления данных" для проверки решения');
+    };
+  </script>
+</body>
+
+</html>

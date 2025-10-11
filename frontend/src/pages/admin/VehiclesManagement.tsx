@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search,
   Filter,
@@ -19,10 +19,14 @@ import {
   ChevronDown,
   ChevronUp,
   Upload,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import LicensePlate from '../../components/LicensePlate';
 import LicensePlateInput from '../../components/LicensePlateInput';
+import { useThrottledApi, useApiQueue } from '../../hooks/useThrottledApi';
+import { useResilientApi } from '../../hooks/useApiRetry';
 
 interface Vehicle {
   id: number;
@@ -82,6 +86,15 @@ const VehiclesManagement: React.FC = () => {
   const [editingGroup, setEditingGroup] = useState<string | null>(null);
   const [groupInstances, setGroupInstances] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'error' | 'retrying'>('connected');
+  
+  // Используем ref для отслеживания загруженных данных, чтобы избежать перерендеров
+  const dataLoadedRef = useRef({ vehicles: false, drivers: false });
+  const isInitialLoadRef = useRef(true);
+  
+  // Используем устойчивый к ошибкам API клиент
+  const { makeRequest, isRetrying, retryCount, successRate } = useResilientApi();
+  const { enqueue } = useApiQueue(1); // Максимум 1 одновременный запрос для предотвращения rate limiting
   const [formData, setFormData] = useState<VehicleFormData>({
     type: 'SEDAN',
     name: '',
@@ -97,50 +110,96 @@ const VehiclesManagement: React.FC = () => {
     imageFile: null
   });
 
-  const fetchDrivers = async () => {
-    try {
-      const response = await fetch('/api/users?role=driver');
-      const data = await response.json();
-
-      if (data.success) {
-        setDrivers(data.data || []);
-      } else {
-        console.error('Failed to fetch drivers:', data.error);
-      }
-    } catch (error) {
-      console.error('Error fetching drivers:', error);
+  const fetchVehicles = useCallback(async (force = false) => {
+    // Предотвращаем повторную загрузку, если данные уже загружены
+    if (dataLoadedRef.current.vehicles && !force) {
+      console.log('🚗 Автомобили уже загружены, пропускаем запрос');
+      return;
     }
-  };
 
-  useEffect(() => {
-    fetchVehicles();
-    fetchDrivers();
-  }, []);
-
-  const fetchVehicles = async () => {
     try {
       console.log('🚗 Начинаем загрузку автомобилей...');
       setLoading(true);
+      setConnectionStatus('connected');
 
-      const response = await fetch('/api/vehicles/all');
-      const data = await response.json();
+      const data = await makeRequest('/api/vehicles/all');
 
       console.log('📦 Получен ответ от API автомобилей:', data);
 
       if (data.success && data.data) {
         setVehicles(data.data);
+        dataLoadedRef.current.vehicles = true; // Используем ref вместо state
         console.log(`✅ Загружено ${data.data.length} автомобилей`);
+        setConnectionStatus('connected');
       } else {
         console.error('❌ API автомобилей вернул ошибку:', data.error);
         setVehicles([]);
+        setConnectionStatus('error');
       }
     } catch (error) {
       console.error('❌ Ошибка при получении автомобилей:', error);
       setVehicles([]);
+      setConnectionStatus('error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [makeRequest]);
+
+  const fetchDrivers = useCallback(async (force = false) => {
+    // Предотвращаем повторную загрузку, если данные уже загружены
+    if (dataLoadedRef.current.drivers && !force) {
+      console.log('👥 Водители уже загружены, пропускаем запрос');
+      return;
+    }
+
+    try {
+      setConnectionStatus('connected');
+      const data = await makeRequest('/api/users?role=driver');
+
+      if (data.success) {
+        setDrivers(data.data || []);
+        dataLoadedRef.current.drivers = true; // Используем ref вместо state
+        console.log('✅ Водители загружены успешно:', data.data?.length || 0);
+      } else {
+        console.error('❌ Ошибка загрузки водителей:', data.error);
+        setConnectionStatus('error');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при получении водителей:', error);
+      setConnectionStatus('error');
+    }
+  }, [makeRequest]);
+
+  // Throttled версии функций для предотвращения спама запросов
+  const throttledFetchVehicles = useThrottledApi(fetchVehicles, { delay: 5000 }); // Увеличиваем до 5 секунд
+  const throttledFetchDrivers = useThrottledApi(fetchDrivers, { delay: 5000 }); // Увеличиваем до 5 секунд
+
+  useEffect(() => {
+    // Загружаем данные только при первом рендере
+    if (!isInitialLoadRef.current) {
+      return;
+    }
+    
+    isInitialLoadRef.current = false;
+    
+    console.log('🔄 Инициализация компонента - начинаем загрузку данных');
+    
+    // Загружаем данные последовательно с небольшой задержкой
+    const loadData = async () => {
+      enqueue(async () => {
+        await fetchVehicles();
+      });
+      
+      // Увеличиваем задержку перед загрузкой водителей для предотвращения rate limiting
+      setTimeout(() => {
+        enqueue(async () => {
+          await fetchDrivers();
+        });
+      }, 3000); // Увеличиваем до 3 секунд
+    };
+    
+    loadData();
+  }, []); // Пустой массив зависимостей - выполняется только один раз
 
   const handleCreate = () => {
     setEditingVehicle(null);
@@ -191,25 +250,19 @@ const VehiclesManagement: React.FC = () => {
 
         console.log('💾 Сохранение подчиненного автомобиля:', editingSubVehicle.id, formData.instances[0]);
 
-        const response = await fetch(`/api/vehicles/${editingSubVehicle.id}`, {
+        await makeRequest(`/api/vehicles/${editingSubVehicle.id}`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify({
             license_plate: formData.instances[0].license_plate,
             status: formData.instances[0].status
           }),
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to update sub-vehicle');
-        }
-
         alert('✅ Экземпляр автомобиля успешно обновлен!');
         setShowModal(false);
         setEditingSubVehicle(null);
-        fetchVehicles();
+        dataLoadedRef.current.vehicles = false; // Сбрасываем флаг перед принудительным обновлением
+        fetchVehicles(true);
         return;
       }
 
@@ -246,7 +299,9 @@ const VehiclesManagement: React.FC = () => {
 
         if (editingGroup) {
           // Редактирование группы - обновляем все экземпляры
-          const updatePromises = groupInstances.map((vehicle, index) => {
+          // Обновляем экземпляры последовательно, чтобы не перегружать сервер
+          for (let index = 0; index < groupInstances.length; index++) {
+            const vehicle = groupInstances[index];
             const instanceData = formData.instances[index];
             const vehicleData = {
               type: formData.type,
@@ -264,20 +319,15 @@ const VehiclesManagement: React.FC = () => {
               driverId: instanceData.driverId
             };
 
-            return fetch(`/api/vehicles/${vehicle.id}`, {
+            await makeRequest(`/api/vehicles/${vehicle.id}`, {
               method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
               body: JSON.stringify(vehicleData),
             });
-          });
-
-          const responses = await Promise.all(updatePromises);
-          const failedUpdates = responses.filter(response => !response.ok);
-
-          if (failedUpdates.length > 0) {
-            throw new Error(`Failed to update ${failedUpdates.length} vehicles in group`);
+            
+            // Увеличиваем задержку между запросами для предотвращения rate limiting
+            if (index < groupInstances.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Увеличиваем до 1 секунды
+            }
           }
 
           alert(`✅ Группа "${formData.name}" успешно обновлена (${groupVehicles.length} экземпляров)!`);
@@ -291,23 +341,18 @@ const VehiclesManagement: React.FC = () => {
             imageUrl: finalImageUrl
           };
 
-          const response = await fetch(`/api/vehicles/${editingVehicle.id}`, {
+          await makeRequest(`/api/vehicles/${editingVehicle.id}`, {
             method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
             body: JSON.stringify(vehicleData),
           });
-
-          if (!response.ok) {
-            throw new Error('Failed to update vehicle');
-          }
 
           alert('✅ Автомобиль успешно обновлен!');
         }
       } else {
-        // Создание новых автомобилей (может быть несколько)
-        const promises = formData.instances.map(instance => {
+        // Создание новых автомобилей последовательно
+        let successCount = 0;
+        for (let index = 0; index < formData.instances.length; index++) {
+          const instance = formData.instances[index];
           const vehicleData = {
             ...formData,
             license_plate: instance.license_plate,
@@ -316,24 +361,18 @@ const VehiclesManagement: React.FC = () => {
             imageUrl: finalImageUrl
           };
 
-          return fetch('/api/vehicles', {
+          await makeRequest('/api/vehicles', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
             body: JSON.stringify(vehicleData),
           });
-        });
-
-        const responses = await Promise.all(promises);
-
-        // Проверяем, что все запросы успешны
-        const failedResponses = responses.filter(response => !response.ok);
-        if (failedResponses.length > 0) {
-          throw new Error(`Failed to create ${failedResponses.length} vehicles`);
+          
+          successCount++;
+          
+          // Увеличиваем задержку между запросами для предотвращения rate limiting
+          if (index < formData.instances.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1500)); // Увеличиваем до 1.5 секунд
+          }
         }
-
-        const successCount = responses.length;
         alert(`✅ Успешно добавлено ${successCount} автомобиль${successCount > 1 ? 'ей' : ''}!`);
       }
 
@@ -341,7 +380,8 @@ const VehiclesManagement: React.FC = () => {
       setEditingVehicle(null);
       setEditingGroup(null);
       setGroupInstances([]);
-      fetchVehicles(); // Перезагружаем список
+      dataLoadedRef.current.vehicles = false; // Сбрасываем флаг перед принудительным обновлением
+      fetchVehicles(true); // Принудительно перезагружаем список
     } catch (error) {
       console.error('❌ Ошибка при сохранении автомобиля:', error);
       alert('❌ Ошибка при сохранении автомобиля');
@@ -354,16 +394,13 @@ const VehiclesManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/vehicles/${vehicleId}`, {
+      await makeRequest(`/api/vehicles/${vehicleId}`, {
         method: 'DELETE',
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete vehicle');
-      }
-
       alert('✅ Автомобиль удален!');
-      fetchVehicles(); // Перезагружаем список
+      dataLoadedRef.current.vehicles = false; // Сбрасываем флаг перед принудительным обновлением
+      fetchVehicles(true); // Принудительно перезагружаем список
     } catch (error) {
       console.error('❌ Ошибка при удалении автомобиля:', error);
       alert('❌ Ошибка при удалении автомобиля');
@@ -372,20 +409,14 @@ const VehiclesManagement: React.FC = () => {
 
   const handleStatusChange = async (vehicleId: number, newStatus: string) => {
     try {
-      const response = await fetch(`/api/vehicles/${vehicleId}/status`, {
+      await makeRequest(`/api/vehicles/${vehicleId}/status`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ status: newStatus }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update status');
-      }
-
       alert('✅ Статус автомобиля обновлен!');
-      fetchVehicles(); // Перезагружаем список
+      dataLoadedRef.current.vehicles = false; // Сбрасываем флаг перед принудительным обновлением
+      fetchVehicles(true); // Принудительно перезагружаем список
     } catch (error) {
       console.error('❌ Ошибка при изменении статуса:', error);
       alert('❌ Ошибка при изменении статуса');
@@ -608,20 +639,20 @@ const VehiclesManagement: React.FC = () => {
     if (!confirm(confirmMessage)) return;
 
     try {
-      // Удаляем все автомобили в группе
-      const deletePromises = groupVehicles.map(vehicle =>
-        fetch(`/api/vehicles/${vehicle.id}`, { method: 'DELETE' })
-      );
-
-      const responses = await Promise.all(deletePromises);
-      const failedDeletes = responses.filter(response => !response.ok);
-
-      if (failedDeletes.length > 0) {
-        throw new Error(`Failed to delete ${failedDeletes.length} vehicles`);
+      // Удаляем все автомобили в группе последовательно
+      for (let index = 0; index < groupVehicles.length; index++) {
+        const vehicle = groupVehicles[index];
+        await makeRequest(`/api/vehicles/${vehicle.id}`, { method: 'DELETE' });
+        
+        // Увеличиваем задержку между запросами для предотвращения rate limiting
+        if (index < groupVehicles.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Увеличиваем до 1 секунды
+        }
       }
 
       alert(`✅ Группа "${vehicleName}" успешно удалена (${groupVehicles.length} экземпляров)!`);
-      fetchVehicles(); // Перезагружаем список
+      dataLoadedRef.current.vehicles = false; // Сбрасываем флаг перед принудительным обновлением
+      fetchVehicles(true); // Принудительно перезагружаем список
     } catch (error) {
       console.error('❌ Ошибка при удалении группы:', error);
       alert('❌ Ошибка при удалении группы');
@@ -639,8 +670,10 @@ const VehiclesManagement: React.FC = () => {
 
       console.log('💾 Добавление экземпляров к модели:', addingToModel, formData);
 
-      // Создание новых экземпляров
-      const promises = formData.instances.map(instance => {
+      // Создание новых экземпляров последовательно
+      let successCount = 0;
+      for (let index = 0; index < formData.instances.length; index++) {
+        const instance = formData.instances[index];
         const vehicleData = {
           ...formData,
           license_plate: instance.license_plate,
@@ -648,29 +681,24 @@ const VehiclesManagement: React.FC = () => {
           driverId: instance.driverId
         };
 
-        return fetch('/api/vehicles', {
+        await makeRequest('/api/vehicles', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify(vehicleData),
         });
-      });
-
-      const responses = await Promise.all(promises);
-
-      // Проверяем, что все запросы успешны
-      const failedResponses = responses.filter(response => !response.ok);
-      if (failedResponses.length > 0) {
-        throw new Error(`Failed to create ${failedResponses.length} vehicles`);
+        
+        successCount++;
+        
+        // Увеличиваем задержку между запросами для предотвращения rate limiting
+        if (index < formData.instances.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1500)); // Увеличиваем до 1.5 секунд
+        }
       }
-
-      const successCount = responses.length;
       alert(`✅ Успешно добавлено ${successCount} экземпляр${successCount > 1 ? 'ов' : ''} к модели ${addingToModel}!`);
 
       setShowAddMoreModal(false);
       setAddingToModel(null);
-      fetchVehicles(); // Перезагружаем список
+      dataLoadedRef.current.vehicles = false; // Сбрасываем флаг перед принудительным обновлением
+      fetchVehicles(true); // Принудительно перезагружаем список
     } catch (error) {
       console.error('❌ Ошибка при добавлении экземпляров:', error);
       alert('❌ Ошибка при добавлении экземпляров');
@@ -725,11 +753,19 @@ const VehiclesManagement: React.FC = () => {
         </div>
         <div className="flex space-x-3">
           <button
-            onClick={fetchVehicles}
-            className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            onClick={() => {
+              dataLoadedRef.current.vehicles = false; // Сбрасываем флаг
+              throttledFetchVehicles(true);
+            }}
+            disabled={isRetrying}
+            className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
+              isRetrying 
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                : 'bg-gray-600 text-white hover:bg-gray-700'
+            }`}
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Обновить
+            <RefreshCw className={`w-4 h-4 mr-2 ${isRetrying ? 'animate-spin' : ''}`} />
+            {isRetrying ? `Повтор ${retryCount + 1}...` : 'Обновить'}
           </button>
           <button
             onClick={handleCreate}
@@ -740,6 +776,38 @@ const VehiclesManagement: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Индикатор состояния подключения */}
+      {(isRetrying || connectionStatus === 'error') && (
+        <div className={`rounded-lg p-4 mb-4 ${
+          isRetrying ? 'bg-yellow-50 border border-yellow-200' : 'bg-red-50 border border-red-200'
+        }`}>
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              {isRetrying ? (
+                <Wifi className="w-5 h-5 text-yellow-600 animate-pulse" />
+              ) : (
+                <WifiOff className="w-5 h-5 text-red-600" />
+              )}
+            </div>
+            <div className="ml-3">
+              <p className={`text-sm font-medium ${
+                isRetrying ? 'text-yellow-800' : 'text-red-800'
+              }`}>
+                {isRetrying 
+                  ? `Переподключение... (попытка ${retryCount + 1})`
+                  : 'Проблемы с подключением к серверу'
+                }
+              </p>
+              <p className={`text-xs ${
+                isRetrying ? 'text-yellow-600' : 'text-red-600'
+              }`}>
+                Успешность запросов: {successRate}%
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Статистика */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

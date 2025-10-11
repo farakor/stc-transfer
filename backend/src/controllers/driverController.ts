@@ -1,8 +1,429 @@
 import { Request, Response } from 'express'
 import { prisma } from '@/utils/prisma'
-import { DriverStatus, BookingStatus } from '@prisma/client'
+import { DriverStatus, BookingStatus, VehicleStatus } from '@prisma/client'
 
 export class DriverController {
+  // POST /api/drivers/login - Авторизация водителя по номеру телефона
+  static async loginByPhone(req: Request, res: Response): Promise<void> {
+    try {
+      const { phone } = req.body
+      console.log(`🔐 Попытка авторизации водителя по телефону: ${phone}`)
+
+      if (!phone) {
+        res.status(400).json({
+          success: false,
+          error: 'Phone number is required'
+        })
+        return
+      }
+
+      // Ищем водителя по номеру телефона
+      // Пробуем разные варианты формата номера
+      const cleanPhone = phone.replace(/\D/g, ''); // Только цифры
+      const formattedPhone = `+${cleanPhone}`; // С плюсом
+      
+      const driver = await prisma.driver.findFirst({
+        where: { 
+          OR: [
+            { phone: cleanPhone },
+            { phone: formattedPhone },
+            { phone: phone } // Исходный формат
+          ]
+        },
+        include: {
+          vehicle: true,
+          bookings: {
+            where: {
+              status: {
+                in: [BookingStatus.VEHICLE_ASSIGNED, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS]
+              }
+            },
+            include: {
+              user: true
+            },
+            orderBy: {
+              created_at: 'desc'
+            }
+          }
+        }
+      })
+
+      if (!driver) {
+        res.status(404).json({
+          success: false,
+          error: 'Driver not found with this phone number'
+        })
+        return
+      }
+
+      const formattedDriver = {
+        id: driver.id,
+        name: driver.name,
+        phone: driver.phone,
+        license: driver.license,
+        status: driver.status,
+        vehicle: driver.vehicle ? {
+          id: driver.vehicle.id,
+          brand: driver.vehicle.brand,
+          model: driver.vehicle.model,
+          licensePlate: driver.vehicle.license_plate,
+          type: driver.vehicle.type
+        } : null,
+        activeBookings: driver.bookings.map(booking => ({
+          id: booking.id,
+          fromLocation: booking.from_location,
+          toLocation: booking.to_location,
+          pickupLocation: booking.pickup_location,
+          dropoffLocation: booking.dropoff_location,
+          pickupTime: booking.pickup_time,
+          passengerCount: booking.passenger_count,
+          price: Number(booking.price),
+          status: booking.status,
+          user: {
+            name: booking.user.name || booking.user.first_name,
+            phone: booking.user.phone
+          },
+          notes: booking.notes,
+          createdAt: booking.created_at
+        })),
+        createdAt: driver.created_at,
+        updatedAt: driver.updated_at
+      }
+
+      console.log(`✅ Водитель ${driver.name} успешно авторизован`)
+
+      res.json({
+        success: true,
+        data: formattedDriver
+      })
+    } catch (error) {
+      console.error('❌ Error during driver login:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to login driver'
+      })
+    }
+  }
+
+  // GET /api/drivers/:id/active-bookings - Получить активные заказы водителя
+  static async getActiveBookings(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+      const driverId = parseInt(id)
+
+      console.log(`📋 Получение активных заказов водителя ${driverId}`)
+
+      if (isNaN(driverId)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid driver ID'
+        })
+        return
+      }
+
+      const bookings = await prisma.booking.findMany({
+        where: {
+          driver_id: driverId,
+          status: {
+            in: [BookingStatus.VEHICLE_ASSIGNED, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS]
+          }
+        },
+        include: {
+          user: true,
+          vehicle: true
+        },
+        orderBy: {
+          created_at: 'desc'
+        }
+      })
+
+      const formattedBookings = bookings.map(booking => ({
+        id: booking.id,
+        fromLocation: booking.from_location,
+        toLocation: booking.to_location,
+        pickupLocation: booking.pickup_location,
+        dropoffLocation: booking.dropoff_location,
+        pickupTime: booking.pickup_time,
+        passengerCount: booking.passenger_count,
+        price: Number(booking.price),
+        status: booking.status,
+        user: {
+          name: booking.user.name || booking.user.first_name,
+          phone: booking.user.phone
+        },
+        notes: booking.notes,
+        distanceKm: booking.distance_km,
+        createdAt: booking.created_at,
+        updatedAt: booking.updated_at
+      }))
+
+      console.log(`✅ Найдено ${formattedBookings.length} активных заказов для водителя ${driverId}`)
+
+      res.json({
+        success: true,
+        data: formattedBookings
+      })
+    } catch (error) {
+      console.error('❌ Error fetching active bookings:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch active bookings'
+      })
+    }
+  }
+
+  // PUT /api/drivers/:driverId/bookings/:bookingId/accept - Принять заказ
+  static async acceptBooking(req: Request, res: Response): Promise<void> {
+    try {
+      const { driverId, bookingId } = req.params
+      const driverIdNum = parseInt(driverId)
+
+      console.log(`✅ Водитель ${driverId} принимает заказ ${bookingId}`)
+
+      if (isNaN(driverIdNum)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid driver ID'
+        })
+        return
+      }
+
+      // Проверяем, что заказ существует и назначен этому водителю
+      const booking = await prisma.booking.findFirst({
+        where: {
+          id: bookingId,
+          driver_id: driverIdNum,
+          status: BookingStatus.VEHICLE_ASSIGNED
+        },
+        include: {
+          user: true,
+          driver: true,
+          vehicle: true
+        }
+      })
+
+      if (!booking) {
+        res.status(404).json({
+          success: false,
+          error: 'Booking not found or not assigned to this driver'
+        })
+        return
+      }
+
+      // Обновляем статус заказа на CONFIRMED (В пути)
+      const updatedBooking = await prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: BookingStatus.CONFIRMED,
+          updated_at: new Date()
+        },
+        include: {
+          user: true,
+          driver: true,
+          vehicle: true
+        }
+      })
+
+      // Обновляем статус водителя на BUSY
+      await prisma.driver.update({
+        where: { id: driverIdNum },
+        data: {
+          status: DriverStatus.BUSY,
+          updated_at: new Date()
+        }
+      })
+
+      console.log(`✅ Заказ ${bookingId} принят водителем ${driverId}, статус изменен на CONFIRMED`)
+
+      res.json({
+        success: true,
+        data: {
+          id: updatedBooking.id,
+          status: updatedBooking.status,
+          message: 'Заказ принят. Вы в пути к клиенту.'
+        }
+      })
+    } catch (error) {
+      console.error('❌ Error accepting booking:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to accept booking'
+      })
+    }
+  }
+
+  // PUT /api/drivers/:driverId/bookings/:bookingId/start - Начать рейс
+  static async startTrip(req: Request, res: Response): Promise<void> {
+    try {
+      const { driverId, bookingId } = req.params
+      const driverIdNum = parseInt(driverId)
+
+      console.log(`🚗 Водитель ${driverId} начинает рейс ${bookingId}`)
+
+      if (isNaN(driverIdNum)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid driver ID'
+        })
+        return
+      }
+
+      // Проверяем, что заказ существует и в статусе CONFIRMED
+      const booking = await prisma.booking.findFirst({
+        where: {
+          id: bookingId,
+          driver_id: driverIdNum,
+          status: BookingStatus.CONFIRMED
+        }
+      })
+
+      if (!booking) {
+        res.status(404).json({
+          success: false,
+          error: 'Booking not found or not in correct status'
+        })
+        return
+      }
+
+      // Обновляем статус заказа на IN_PROGRESS (В работе)
+      const updatedBooking = await prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: BookingStatus.IN_PROGRESS,
+          updated_at: new Date()
+        },
+        include: {
+          vehicle: true
+        }
+      })
+
+      // Обновляем статус автомобиля на BUSY
+      if (updatedBooking.vehicle_id) {
+        await prisma.vehicle.update({
+          where: { id: updatedBooking.vehicle_id },
+          data: { 
+            status: VehicleStatus.BUSY,
+            updated_at: new Date()
+          }
+        })
+        console.log(`✅ Статус автомобиля ${updatedBooking.vehicle_id} обновлен на BUSY`)
+      }
+
+      console.log(`✅ Рейс ${bookingId} начат, статус изменен на IN_PROGRESS`)
+
+      res.json({
+        success: true,
+        data: {
+          id: updatedBooking.id,
+          status: updatedBooking.status,
+          message: 'Рейс начат. Клиент в машине.'
+        }
+      })
+    } catch (error) {
+      console.error('❌ Error starting trip:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to start trip'
+      })
+    }
+  }
+
+  // PUT /api/drivers/:driverId/bookings/:bookingId/complete - Завершить заказ
+  static async completeBooking(req: Request, res: Response): Promise<void> {
+    try {
+      const { driverId, bookingId } = req.params
+      const driverIdNum = parseInt(driverId)
+
+      console.log(`🏁 Водитель ${driverId} завершает заказ ${bookingId}`)
+
+      if (isNaN(driverIdNum)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid driver ID'
+        })
+        return
+      }
+
+      // Проверяем, что заказ существует и в статусе IN_PROGRESS
+      const booking = await prisma.booking.findFirst({
+        where: {
+          id: bookingId,
+          driver_id: driverIdNum,
+          status: BookingStatus.IN_PROGRESS
+        }
+      })
+
+      if (!booking) {
+        res.status(404).json({
+          success: false,
+          error: 'Booking not found or not in progress'
+        })
+        return
+      }
+
+      // Обновляем статус заказа на COMPLETED (Завершен)
+      const updatedBooking = await prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: BookingStatus.COMPLETED,
+          updated_at: new Date()
+        },
+        include: {
+          vehicle: true
+        }
+      })
+
+      // Обновляем статус автомобиля на AVAILABLE
+      if (updatedBooking.vehicle_id) {
+        await prisma.vehicle.update({
+          where: { id: updatedBooking.vehicle_id },
+          data: { 
+            status: VehicleStatus.AVAILABLE,
+            updated_at: new Date()
+          }
+        })
+        console.log(`✅ Статус автомобиля ${updatedBooking.vehicle_id} обновлен на AVAILABLE`)
+      }
+
+      // Проверяем, есть ли у водителя другие активные заказы
+      const activeBookings = await prisma.booking.findMany({
+        where: {
+          driver_id: driverIdNum,
+          status: {
+            in: [BookingStatus.VEHICLE_ASSIGNED, BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS]
+          }
+        }
+      })
+
+      // Если нет активных заказов, меняем статус водителя на AVAILABLE
+      if (activeBookings.length === 0) {
+        await prisma.driver.update({
+          where: { id: driverIdNum },
+          data: {
+            status: DriverStatus.AVAILABLE,
+            updated_at: new Date()
+          }
+        })
+      }
+
+      console.log(`✅ Заказ ${bookingId} завершен, статус изменен на COMPLETED`)
+
+      res.json({
+        success: true,
+        data: {
+          id: updatedBooking.id,
+          status: updatedBooking.status,
+          message: 'Заказ успешно завершен.'
+        }
+      })
+    } catch (error) {
+      console.error('❌ Error completing booking:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to complete booking'
+      })
+    }
+  }
   // GET /api/drivers/telegram/:telegramId - Получить водителя по Telegram ID
   static async getDriverByTelegramId(req: Request, res: Response): Promise<void> {
     try {

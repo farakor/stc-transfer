@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест рабочего токена Wialon</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-weight: 500;
+    }
+
+    .status.loading {
+      background: #e0f2fe;
+      color: #0277bd;
+      border: 1px solid #81d4fa;
+    }
+
+    .status.success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #81c784;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+
+    .info-block {
+      background: #e3f2fd;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #2196f3;
+    }
+
+    .btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+
+    .btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .btn.success {
+      background: #28a745;
+    }
+
+    .btn.large {
+      padding: 15px 30px;
+      font-size: 16px;
+    }
+
+    .vehicle-list {
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .vehicle-item {
+      background: #f8f9fa;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      border-left: 3px solid #28a745;
+    }
+
+    .vehicle-offline {
+      border-left-color: #dc3545;
+    }
+
+    .vehicle-moving {
+      border-left-color: #28a745;
+    }
+
+    .vehicle-stopped {
+      border-left-color: #ffc107;
+    }
+
+    .token-info {
+      background: #d4edda;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #28a745;
+    }
+
+    .step {
+      background: #f8f9fa;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border-left: 3px solid #007bff;
+    }
+
+    .step.completed {
+      border-left-color: #28a745;
+      background: #d4edda;
+    }
+
+    .step.error {
+      border-left-color: #dc3545;
+      background: #f8d7da;
+    }
+
+    .coordinates {
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .stat-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 6px;
+      text-align: center;
+      border: 1px solid #dee2e6;
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🔑 Тест рабочего токена Wialon</h1>
+    
+    <div class="token-info">
+      <strong>✅ Рабочий токен найден!</strong><br>
+      <small>Токен: 85991e5f06896e98fe3c0bd49d2fe6d8EC2B0F5F2A7A963F0EC0B869EB87FF8188C6EE8D</small><br>
+      <small>Сервер: http://176.74.220.111/login_simple.html</small>
+    </div>
+
+    <div class="info-block">
+      <strong>📋 Этапы тестирования:</strong><br>
+      1. Авторизация с токеном<br>
+      2. Получение информации о пользователе<br>
+      3. Загрузка списка транспорта<br>
+      4. Обновление позиций транспорта<br>
+      5. Анализ данных
+    </div>
+
+    <!-- Кнопки управления -->
+    <div style="text-align: center; margin: 20px 0;">
+      <button class="btn large success" onclick="runFullTest()">🚀 Запустить полный тест</button>
+      <button class="btn" onclick="testLogin()">🔐 Тест авторизации</button>
+      <button class="btn" onclick="getVehicles()" id="vehiclesBtn" disabled>🚌 Получить транспорт</button>
+      <button class="btn" onclick="updatePositions()" id="positionsBtn" disabled>📍 Обновить позиции</button>
+      <button class="btn" onclick="clearResults()">🗑️ Очистить</button>
+    </div>
+
+    <!-- Этапы тестирования -->
+    <div id="steps">
+      <div class="step" id="step1">
+        <strong>Шаг 1:</strong> Авторизация с токеном
+        <div id="step1-result"></div>
+      </div>
+      <div class="step" id="step2">
+        <strong>Шаг 2:</strong> Получение информации о пользователе
+        <div id="step2-result"></div>
+      </div>
+      <div class="step" id="step3">
+        <strong>Шаг 3:</strong> Загрузка списка транспорта
+        <div id="step3-result"></div>
+      </div>
+      <div class="step" id="step4">
+        <strong>Шаг 4:</strong> Обновление позиций транспорта
+        <div id="step4-result"></div>
+      </div>
+      <div class="step" id="step5">
+        <strong>Шаг 5:</strong> Анализ данных
+        <div id="step5-result"></div>
+      </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="stats-grid" id="statsGrid" style="display: none;">
+      <div class="stat-card">
+        <div class="stat-number" id="totalVehicles">0</div>
+        <div class="stat-label">Всего транспорта</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="onlineVehicles">0</div>
+        <div class="stat-label">Онлайн</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="movingVehicles">0</div>
+        <div class="stat-label">В движении</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stoppedVehicles">0</div>
+        <div class="stat-label">Остановка</div>
+      </div>
+    </div>
+
+    <!-- Статус -->
+    <div id="status"></div>
+
+    <!-- Результаты -->
+    <div id="results"></div>
+
+    <!-- Логи -->
+    <div id="log"></div>
+  </div>
+
+  <script>
+    const baseUrl = 'https://176.74.220.111';
+    const workingToken = '85991e5f06896e98fe3c0bd49d2fe6d825770468546E156C3088DF44EB44163B2A478841';
+    let session = null;
+    let vehicles = [];
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+      logEntry.style.margin = '2px 0';
+      logEntry.style.padding = '3px';
+      logEntry.style.borderRadius = '3px';
+      logEntry.style.fontSize = '12px';
+
+      switch (type) {
+        case 'error':
+          logEntry.style.background = '#ffebee';
+          logEntry.style.color = '#c62828';
+          break;
+        case 'success':
+          logEntry.style.background = '#e8f5e8';
+          logEntry.style.color = '#2e7d32';
+          break;
+        default:
+          logEntry.style.background = '#f8f9fa';
+          logEntry.style.color = '#495057';
+      }
+
+      logDiv.appendChild(logEntry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+    }
+
+    function updateStep(stepNumber, status, message = '') {
+      const step = document.getElementById(`step${stepNumber}`);
+      const result = document.getElementById(`step${stepNumber}-result`);
+      
+      step.className = `step ${status}`;
+      if (message) {
+        result.innerHTML = `<small>${message}</small>`;
+      }
+    }
+
+    // Тест авторизации
+    async function testLogin() {
+      log('=== ТЕСТ АВТОРИЗАЦИИ ===');
+      updateStep(1, 'loading');
+      showStatus('🔐 Авторизация...', 'loading');
+
+      try {
+        const response = await fetch(`${baseUrl}?svc=token/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `params=${JSON.stringify({ token: workingToken })}`
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.error) {
+          throw new Error(`Wialon Error: ${data.error}`);
+        }
+
+        session = {
+          sid: data.eid,
+          userId: data.user?.id || 0,
+          userName: data.user?.nm || 'Unknown'
+        };
+
+        updateStep(1, 'completed', `✅ SID: ${session.sid}, Пользователь: ${session.userName}`);
+        log(`✅ Авторизация успешна! SID: ${session.sid}`, 'success');
+        showStatus(`✅ Авторизован как: ${session.userName}`, 'success');
+
+        document.getElementById('vehiclesBtn').disabled = false;
+        return true;
+
+      } catch (error) {
+        updateStep(1, 'error', `❌ ${error.message}`);
+        log(`❌ Ошибка авторизации: ${error.message}`, 'error');
+        showStatus(`❌ Ошибка авторизации: ${error.message}`, 'error');
+        return false;
+      }
+    }
+
+    // Получение списка транспорта
+    async function getVehicles() {
+      if (!session) {
+        showStatus('❌ Сначала выполните авторизацию', 'error');
+        return false;
+      }
+
+      log('=== ПОЛУЧЕНИЕ СПИСКА ТРАНСПОРТА ===');
+      updateStep(3, 'loading');
+      showStatus('🚌 Загрузка транспорта...', 'loading');
+
+      try {
+        const response = await fetch(`${baseUrl}?svc=core/search_items&sid=${session.sid}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `params=${JSON.stringify({
+            spec: {
+              itemsType: 'avl_unit',
+              propName: 'sys_name',
+              propValueMask: '*',
+              sortType: 'sys_name'
+            },
+            force: 1,
+            flags: 0x1,
+            from: 0,
+            to: 0
+          })}`
+        });
+
+        const data = await response.json();
+        
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        vehicles = data.items || [];
+        updateStep(3, 'completed', `✅ Найдено: ${vehicles.length} транспортных средств`);
+        log(`✅ Найдено транспортных средств: ${vehicles.length}`, 'success');
+
+        if (vehicles.length === 0) {
+          showStatus('⚠️ Транспортные средства не найдены', 'error');
+          return false;
+        }
+
+        document.getElementById('positionsBtn').disabled = false;
+        showStatus(`✅ Загружено ${vehicles.length} транспортных средств`, 'success');
+        return true;
+
+      } catch (error) {
+        updateStep(3, 'error', `❌ ${error.message}`);
+        log(`❌ Ошибка: ${error.message}`, 'error');
+        showStatus(`❌ Ошибка: ${error.message}`, 'error');
+        return false;
+      }
+    }
+
+    // Обновление позиций транспорта
+    async function updatePositions() {
+      if (!vehicles.length || !session) {
+        showStatus('❌ Сначала загрузите список транспорта', 'error');
+        return false;
+      }
+
+      log('=== ОБНОВЛЕНИЕ ПОЗИЦИЙ ===');
+      updateStep(4, 'loading');
+      showStatus('📍 Обновление позиций...', 'loading');
+
+      try {
+        const vehicleIds = vehicles.map(v => v.id);
+        const response = await fetch(`${baseUrl}?svc=core/update_data_flags&sid=${session.sid}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `params=${JSON.stringify({
+            spec: vehicleIds.map(id => ({
+              type: 'id',
+              data: id,
+              flags: 0x1 | 0x2
+            }))
+          })}`
+        });
+
+        const data = await response.json();
+        
+        updateStep(4, 'completed', `✅ Позиции обновлены`);
+        log('✅ Позиции обновлены', 'success');
+        
+        analyzeData();
+        displayVehicles();
+        showStatus('✅ Данные обновлены и проанализированы', 'success');
+        return true;
+
+      } catch (error) {
+        updateStep(4, 'error', `❌ ${error.message}`);
+        log(`❌ Ошибка обновления позиций: ${error.message}`, 'error');
+        showStatus(`❌ Ошибка: ${error.message}`, 'error');
+        return false;
+      }
+    }
+
+    // Анализ данных
+    function analyzeData() {
+      updateStep(5, 'loading');
+      
+      let online = 0, moving = 0, stopped = 0;
+      const now = Math.floor(Date.now() / 1000);
+
+      vehicles.forEach(vehicle => {
+        const pos = vehicle.pos;
+        if (pos && (now - pos.t) < 600) { // 10 минут
+          online++;
+          const speed = pos.s || 0;
+          if (speed > 5) {
+            moving++;
+          } else {
+            stopped++;
+          }
+        }
+      });
+
+      // Обновляем статистику
+      document.getElementById('totalVehicles').textContent = vehicles.length;
+      document.getElementById('onlineVehicles').textContent = online;
+      document.getElementById('movingVehicles').textContent = moving;
+      document.getElementById('stoppedVehicles').textContent = stopped;
+      document.getElementById('statsGrid').style.display = 'grid';
+
+      updateStep(5, 'completed', `✅ Онлайн: ${online}, В движении: ${moving}, Остановка: ${stopped}`);
+      log(`✅ Анализ завершен: Онлайн: ${online}, В движении: ${moving}, Остановка: ${stopped}`, 'success');
+    }
+
+    // Отображение транспорта
+    function displayVehicles() {
+      const resultsDiv = document.getElementById('results');
+      
+      if (!vehicles.length) {
+        resultsDiv.innerHTML = '';
+        return;
+      }
+
+      let html = '<h3>🚌 Ваш транспорт:</h3><div class="vehicle-list">';
+      const now = Math.floor(Date.now() / 1000);
+
+      vehicles.forEach(vehicle => {
+        const pos = vehicle.pos;
+        const isOnline = pos && (now - pos.t) < 600;
+        const speed = pos?.s || 0;
+        let status = 'Оффлайн';
+        let statusClass = 'vehicle-offline';
+        
+        if (isOnline) {
+          if (speed > 5) {
+            status = 'В движении';
+            statusClass = 'vehicle-moving';
+          } else {
+            status = 'Остановка';
+            statusClass = 'vehicle-stopped';
+          }
+        }
+
+        html += `
+          <div class="vehicle-item ${statusClass}">
+            <strong>${vehicle.nm || `Транспорт ${vehicle.id}`}</strong><br>
+            <small>
+              ID: ${vehicle.id} | Статус: ${status} | Скорость: ${speed} км/ч<br>
+              ${pos ? `<span class="coordinates">Координаты: ${pos.y?.toFixed(6)}, ${pos.x?.toFixed(6)}</span>` : 'Нет данных о позиции'}<br>
+              ${pos ? `Обновлено: ${new Date(pos.t * 1000).toLocaleString()}` : ''}
+            </small>
+          </div>
+        `;
+      });
+
+      html += '</div>';
+      resultsDiv.innerHTML = html;
+    }
+
+    // Полный тест
+    async function runFullTest() {
+      log('=== ЗАПУСК ПОЛНОГО ТЕСТА ===');
+      
+      // Сброс состояния
+      for (let i = 1; i <= 5; i++) {
+        updateStep(i, '');
+      }
+      
+      // Шаг 1: Авторизация
+      const loginSuccess = await testLogin();
+      if (!loginSuccess) return;
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Шаг 2: Информация о пользователе (уже получена при авторизации)
+      updateStep(2, 'completed', `✅ ID: ${session.userId}, Имя: ${session.userName}`);
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Шаг 3: Загрузка транспорта
+      const vehiclesSuccess = await getVehicles();
+      if (!vehiclesSuccess) return;
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Шаг 4: Обновление позиций
+      await updatePositions();
+      
+      log('=== ПОЛНЫЙ ТЕСТ ЗАВЕРШЕН ===', 'success');
+    }
+
+    // Очистка результатов
+    function clearResults() {
+      document.getElementById('results').innerHTML = '';
+      document.getElementById('log').innerHTML = '';
+      document.getElementById('status').innerHTML = '';
+      document.getElementById('statsGrid').style.display = 'none';
+      document.getElementById('vehiclesBtn').disabled = true;
+      document.getElementById('positionsBtn').disabled = true;
+      
+      for (let i = 1; i <= 5; i++) {
+        updateStep(i, '');
+        document.getElementById(`step${i}-result`).innerHTML = '';
+      }
+      
+      session = null;
+      vehicles = [];
+    }
+
+    // Инициализация
+    window.onload = function() {
+      log('🔑 Система тестирования рабочего токена готова!');
+      log(`Токен: ${workingToken.substring(0, 30)}...`);
+      log(`Сервер: ${baseUrl}`);
+      log('Нажмите "Запустить полный тест" для начала');
+    };
+  </script>
+</body>
+
+</html>

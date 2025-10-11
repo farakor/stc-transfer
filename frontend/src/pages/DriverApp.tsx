@@ -41,7 +41,7 @@ interface Trip {
   pickup_time?: string;
   passenger_count: number;
   price: number;
-  status: 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED';
+  status: 'VEHICLE_ASSIGNED' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED';
   user: {
     name?: string;
     phone?: string;
@@ -157,7 +157,9 @@ const DriverApp: React.FC = () => {
           }
 
           // Находим ожидающие рейсы
-          const pending = trips.filter((trip: Trip) => trip.status === 'CONFIRMED');
+          const pending = trips.filter((trip: Trip) => 
+            trip.status === 'VEHICLE_ASSIGNED' || trip.status === 'CONFIRMED'
+          );
           setPendingTrips(pending);
         }
       } else {
@@ -185,6 +187,44 @@ const DriverApp: React.FC = () => {
       }
     } catch (error) {
       console.error('❌ Ошибка загрузки рейсов:', error);
+    }
+  };
+
+  const acceptTrip = async (tripId: string) => {
+    try {
+      console.log('✅ Принимаем заказ:', tripId);
+
+      const response = await fetch(`/api/drivers/${driver?.id}/bookings/${tripId}/accept`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const trip = pendingTrips.find(t => t.id === tripId);
+        if (trip) {
+          const updatedTrip = { ...trip, status: 'CONFIRMED' as const };
+          setPendingTrips(prev => prev.map(t => t.id === tripId ? updatedTrip : t));
+
+          if (webApp?.showAlert) {
+            webApp.showAlert('Заказ принят! Теперь можете начать рейс.');
+          } else {
+            alert('Заказ принят! Теперь можете начать рейс.');
+          }
+        }
+      } else {
+        if (webApp?.showAlert) {
+          webApp.showAlert('Ошибка при принятии заказа');
+        } else {
+          alert('Ошибка при принятии заказа');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Ошибка принятия заказа:', error);
+      if (webApp?.showAlert) {
+        webApp.showAlert('Ошибка при принятии заказа');
+      } else {
+        alert('Ошибка при принятии заказа');
+      }
     }
   };
 
@@ -527,13 +567,23 @@ const DriverApp: React.FC = () => {
                   )}
                 </div>
 
-                <button
-                  onClick={() => startTrip(trip.id)}
-                  className="w-full flex items-center justify-center space-x-2 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Play className="w-4 h-4" />
-                  <span className="font-medium">Начать рейс</span>
-                </button>
+                {trip.status === 'VEHICLE_ASSIGNED' ? (
+                  <button
+                    onClick={() => acceptTrip(trip.id)}
+                    className="w-full flex items-center justify-center space-x-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="font-medium">Принять заказ</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => startTrip(trip.id)}
+                    className="w-full flex items-center justify-center space-x-2 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Play className="w-4 h-4" />
+                    <span className="font-medium">Начать рейс</span>
+                  </button>
+                )}
               </div>
             ))}
           </div>

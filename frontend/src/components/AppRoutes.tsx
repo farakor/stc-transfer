@@ -7,6 +7,8 @@ import { BookingConfirmation } from '@/pages/BookingConfirmation'
 import { BookingStatus } from '@/pages/BookingStatus'
 import AdminApp from '@/pages/admin/AdminApp'
 import DriverApp from '@/pages/DriverApp'
+import DriverLogin from '@/pages/driver/DriverLogin'
+import DriverDashboard from '@/pages/driver/DriverDashboard'
 
 export function AppRoutes() {
   return (
@@ -24,8 +26,11 @@ export function AppRoutes() {
       <Route path="/admin/tariffs" element={<AdminApp page="tariffs" />} />
       <Route path="/admin/settings" element={<AdminApp page="settings" />} />
 
-      {/* Driver app */}
-      <Route path="/driver" element={<DriverApp />} />
+      {/* Driver app routes */}
+      <Route path="/driver" element={<Navigate to="/driver/login" replace />} />
+      <Route path="/driver/login" element={<DriverLogin />} />
+      <Route path="/driver/dashboard" element={<DriverDashboard />} />
+      <Route path="/driver/telegram" element={<DriverApp />} />
 
       {/* Main booking flow */}
       <Route path="/language" element={<LanguageSelection />} />

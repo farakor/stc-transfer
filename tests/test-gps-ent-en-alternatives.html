@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Альтернативные методы - gps.ent-en.com</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-weight: 500;
+    }
+
+    .status.loading {
+      background: #e0f2fe;
+      color: #0277bd;
+      border: 1px solid #81d4fa;
+    }
+
+    .status.success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #81c784;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+
+    .info-block {
+      background: #e3f2fd;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #2196f3;
+    }
+
+    .warning-block {
+      background: #fff3cd;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #ffc107;
+      color: #856404;
+    }
+
+    .btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+
+    .btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .btn.success {
+      background: #28a745;
+    }
+
+    .btn.large {
+      padding: 15px 30px;
+      font-size: 16px;
+    }
+
+    .method-card {
+      background: #f8f9fa;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border-left: 3px solid #007bff;
+    }
+
+    .method-card.success {
+      border-left-color: #28a745;
+      background: #d4edda;
+    }
+
+    .method-card.error {
+      border-left-color: #dc3545;
+      background: #f8d7da;
+    }
+
+    .method-card.loading {
+      border-left-color: #ffc107;
+      background: #fff3cd;
+    }
+
+    .code-block {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      margin: 10px 0;
+      border: 1px solid #dee2e6;
+    }
+
+    .vehicle-list {
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .vehicle-item {
+      background: #f8f9fa;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      border-left: 3px solid #28a745;
+    }
+
+    .vehicle-offline {
+      border-left-color: #dc3545;
+    }
+
+    .vehicle-moving {
+      border-left-color: #28a745;
+    }
+
+    .vehicle-stopped {
+      border-left-color: #ffc107;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🔄 Альтернативные методы подключения к gps.ent-en.com</h1>
+    
+    <div class="warning-block">
+      <strong>⚠️ Проблема CORS:</strong> Прямые запросы к API заблокированы браузером (Failed to fetch).<br>
+      <strong>✅ Решение:</strong> Используем альтернативные методы обхода CORS ограничений.
+    </div>
+
+    <div class="info-block">
+      <strong>🎯 Тестируемые методы:</strong><br>
+      1. <strong>JSONP</strong> - обход CORS через динамические script теги<br>
+      2. <strong>Публичный CORS прокси</strong> - через внешний прокси сервер<br>
+      3. <strong>Локальный прокси</strong> - через ваш собственный прокси<br>
+      4. <strong>Альтернативные порты</strong> - тестирование разных портов<br>
+      <strong>🔑 Токен:</strong> <code>85991e5f06896e98fe3c0bd49d2fe6d8EC2B0F5F2A7A963F0EC0B869EB87FF8188C6EE8D</code>
+    </div>
+
+    <!-- Кнопки управления -->
+    <div style="text-align: center; margin: 20px 0;">
+      <button class="btn large success" onclick="testAllMethods()">🚀 Тестировать все методы</button>
+      <button class="btn" onclick="testJsonp()">📜 Тест JSONP</button>
+      <button class="btn" onclick="testCorsProxy()">🌐 Тест CORS прокси</button>
+      <button class="btn" onclick="getVehicles()" id="vehiclesBtn" disabled>🚌 Получить транспорт</button>
+      <button class="btn" onclick="clearResults()">🗑️ Очистить</button>
+    </div>
+
+    <!-- Методы подключения -->
+    <div id="methods">
+      <div class="method-card" id="method-jsonp">
+        <strong>Метод 1: JSONP (JSON with Padding)</strong>
+        <div class="code-block">Обход CORS через динамические script теги</div>
+        <div id="result-jsonp"></div>
+      </div>
+      
+      <div class="method-card" id="method-cors-proxy">
+        <strong>Метод 2: Публичный CORS прокси</strong>
+        <div class="code-block">https://cors-anywhere.herokuapp.com/https://gps.ent-en.com/wialon/ajax.html</div>
+        <div id="result-cors-proxy"></div>
+      </div>
+      
+      <div class="method-card" id="method-allorigins">
+        <strong>Метод 3: AllOrigins прокси</strong>
+        <div class="code-block">https://api.allorigins.win/raw?url=https://gps.ent-en.com/wialon/ajax.html</div>
+        <div id="result-allorigins"></div>
+      </div>
+      
+      <div class="method-card" id="method-ports">
+        <strong>Метод 4: Альтернативные порты</strong>
+        <div class="code-block">Тестирование портов 80, 443, 8080, 8443</div>
+        <div id="result-ports"></div>
+      </div>
+    </div>
+
+    <!-- Статус -->
+    <div id="status"></div>
+
+    <!-- Результаты -->
+    <div id="results"></div>
+
+    <!-- Логи -->
+    <div id="log"></div>
+  </div>
+
+  <script>
+    const serverHost = 'gps.ent-en.com';
+    const token = '85991e5f06896e98fe3c0bd49d2fe6d8EC2B0F5F2A7A963F0EC0B869EB87FF8188C6EE8D';
+    let session = null;
+    let vehicles = [];
+    let workingMethod = null;
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+      logEntry.style.margin = '2px 0';
+      logEntry.style.padding = '3px';
+      logEntry.style.borderRadius = '3px';
+      logEntry.style.fontSize = '12px';
+
+      switch (type) {
+        case 'error':
+          logEntry.style.background = '#ffebee';
+          logEntry.style.color = '#c62828';
+          break;
+        case 'success':
+          logEntry.style.background = '#e8f5e8';
+          logEntry.style.color = '#2e7d32';
+          break;
+        default:
+          logEntry.style.background = '#f8f9fa';
+          logEntry.style.color = '#495057';
+      }
+
+      logDiv.appendChild(logEntry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+    }
+
+    function updateMethodResult(methodId, status, message) {
+      const methodDiv = document.getElementById(`method-${methodId}`);
+      const resultDiv = document.getElementById(`result-${methodId}`);
+      
+      methodDiv.className = `method-card ${status}`;
+      resultDiv.innerHTML = `<small>${message}</small>`;
+    }
+
+    // JSONP метод
+    function testJsonp() {
+      return new Promise((resolve) => {
+        log('=== ТЕСТ JSONP МЕТОДА ===');
+        updateMethodResult('jsonp', 'loading', 'Тестирование JSONP...');
+
+        // Создаем уникальное имя callback функции
+        const callbackName = 'wialonCallback_' + Date.now();
+        
+        // Создаем глобальную callback функцию
+        window[callbackName] = function(data) {
+          try {
+            if (data.error) {
+              throw new Error(`Wialon Error: ${data.error}`);
+            }
+
+            session = {
+              sid: data.eid,
+              userId: data.user?.id || 0,
+              userName: data.user?.nm || 'Unknown',
+              method: 'jsonp',
+              apiUrl: `https://${serverHost}/wialon/ajax.html`
+            };
+
+            workingMethod = 'jsonp';
+            updateMethodResult('jsonp', 'success', `✅ JSONP работает! SID: ${session.sid}, Пользователь: ${session.userName}`);
+            log(`✅ JSONP успешно! SID: ${session.sid}`, 'success');
+            document.getElementById('vehiclesBtn').disabled = false;
+            resolve(true);
+          } catch (error) {
+            updateMethodResult('jsonp', 'error', `❌ ${error.message}`);
+            log(`❌ JSONP ошибка: ${error.message}`, 'error');
+            resolve(false);
+          } finally {
+            // Очищаем callback функцию
+            delete window[callbackName];
+            // Удаляем script тег
+            const script = document.getElementById('jsonp-script');
+            if (script) {
+              script.remove();
+            }
+          }
+        };
+
+        // Создаем script тег для JSONP запроса
+        const script = document.createElement('script');
+        script.id = 'jsonp-script';
+        script.src = `https://${serverHost}/wialon/ajax.html?svc=token/login&params=${encodeURIComponent(JSON.stringify({ token: token }))}&callback=${callbackName}`;
+        
+        // Обработка ошибок загрузки
+        script.onerror = function() {
+          updateMethodResult('jsonp', 'error', '❌ Ошибка загрузки JSONP скрипта');
+          log('❌ JSONP: Ошибка загрузки скрипта', 'error');
+          delete window[callbackName];
+          resolve(false);
+        };
+
+        // Таймаут для JSONP
+        setTimeout(() => {
+          if (window[callbackName]) {
+            updateMethodResult('jsonp', 'error', '❌ JSONP таймаут');
+            log('❌ JSONP: Таймаут запроса', 'error');
+            delete window[callbackName];
+            if (script) script.remove();
+            resolve(false);
+          }
+        }, 10000);
+
+        document.head.appendChild(script);
+      });
+    }
+
+    // CORS прокси метод
+    async function testCorsProxy() {
+      log('=== ТЕСТ CORS ПРОКСИ ===');
+      updateMethodResult('cors-proxy', 'loading', 'Тестирование CORS прокси...');
+
+      const proxyUrl = `https://cors-anywhere.herokuapp.com/https://${serverHost}/wialon/ajax.html`;
+      
+      try {
+        const response = await fetch(`${proxyUrl}?svc=token/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: `params=${JSON.stringify({ token: token })}`
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.error) {
+          throw new Error(`Wialon Error: ${data.error}`);
+        }
+
+        session = {
+          sid: data.eid,
+          userId: data.user?.id || 0,
+          userName: data.user?.nm || 'Unknown',
+          method: 'cors-proxy',
+          apiUrl: proxyUrl
+        };
+
+        workingMethod = 'cors-proxy';
+        updateMethodResult('cors-proxy', 'success', `✅ CORS прокси работает! SID: ${session.sid}, Пользователь: ${session.userName}`);
+        log(`✅ CORS прокси успешно! SID: ${session.sid}`, 'success');
+        document.getElementById('vehiclesBtn').disabled = false;
+        return true;
+
+      } catch (error) {
+        updateMethodResult('cors-proxy', 'error', `❌ ${error.message}`);
+        log(`❌ CORS прокси ошибка: ${error.message}`, 'error');
+        return false;
+      }
+    }
+
+    // AllOrigins прокси метод
+    async function testAllOrigins() {
+      log('=== ТЕСТ ALLORIGINS ПРОКСИ ===');
+      updateMethodResult('allorigins', 'loading', 'Тестирование AllOrigins...');
+
+      const targetUrl = `https://${serverHost}/wialon/ajax.html?svc=token/login`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+      
+      try {
+        const response = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `params=${JSON.stringify({ token: token })}`
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.error) {
+          throw new Error(`Wialon Error: ${data.error}`);
+        }
+
+        session = {
+          sid: data.eid,
+          userId: data.user?.id || 0,
+          userName: data.user?.nm || 'Unknown',
+          method: 'allorigins',
+          apiUrl: `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://${serverHost}/wialon/ajax.html`)}`
+        };
+
+        workingMethod = 'allorigins';
+        updateMethodResult('allorigins', 'success', `✅ AllOrigins работает! SID: ${session.sid}, Пользователь: ${session.userName}`);
+        log(`✅ AllOrigins успешно! SID: ${session.sid}`, 'success');
+        document.getElementById('vehiclesBtn').disabled = false;
+        return true;
+
+      } catch (error) {
+        updateMethodResult('allorigins', 'error', `❌ ${error.message}`);
+        log(`❌ AllOrigins ошибка: ${error.message}`, 'error');
+        return false;
+      }
+    }
+
+    // Тест альтернативных портов
+    async function testAlternativePorts() {
+      log('=== ТЕСТ АЛЬТЕРНАТИВНЫХ ПОРТОВ ===');
+      updateMethodResult('ports', 'loading', 'Тестирование портов...');
+
+      const ports = [80, 443, 8080, 8443, 9090];
+      
+      for (const port of ports) {
+        try {
+          log(`Тестирование порта ${port}...`);
+          const url = `https://${serverHost}:${port}/wialon/ajax.html`;
+          
+          const response = await fetch(`${url}?svc=token/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `params=${JSON.stringify({ token: token })}`
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (!data.error) {
+              session = {
+                sid: data.eid,
+                userId: data.user?.id || 0,
+                userName: data.user?.nm || 'Unknown',
+                method: 'port',
+                apiUrl: url
+              };
+
+              workingMethod = 'port';
+              updateMethodResult('ports', 'success', `✅ Порт ${port} работает! SID: ${session.sid}, Пользователь: ${session.userName}`);
+              log(`✅ Порт ${port} успешно! SID: ${session.sid}`, 'success');
+              document.getElementById('vehiclesBtn').disabled = false;
+              return true;
+            }
+          }
+        } catch (error) {
+          log(`❌ Порт ${port}: ${error.message}`, 'error');
+        }
+      }
+
+      updateMethodResult('ports', 'error', '❌ Ни один альтернативный порт не работает');
+      return false;
+    }
+
+    // Тестирование всех методов
+    async function testAllMethods() {
+      log('=== ТЕСТИРОВАНИЕ ВСЕХ АЛЬТЕРНАТИВНЫХ МЕТОДОВ ===');
+      showStatus('🔄 Тестирование альтернативных методов...', 'loading');
+
+      // Сброс состояния
+      session = null;
+      vehicles = [];
+      workingMethod = null;
+      document.getElementById('vehiclesBtn').disabled = true;
+
+      // Тестируем JSONP
+      const jsonpSuccess = await testJsonp();
+      if (jsonpSuccess) {
+        showStatus(`✅ JSONP метод работает! Пользователь: ${session.userName}`, 'success');
+        return;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Тестируем CORS прокси
+      const corsSuccess = await testCorsProxy();
+      if (corsSuccess) {
+        showStatus(`✅ CORS прокси работает! Пользователь: ${session.userName}`, 'success');
+        return;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Тестируем AllOrigins
+      const allOriginsSuccess = await testAllOrigins();
+      if (allOriginsSuccess) {
+        showStatus(`✅ AllOrigins прокси работает! Пользователь: ${session.userName}`, 'success');
+        return;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Тестируем альтернативные порты
+      const portsSuccess = await testAlternativePorts();
+      if (portsSuccess) {
+        showStatus(`✅ Альтернативный порт работает! Пользователь: ${session.userName}`, 'success');
+        return;
+      }
+
+      showStatus('❌ Ни один альтернативный метод не работает', 'error');
+      log('=== ВСЕ АЛЬТЕРНАТИВНЫЕ МЕТОДЫ ПРОТЕСТИРОВАНЫ - НИ ОДИН НЕ РАБОТАЕТ ===', 'error');
+    }
+
+    // Получение списка транспорта через JSONP
+    function getVehiclesJsonp() {
+      return new Promise((resolve) => {
+        log('=== ПОЛУЧЕНИЕ ТРАНСПОРТА ЧЕРЕЗ JSONP ===');
+        
+        const callbackName = 'wialonVehiclesCallback_' + Date.now();
+        
+        window[callbackName] = function(data) {
+          try {
+            if (data.error) {
+              throw new Error(`Wialon Error: ${data.error}`);
+            }
+
+            vehicles = data.items || [];
+            log(`✅ Найдено транспортных средств через JSONP: ${vehicles.length}`, 'success');
+            
+            if (vehicles.length > 0) {
+              // Обновляем позиции через JSONP
+              updateVehiclePositionsJsonp().then(() => {
+                displayVehicles();
+                showStatus(`✅ Загружено ${vehicles.length} транспортных средств через JSONP`, 'success');
+                resolve(true);
+              });
+            } else {
+              showStatus('⚠️ Транспортные средства не найдены', 'error');
+              resolve(false);
+            }
+          } catch (error) {
+            log(`❌ JSONP транспорт ошибка: ${error.message}`, 'error');
+            showStatus(`❌ Ошибка получения транспорта: ${error.message}`, 'error');
+            resolve(false);
+          } finally {
+            delete window[callbackName];
+            const script = document.getElementById('jsonp-vehicles-script');
+            if (script) script.remove();
+          }
+        };
+
+        const searchParams = {
+          spec: {
+            itemsType: 'avl_unit',
+            propName: 'sys_name',
+            propValueMask: '*',
+            sortType: 'sys_name'
+          },
+          force: 1,
+          flags: 0x1,
+          from: 0,
+          to: 0
+        };
+
+        const script = document.createElement('script');
+        script.id = 'jsonp-vehicles-script';
+        script.src = `https://${serverHost}/wialon/ajax.html?svc=core/search_items&sid=${session.sid}&params=${encodeURIComponent(JSON.stringify(searchParams))}&callback=${callbackName}`;
+        
+        script.onerror = function() {
+          log('❌ JSONP: Ошибка загрузки скрипта для получения транспорта', 'error');
+          showStatus('❌ Ошибка загрузки данных транспорта', 'error');
+          delete window[callbackName];
+          resolve(false);
+        };
+
+        setTimeout(() => {
+          if (window[callbackName]) {
+            log('❌ JSONP: Таймаут получения транспорта', 'error');
+            showStatus('❌ Таймаут получения транспорта', 'error');
+            delete window[callbackName];
+            if (script) script.remove();
+            resolve(false);
+          }
+        }, 15000);
+
+        document.head.appendChild(script);
+      });
+    }
+
+    // Обновление позиций транспорта через JSONP
+    function updateVehiclePositionsJsonp() {
+      return new Promise((resolve) => {
+        if (!vehicles.length) {
+          resolve();
+          return;
+        }
+
+        log('Обновление позиций транспорта через JSONP...');
+        
+        const callbackName = 'wialonPositionsCallback_' + Date.now();
+        
+        window[callbackName] = function(data) {
+          try {
+            if (data.error) {
+              log(`⚠️ Ошибка обновления позиций: ${data.error}`, 'error');
+            } else {
+              log('✅ Позиции транспорта обновлены через JSONP', 'success');
+            }
+          } catch (error) {
+            log(`❌ Ошибка обработки позиций: ${error.message}`, 'error');
+          } finally {
+            delete window[callbackName];
+            const script = document.getElementById('jsonp-positions-script');
+            if (script) script.remove();
+            resolve();
+          }
+        };
+
+        const vehicleIds = vehicles.map(v => v.id);
+        const updateParams = {
+          spec: vehicleIds.map(id => ({
+            type: 'id',
+            data: id,
+            flags: 0x1 | 0x2
+          }))
+        };
+
+        const script = document.createElement('script');
+        script.id = 'jsonp-positions-script';
+        script.src = `https://${serverHost}/wialon/ajax.html?svc=core/update_data_flags&sid=${session.sid}&params=${encodeURIComponent(JSON.stringify(updateParams))}&callback=${callbackName}`;
+        
+        script.onerror = function() {
+          log('❌ JSONP: Ошибка обновления позиций', 'error');
+          delete window[callbackName];
+          resolve();
+        };
+
+        setTimeout(() => {
+          if (window[callbackName]) {
+            log('❌ JSONP: Таймаут обновления позиций', 'error');
+            delete window[callbackName];
+            if (script) script.remove();
+            resolve();
+          }
+        }, 10000);
+
+        document.head.appendChild(script);
+      });
+    }
+
+    // Получение списка транспорта
+    async function getVehicles() {
+      if (!session) {
+        showStatus('❌ Сначала найдите рабочий метод подключения', 'error');
+        return;
+      }
+
+      log('=== ПОЛУЧЕНИЕ СПИСКА ТРАНСПОРТА ===');
+      showStatus('🚌 Загрузка транспорта...', 'loading');
+
+      try {
+        if (workingMethod === 'jsonp') {
+          // Для JSONP используем специальную функцию
+          await getVehiclesJsonp();
+        } else {
+          // Для прокси методов
+          const response = await fetch(`${session.apiUrl}?svc=core/search_items&sid=${session.sid}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `params=${JSON.stringify({
+              spec: {
+                itemsType: 'avl_unit',
+                propName: 'sys_name',
+                propValueMask: '*',
+                sortType: 'sys_name'
+              },
+              force: 1,
+              flags: 0x1,
+              from: 0,
+              to: 0
+            })}`
+          });
+
+          const data = await response.json();
+          
+          if (data.error) {
+            throw new Error(data.error);
+          }
+
+          vehicles = data.items || [];
+          log(`✅ Найдено транспортных средств: ${vehicles.length}`, 'success');
+
+          if (vehicles.length === 0) {
+            showStatus('⚠️ Транспортные средства не найдены', 'error');
+            return;
+          }
+
+          displayVehicles();
+          showStatus(`✅ Загружено ${vehicles.length} транспортных средств через ${workingMethod}`, 'success');
+        }
+
+      } catch (error) {
+        log(`❌ Ошибка: ${error.message}`, 'error');
+        showStatus(`❌ Ошибка: ${error.message}`, 'error');
+      }
+    }
+
+    // Отображение транспорта
+    function displayVehicles() {
+      const resultsDiv = document.getElementById('results');
+      
+      if (!vehicles.length) {
+        resultsDiv.innerHTML = '';
+        return;
+      }
+
+      let html = '<h3>🚌 Ваш транспорт:</h3><div class="vehicle-list">';
+      const now = Math.floor(Date.now() / 1000);
+
+      let online = 0, moving = 0, stopped = 0;
+
+      vehicles.forEach(vehicle => {
+        const pos = vehicle.pos;
+        const isOnline = pos && (now - pos.t) < 600;
+        const speed = pos?.s || 0;
+        let status = 'Оффлайн';
+        let statusClass = 'vehicle-offline';
+        
+        if (isOnline) {
+          online++;
+          if (speed > 5) {
+            status = 'В движении';
+            statusClass = 'vehicle-moving';
+            moving++;
+          } else {
+            status = 'Остановка';
+            statusClass = 'vehicle-stopped';
+            stopped++;
+          }
+        }
+
+        html += `
+          <div class="vehicle-item ${statusClass}">
+            <strong>${vehicle.nm || `Транспорт ${vehicle.id}`}</strong><br>
+            <small>
+              ID: ${vehicle.id} | Статус: ${status} | Скорость: ${speed} км/ч<br>
+              ${pos ? `Координаты: ${pos.y?.toFixed(6)}, ${pos.x?.toFixed(6)}` : 'Нет данных о позиции'}<br>
+              ${pos ? `Обновлено: ${new Date(pos.t * 1000).toLocaleString()}` : ''}
+            </small>
+          </div>
+        `;
+      });
+
+      html += '</div>';
+      
+      // Добавляем статистику
+      html += `
+        <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 6px;">
+          <strong>📊 Статистика:</strong><br>
+          <small>
+            Всего: ${vehicles.length} | 
+            Онлайн: ${online} | 
+            В движении: ${moving} | 
+            Остановка: ${stopped} | 
+            Оффлайн: ${vehicles.length - online}
+          </small>
+        </div>
+      `;
+      
+      // Добавляем информацию о подключении
+      html += `
+        <div style="margin-top: 15px; padding: 15px; background: #d4edda; border-radius: 6px;">
+          <strong>✅ Подключение через gps.ent-en.com успешно!</strong><br>
+          <small>Метод: ${workingMethod}</small><br>
+          <small>API: ${session.apiUrl}</small><br>
+          <small>SID: ${session.sid}</small><br>
+          <small>Пользователь: ${session.userName}</small>
+        </div>
+      `;
+      
+      resultsDiv.innerHTML = html;
+    }
+
+    // Очистка результатов
+    function clearResults() {
+      document.getElementById('results').innerHTML = '';
+      document.getElementById('log').innerHTML = '';
+      document.getElementById('status').innerHTML = '';
+      document.getElementById('vehiclesBtn').disabled = true;
+      
+      // Сброс методов
+      ['jsonp', 'cors-proxy', 'allorigins', 'ports'].forEach(methodId => {
+        document.getElementById(`method-${methodId}`).className = 'method-card';
+        document.getElementById(`result-${methodId}`).innerHTML = '';
+      });
+      
+      session = null;
+      vehicles = [];
+      workingMethod = null;
+    }
+
+    // Инициализация
+    window.onload = function() {
+      log('🔄 Система альтернативных методов для gps.ent-en.com готова!');
+      log(`Сервер: ${serverHost}`);
+      log(`Токен: ${token.substring(0, 30)}...`);
+      log('Нажмите "Тестировать все методы" для обхода CORS ограничений');
+    };
+  </script>
+</body>
+
+</html>

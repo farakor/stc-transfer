@@ -7,10 +7,17 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  BarChart3,
+  Activity,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { BookingStats } from '../../types/admin';
 import { adminService } from '../../services/adminService';
+import AnalyticsDashboard from '../../components/analytics/AnalyticsDashboard';
+import VehicleTrackingMapJsonp from '../../components/VehicleTrackingMapJsonp';
+import { wialonConfig, defaultMapSettings } from '../../config/wialon.config';
 
 interface StatCard {
   title: string;
@@ -25,6 +32,8 @@ const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<BookingStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [viewMode, setViewMode] = useState<'overview' | 'analytics'>('overview');
 
   useEffect(() => {
     fetchStats();
@@ -104,108 +113,158 @@ const AdminDashboard: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Заголовок */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Панель диспетчера</h1>
           <p className="text-gray-600 mt-1">Добро пожаловать в систему управления заказами</p>
         </div>
 
-        {/* Переключатель периода */}
-        <div className="flex bg-gray-100 rounded-lg p-1">
-          {(['day', 'week', 'month'] as const).map((p) => (
+        <div className="flex items-center space-x-4">
+          {/* Переключатель режима просмотра */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
             <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${period === p
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+              onClick={() => setViewMode('overview')}
+              className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'overview'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
                 }`}
             >
-              {getPeriodLabel(p)}
+              <Activity className="w-4 h-4 mr-2" />
+              Обзор
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Карточки статистики */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        {getStatCards().map((card, index) => (
-          <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">{card.title}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
-                {card.change && (
-                  <p className={`text-sm mt-1 ${card.changeType === 'positive' ? 'text-green-600' :
-                      card.changeType === 'negative' ? 'text-red-600' : 'text-gray-600'
-                    }`}>
-                    {card.change}
-                  </p>
-                )}
-              </div>
-              <div className={`${card.color} text-white p-3 rounded-lg`}>
-                {card.icon}
-              </div>
-            </div>
+            <button
+              onClick={() => setViewMode('analytics')}
+              className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'analytics'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Аналитика
+            </button>
           </div>
-        ))}
-      </div>
 
-      {/* Быстрые действия */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Быстрые действия</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button
-            onClick={() => window.location.href = '/admin/bookings'}
-            className="flex items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
-          >
-            <CalendarDays className="w-5 h-5 text-blue-600 mr-2" />
-            <span className="text-blue-700 font-medium">Управление заказами</span>
-          </button>
-
-          <button
-            onClick={() => window.location.href = '/admin/drivers'}
-            className="flex items-center justify-center p-4 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 transition-colors"
-          >
-            <Users className="w-5 h-5 text-green-600 mr-2" />
-            <span className="text-green-700 font-medium">Водители</span>
-          </button>
-
-          <button
-            onClick={() => window.location.href = '/admin/vehicles'}
-            className="flex items-center justify-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors"
-          >
-            <Car className="w-5 h-5 text-purple-600 mr-2" />
-            <span className="text-purple-700 font-medium">Транспорт</span>
-          </button>
+          {/* Переключатель периода */}
+          {viewMode === 'overview' && (
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              {(['day', 'week', 'month'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${period === p
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  {getPeriodLabel(p)}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Предупреждения */}
-      {stats && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Уведомления</h2>
-          <div className="space-y-3">
-            {stats.statusStats.find(s => s.status === 'PENDING')?._count.status > 0 && (
-              <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-yellow-600 mr-3" />
-                <div>
-                  <p className="text-yellow-800 font-medium">
-                    {stats.statusStats.find(s => s.status === 'PENDING')?._count.status} заказов ожидают обработки
-                  </p>
-                  <p className="text-yellow-700 text-sm">Требуется назначение водителей</p>
+      {/* Контент в зависимости от режима */}
+      {viewMode === 'overview' ? (
+        <>
+          {/* Карточки статистики */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            {getStatCards().map((card, index) => (
+              <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">{card.title}</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{card.value}</p>
+                    {card.change && (
+                      <p className={`text-sm mt-1 ${card.changeType === 'positive' ? 'text-green-600' :
+                        card.changeType === 'negative' ? 'text-red-600' : 'text-gray-600'
+                        }`}>
+                        {card.change}
+                      </p>
+                    )}
+                  </div>
+                  <div className={`${card.color} text-white p-3 rounded-lg`}>
+                    {card.icon}
+                  </div>
                 </div>
               </div>
-            )}
-
-            {!stats.statusStats.length && (
-              <div className="text-center py-8 text-gray-500">
-                <Clock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>Нет активных уведомлений</p>
-              </div>
-            )}
+            ))}
           </div>
-        </div>
+
+          {/* Карта мониторинга транспорта */}
+          <div className="mt-6">
+            <VehicleTrackingMapJsonp
+              height="600px"
+              wialonConfig={wialonConfig}
+              refreshInterval={defaultMapSettings.refreshInterval}
+              showControls={true}
+            />
+          </div>
+        </>
+      ) : (
+        <AnalyticsDashboard />
+      )}
+
+      {/* Быстрые действия и уведомления только в режиме обзора */}
+      {viewMode === 'overview' && (
+        <>
+          {/* Быстрые действия */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Быстрые действия</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button
+                onClick={() => window.location.href = '/admin/bookings'}
+                className="flex items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors"
+              >
+                <CalendarDays className="w-5 h-5 text-blue-600 mr-2" />
+                <span className="text-blue-700 font-medium">Управление заказами</span>
+              </button>
+
+              <button
+                onClick={() => window.location.href = '/admin/drivers'}
+                className="flex items-center justify-center p-4 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 transition-colors"
+              >
+                <Users className="w-5 h-5 text-green-600 mr-2" />
+                <span className="text-green-700 font-medium">Водители</span>
+              </button>
+
+              <button
+                onClick={() => window.location.href = '/admin/vehicles'}
+                className="flex items-center justify-center p-4 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors"
+              >
+                <Car className="w-5 h-5 text-purple-600 mr-2" />
+                <span className="text-purple-700 font-medium">Транспорт</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Предупреждения */}
+          {stats && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Уведомления</h2>
+              <div className="space-y-3">
+                {stats.statusStats.find(s => s.status === 'PENDING')?._count.status > 0 && (
+                  <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 mr-3" />
+                    <div>
+                      <p className="text-yellow-800 font-medium">
+                        {stats.statusStats.find(s => s.status === 'PENDING')?._count.status} заказов ожидают обработки
+                      </p>
+                      <p className="text-yellow-700 text-sm">Требуется назначение водителей</p>
+                    </div>
+                  </div>
+                )}
+
+                {!stats.statusStats.length && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Clock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>Нет активных уведомлений</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

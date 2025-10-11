@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { VehicleType } from '@prisma/client'
+import { VehicleType, BookingStatus } from '@prisma/client'
 import { BookingService } from '@/services/bookingService'
 
 export class BookingController {
@@ -158,7 +158,9 @@ export class BookingController {
         return
       }
 
-      const booking = await BookingService.updateBookingStatus(id, status, notes)
+      // Преобразуем статус в верхний регистр для соответствия enum BookingStatus
+      const enumStatus = status.toUpperCase() as BookingStatus
+      const booking = await BookingService.updateBookingStatus(id, enumStatus, notes)
 
       res.json({
         success: true,
@@ -265,6 +267,25 @@ export class BookingController {
       res.status(500).json({
         success: false,
         error: 'Failed to fetch active bookings'
+      })
+    }
+  }
+
+  // GET /api/bookings/all - Получить все заказы (включая завершенные и отмененные)
+  static async getAllBookings(req: Request, res: Response): Promise<void> {
+    try {
+      const bookings = await BookingService.getAllBookings()
+
+      res.json({
+        success: true,
+        data: bookings,
+        total: bookings.length
+      })
+    } catch (error) {
+      console.error('❌ Error fetching all bookings:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch all bookings'
       })
     }
   }

@@ -118,7 +118,15 @@ export class AdminController {
   static async updateDriver(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params
-      const updateData = req.body
+      const { name, phone, license, status, vehicleId } = req.body
+
+      const updateData = {
+        ...(name && { name }),
+        ...(phone && { phone }),
+        ...(license && { license }),
+        ...(status && { status }),
+        ...(vehicleId && { vehicleId: vehicleId.toString() })
+      }
 
       const driver = await AdminService.updateDriver(Number(id), updateData)
 

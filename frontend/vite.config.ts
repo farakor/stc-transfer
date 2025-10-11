@@ -17,8 +17,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3003,
+    port: 3003, // НИКОГДА НЕ МЕНЯЙ! ДОЛЖЕН БЫТЬ 3003!
     host: true,
+    strictPort: true, // Не позволяем Vite использовать другой порт
     // Настраиваем прокси для локальной разработки
     proxy: {
       '/api': {

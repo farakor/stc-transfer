@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест исправления сессии Wialon</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-weight: 500;
+    }
+
+    .status.loading {
+      background: #e0f2fe;
+      color: #0277bd;
+      border: 1px solid #81d4fa;
+    }
+
+    .status.success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #81c784;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+
+    .btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+
+    .btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .btn.success {
+      background: #28a745;
+    }
+
+    .info-block {
+      background: #e3f2fd;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #2196f3;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🔧 Тест исправления сессии Wialon</h1>
+    
+    <div class="info-block">
+      <strong>🎯 Цель теста:</strong> Проверить автоматическое восстановление сессии при ошибке 4<br>
+      <strong>🔑 Токен:</strong> 85991e5f06896e98fe3c0bd49d2fe6d8EC2B0F5F2A7A963F0EC0B869EB87FF8188C6EE8D<br>
+      <strong>🌐 Сервер:</strong> gps.ent-en.com
+    </div>
+
+    <div style="text-align: center; margin: 20px 0;">
+      <button class="btn success" onclick="testSessionRecovery()">🚀 Тест восстановления сессии</button>
+      <button class="btn" onclick="testNormalFlow()">✅ Тест обычного потока</button>
+      <button class="btn" onclick="clearResults()">🗑️ Очистить</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    const serverHost = 'gps.ent-en.com';
+    const token = '85991e5f06896e98fe3c0bd49d2fe6d8EC2B0F5F2A7A963F0EC0B869EB87FF8188C6EE8D';
+    let session = null;
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+      logEntry.style.margin = '2px 0';
+      logEntry.style.padding = '3px';
+      logEntry.style.borderRadius = '3px';
+      logEntry.style.fontSize = '12px';
+
+      switch (type) {
+        case 'error':
+          logEntry.style.background = '#ffebee';
+          logEntry.style.color = '#c62828';
+          break;
+        case 'success':
+          logEntry.style.background = '#e8f5e8';
+          logEntry.style.color = '#2e7d32';
+          break;
+        default:
+          logEntry.style.background = '#f8f9fa';
+          logEntry.style.color = '#495057';
+      }
+
+      logDiv.appendChild(logEntry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+    }
+
+    // JSONP запрос
+    function makeJsonpRequest(service, params, sid) {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'wialonCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        window[callbackName] = function(data) {
+          try {
+            if (data.error) {
+              reject(new Error(`Wialon API Error: ${data.error}`));
+            } else {
+              resolve(data);
+            }
+          } catch (error) {
+            reject(error);
+          } finally {
+            delete window[callbackName];
+            const script = document.getElementById(`jsonp-${callbackName}`);
+            if (script) script.remove();
+          }
+        };
+
+        let url = `https://${serverHost}/wialon/ajax.html?svc=${service}`;
+        if (sid) url += `&sid=${sid}`;
+        url += `&params=${encodeURIComponent(JSON.stringify(params))}`;
+        url += `&callback=${callbackName}`;
+
+        const script = document.createElement('script');
+        script.id = `jsonp-${callbackName}`;
+        script.src = url;
+        
+        script.onerror = () => {
+          delete window[callbackName];
+          reject(new Error('JSONP request failed'));
+        };
+
+        setTimeout(() => {
+          if (window[callbackName]) {
+            delete window[callbackName];
+            if (script) script.remove();
+            reject(new Error('JSONP timeout'));
+          }
+        }, 10000);
+
+        document.head.appendChild(script);
+      });
+    }
+
+    // Авторизация
+    async function login() {
+      log('Выполнение авторизации...');
+      try {
+        const response = await makeJsonpRequest('token/login', { token: token });
+        session = {
+          sid: response.eid,
+          userName: response.user?.nm || 'Unknown'
+        };
+        log(`✅ Авторизация успешна! SID: ${session.sid}, Пользователь: ${session.userName}`, 'success');
+        return session;
+      } catch (error) {
+        log(`❌ Ошибка авторизации: ${error.message}`, 'error');
+        throw error;
+      }
+    }
+
+    // Получение транспорта с автовосстановлением сессии
+    async function getVehiclesWithRetry() {
+      if (!session) {
+        throw new Error('No session available');
+      }
+
+      try {
+        log('Получение списка транспорта...');
+        const response = await makeJsonpRequest('core/search_items', {
+          spec: {
+            itemsType: 'avl_unit',
+            propName: 'sys_name',
+            propValueMask: '*',
+            sortType: 'sys_name'
+          },
+          force: 1,
+          flags: 1,
+          from: 0,
+          to: 0
+        }, session.sid);
+
+        const vehicles = response.items || [];
+        log(`✅ Получено транспорта: ${vehicles.length}`, 'success');
+        return vehicles;
+      } catch (error) {
+        // Если ошибка 4 (Invalid session), пытаемся переавторизоваться
+        if (error.message.includes('Wialon API Error: 4')) {
+          log('🔄 Обнаружена ошибка сессии (код 4), попытка переавторизации...', 'error');
+          try {
+            await login();
+            log('🔄 Повторный запрос транспорта с новой сессией...');
+            
+            const retryResponse = await makeJsonpRequest('core/search_items', {
+              spec: {
+                itemsType: 'avl_unit',
+                propName: 'sys_name',
+                propValueMask: '*',
+                sortType: 'sys_name'
+              },
+              force: 1,
+              flags: 1,
+              from: 0,
+              to: 0
+            }, session.sid);
+
+            const vehicles = retryResponse.items || [];
+            log(`✅ После переавторизации получено транспорта: ${vehicles.length}`, 'success');
+            return vehicles;
+          } catch (retryError) {
+            log(`❌ Ошибка после переавторизации: ${retryError.message}`, 'error');
+            throw retryError;
+          }
+        } else {
+          log(`❌ Ошибка получения транспорта: ${error.message}`, 'error');
+          throw error;
+        }
+      }
+    }
+
+    // Тест восстановления сессии
+    async function testSessionRecovery() {
+      log('=== ТЕСТ ВОССТАНОВЛЕНИЯ СЕССИИ ===');
+      showStatus('🔄 Тестирование восстановления сессии...', 'loading');
+
+      try {
+        // Шаг 1: Авторизация
+        await login();
+        
+        // Шаг 2: Намеренно "портим" сессию для имитации ошибки 4
+        log('🔧 Имитация истечения сессии...');
+        const originalSid = session.sid;
+        session.sid = 'invalid_session_id_for_testing';
+        
+        // Шаг 3: Попытка получить транспорт (должна вызвать ошибку 4 и автовосстановление)
+        log('🧪 Попытка получения транспорта с недействительной сессией...');
+        const vehicles = await getVehiclesWithRetry();
+        
+        showStatus(`✅ Тест пройден! Сессия автоматически восстановлена. Найдено транспорта: ${vehicles.length}`, 'success');
+        log(`🎉 ТЕСТ УСПЕШЕН: Автовосстановление сессии работает!`, 'success');
+        
+      } catch (error) {
+        showStatus(`❌ Тест провален: ${error.message}`, 'error');
+        log(`💥 ТЕСТ ПРОВАЛЕН: ${error.message}`, 'error');
+      }
+    }
+
+    // Тест обычного потока
+    async function testNormalFlow() {
+      log('=== ТЕСТ ОБЫЧНОГО ПОТОКА ===');
+      showStatus('🔄 Тестирование обычного потока...', 'loading');
+
+      try {
+        await login();
+        const vehicles = await getVehiclesWithRetry();
+        
+        showStatus(`✅ Обычный поток работает! Найдено транспорта: ${vehicles.length}`, 'success');
+        log(`✅ ОБЫЧНЫЙ ПОТОК: Все работает нормально`, 'success');
+        
+      } catch (error) {
+        showStatus(`❌ Ошибка в обычном потоке: ${error.message}`, 'error');
+        log(`❌ ОШИБКА: ${error.message}`, 'error');
+      }
+    }
+
+    // Очистка результатов
+    function clearResults() {
+      document.getElementById('log').innerHTML = '';
+      document.getElementById('status').innerHTML = '';
+      session = null;
+    }
+
+    // Инициализация
+    window.onload = function() {
+      log('🔧 Тест исправления сессии готов!');
+      log(`Сервер: ${serverHost}`);
+      log(`Токен: ${token.substring(0, 30)}...`);
+      log('Нажмите "Тест восстановления сессии" для проверки исправления');
+    };
+  </script>
+</body>
+
+</html>

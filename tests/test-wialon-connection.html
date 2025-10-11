@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест подключения к Wialon - gps.ent-en.com</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-weight: 500;
+    }
+
+    .status.loading {
+      background: #e0f2fe;
+      color: #0277bd;
+      border: 1px solid #81d4fa;
+    }
+
+    .status.success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #81c784;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+
+    .info-block {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #007bff;
+    }
+
+    .vehicle-list {
+      margin-top: 20px;
+    }
+
+    .vehicle-item {
+      background: #f8f9fa;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+      border-left: 3px solid #28a745;
+    }
+
+    .vehicle-offline {
+      border-left-color: #dc3545;
+    }
+
+    .btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+
+    .btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    pre {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🔌 Тест подключения к Wialon</h1>
+    <p>Проверка подключения к серверу: <strong>176.74.220.111</strong></p>
+
+    <div class="info-block">
+      <strong>Настройки подключения:</strong><br>
+      Сервер: 176.74.220.111<br>
+      Токен: 85991e5f06896e98fe3c0bd49d2fe6d8EC2B0F5F2A7A963F0EC0B869EB87FF8188C6EE8D
+    </div>
+
+    <button class="btn" onclick="testConnection()">🚀 Тестировать текущую</button>
+    <button class="btn" onclick="testAllTokens()">🔑 Тестировать все токены</button>
+    <button class="btn" onclick="testAllConfigs()">🔄 Тестировать все комбинации</button>
+    <button class="btn" onclick="testServerAvailability()">🌐 Проверить доступность сервера</button>
+    <button class="btn" onclick="getVehicles()" id="vehiclesBtn" disabled>🚌 Получить список транспорта</button>
+    <button class="btn" onclick="clearLog()">🗑️ Очистить лог</button>
+
+    <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+      <strong>Текущая конфигурация:</strong> <span id="currentConfig">HTTP + Токен 1</span><br>
+      <small>Всего конфигураций: <span id="totalConfigs">40</span> (5 URL × 8 токенов)</small>
+    </div>
+
+    <div id="status"></div>
+    <div id="results"></div>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    // Все доступные токены для тестирования
+    const tokens = [
+      '85991e5f06896e98fe3c0bd49d2fe6d8180CC6E50B57B93D4DEBC803DCA10911F8194C4C',
+      '85991e5f06896e98fe3c0bd49d2fe6d81E788605DF95583FD8DDBFFC265EBDE983728755',
+      '85991e5f06896e98fe3c0bd49d2fe6d81F89022B622B2C29F032B733A970E75BD5442A89',
+      '85991e5f06896e98fe3c0bd49d2fe6d82EF1B79878B3945A64C4E9CF0B89A97BBE9859DC',
+      '85991e5f06896e98fe3c0bd49d2fe6d87952655C715C1EEB7D785AECF9E97D45C2365196',
+      '85991e5f06896e98fe3c0bd49d2fe6d88A480A15648C17B4F9820C17D612D39FF0416A36',
+      '85991e5f06896e98fe3c0bd49d2fe6d8EC2B0F5F2A7A963F0EC0B869EB87FF8188C6EE8D',
+      '85991e5f06896e98fe3c0bd49d2fe6d8FB33DD1867560C348D1E2840BE0227089280C386'
+    ];
+
+    // Базовые URL для тестирования
+    const baseUrls = [
+      'http://176.74.220.111',
+      'https://176.74.220.111',
+      'http://176.74.220.111:8080',
+      'http://176.74.220.111/wialon/ajax.html',
+      'http://176.74.220.111:80'
+    ];
+
+    // Генерируем все комбинации URL + токен
+    const configs = [];
+    baseUrls.forEach((baseUrl, urlIndex) => {
+      tokens.forEach((token, tokenIndex) => {
+        const urlName = baseUrl.includes(':8080') ? 'HTTP:8080' :
+          baseUrl.includes('https') ? 'HTTPS' :
+            baseUrl.includes('/wialon/ajax.html') ? 'HTTP прямой' :
+              baseUrl.includes(':80') ? 'HTTP:80' : 'HTTP';
+
+        configs.push({
+          name: `${urlName} + Токен ${tokenIndex + 1}`,
+          baseUrl: baseUrl,
+          token: token,
+          tokenIndex: tokenIndex + 1,
+          urlIndex: urlIndex + 1
+        });
+      });
+    });
+
+    let currentConfigIndex = 0;
+    let config = configs[currentConfigIndex];
+
+    let session = null;
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+      logEntry.style.margin = '5px 0';
+      logEntry.style.padding = '5px';
+      logEntry.style.borderRadius = '3px';
+
+      switch (type) {
+        case 'error':
+          logEntry.style.background = '#ffebee';
+          logEntry.style.color = '#c62828';
+          break;
+        case 'success':
+          logEntry.style.background = '#e8f5e8';
+          logEntry.style.color = '#2e7d32';
+          break;
+        default:
+          logEntry.style.background = '#f8f9fa';
+          logEntry.style.color = '#495057';
+      }
+
+      logDiv.appendChild(logEntry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+    }
+
+    async function makeRequest(svc, params = {}) {
+      // Определяем правильный URL
+      let baseApiUrl;
+      if (config.baseUrl.includes('/wialon/ajax.html')) {
+        baseApiUrl = config.baseUrl;
+      } else {
+        baseApiUrl = `${config.baseUrl}/wialon/ajax.html`;
+      }
+
+      const url = new URL(baseApiUrl);
+      url.searchParams.set('svc', svc);
+
+      if (session) {
+        url.searchParams.set('sid', session.sid);
+      }
+
+      const body = new URLSearchParams();
+      body.append('params', JSON.stringify(params));
+
+      log(`Конфигурация: ${config.name}`);
+      log(`Отправка запроса: ${svc}`);
+      log(`URL: ${url.toString()}`);
+      log(`Параметры: ${JSON.stringify(params)}`);
+
+      try {
+        const response = await fetch(url.toString(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: body.toString()
+        });
+
+        log(`Статус ответа: ${response.status} ${response.statusText}`);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        log(`Ответ получен: ${JSON.stringify(data, null, 2)}`);
+        return data;
+      } catch (error) {
+        log(`Ошибка запроса: ${error.message}`, 'error');
+        throw error;
+      }
+    }
+
+    // Новые функции для тестирования
+    async function testServerAvailability() {
+      log('=== ТЕСТ ДОСТУПНОСТИ СЕРВЕРА ===');
+
+      const testUrls = [
+        'http://176.74.220.111',
+        'https://176.74.220.111',
+        'http://176.74.220.111:8080',
+        'http://176.74.220.111/wialon',
+        'http://176.74.220.111:80'
+      ];
+
+      for (const testUrl of testUrls) {
+        try {
+          log(`Проверка доступности: ${testUrl}`);
+          const response = await fetch(testUrl, {
+            method: 'HEAD',
+            mode: 'no-cors' // Обходим CORS для простой проверки доступности
+          });
+          log(`✅ ${testUrl} - доступен`, 'success');
+        } catch (error) {
+          log(`❌ ${testUrl} - недоступен: ${error.message}`, 'error');
+        }
+      }
+    }
+
+    async function testAllTokens() {
+      log('=== ТЕСТ ВСЕХ ТОКЕНОВ С HTTP ===');
+      showStatus('🔄 Тестирование всех 8 токенов...', 'loading');
+
+      const baseUrl = 'http://176.74.220.111';
+
+      for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
+        const testConfig = {
+          name: `HTTP + Токен ${i + 1}`,
+          baseUrl: baseUrl,
+          token: token,
+          tokenIndex: i + 1
+        };
+
+        config = testConfig;
+        document.getElementById('currentConfig').textContent = config.name;
+
+        log(`\n--- Тестирование токена ${i + 1}/8 ---`);
+        log(`Токен: ${token.substring(0, 20)}...${token.substring(token.length - 10)}`);
+
+        try {
+          session = null; // Сбрасываем сессию
+          await testConnectionSilent();
+          log(`✅ Токен ${i + 1} работает!`, 'success');
+          showStatus(`✅ Найден рабочий токен ${i + 1}!`, 'success');
+          document.getElementById('vehiclesBtn').disabled = false;
+          return; // Останавливаемся на первом рабочем токене
+        } catch (error) {
+          log(`❌ Токен ${i + 1} не работает: ${error.message}`, 'error');
+        }
+
+        // Небольшая пауза между тестами
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      showStatus('❌ Ни один токен не работает', 'error');
+      log('=== ВСЕ ТОКЕНЫ ПРОТЕСТИРОВАНЫ ===', 'error');
+    }
+
+    async function testAllConfigs() {
+      log('=== ТЕСТ ВСЕХ КОМБИНАЦИЙ (URL + ТОКЕНЫ) ===');
+      showStatus('🔄 Тестирование всех 40 комбинаций...', 'loading');
+
+      for (let i = 0; i < configs.length; i++) {
+        currentConfigIndex = i;
+        config = configs[i];
+        document.getElementById('currentConfig').textContent = config.name;
+
+        log(`\n--- Тестирование ${i + 1}/${configs.length}: ${config.name} ---`);
+
+        try {
+          session = null; // Сбрасываем сессию
+          await testConnectionSilent();
+          log(`✅ Конфигурация "${config.name}" работает!`, 'success');
+          showStatus(`✅ Найдена рабочая конфигурация: ${config.name}`, 'success');
+          document.getElementById('vehiclesBtn').disabled = false;
+          return; // Останавливаемся на первой рабочей конфигурации
+        } catch (error) {
+          log(`❌ ${config.name}: ${error.message}`, 'error');
+        }
+
+        // Небольшая пауза между тестами
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      showStatus('❌ Ни одна конфигурация не работает', 'error');
+      log('=== ВСЕ КОНФИГУРАЦИИ ПРОТЕСТИРОВАНЫ ===', 'error');
+    }
+
+    // Тихая версия тестирования (без лишних логов)
+    async function testConnectionSilent() {
+      const loginResponse = await makeRequestSilent('token/login', {
+        token: config.token
+      });
+
+      if (loginResponse.error) {
+        throw new Error(`Ошибка авторизации: ${loginResponse.error}`);
+      }
+
+      session = {
+        sid: loginResponse.eid,
+        userId: loginResponse.user?.id || 0,
+        userName: loginResponse.user?.nm || 'Unknown'
+      };
+
+      return session;
+    }
+
+    // Тихая версия запроса (без подробных логов)
+    async function makeRequestSilent(svc, params = {}) {
+      let baseApiUrl;
+      if (config.baseUrl.includes('/wialon/ajax.html')) {
+        baseApiUrl = config.baseUrl;
+      } else {
+        baseApiUrl = `${config.baseUrl}/wialon/ajax.html`;
+      }
+
+      const url = new URL(baseApiUrl);
+      url.searchParams.set('svc', svc);
+
+      if (session) {
+        url.searchParams.set('sid', session.sid);
+      }
+
+      const body = new URLSearchParams();
+      body.append('params', JSON.stringify(params));
+
+      const response = await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body.toString()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    }
+
+    async function testConnection() {
+      showStatus('🔄 Подключение к Wialon...', 'loading');
+      log('=== НАЧАЛО ТЕСТА ПОДКЛЮЧЕНИЯ ===');
+
+      try {
+        // Тест 1: Проверка доступности сервера
+        log('Шаг 1: Проверка доступности сервера...');
+
+        // Тест 2: Авторизация
+        log('Шаг 2: Попытка авторизации...');
+        const loginResponse = await makeRequest('token/login', {
+          token: config.token
+        });
+
+        if (loginResponse.error) {
+          throw new Error(`Ошибка авторизации: ${loginResponse.error}`);
+        }
+
+        session = {
+          sid: loginResponse.eid,
+          userId: loginResponse.user?.id || 0,
+          userName: loginResponse.user?.nm || 'Unknown'
+        };
+
+        log(`Авторизация успешна! SID: ${session.sid}`, 'success');
+        log(`Пользователь: ${session.userName} (ID: ${session.userId})`, 'success');
+
+        // Тест 3: Установка локали
+        log('Шаг 3: Установка часового пояса...');
+        const tzOffset = new Date().getTimezoneOffset() * -60;
+        await makeRequest('render/set_locale', {
+          tzOffset,
+          language: 'ru'
+        });
+
+        showStatus('✅ Подключение к Wialon успешно установлено!', 'success');
+        document.getElementById('vehiclesBtn').disabled = false;
+
+        log('=== ТЕСТ ПОДКЛЮЧЕНИЯ ЗАВЕРШЕН УСПЕШНО ===', 'success');
+
+      } catch (error) {
+        showStatus(`❌ Ошибка подключения: ${error.message}`, 'error');
+        log(`КРИТИЧЕСКАЯ ОШИБКА: ${error.message}`, 'error');
+        log('=== ТЕСТ ПОДКЛЮЧЕНИЯ ПРОВАЛЕН ===', 'error');
+      }
+    }
+
+    async function getVehicles() {
+      if (!session) {
+        showStatus('❌ Сначала выполните подключение', 'error');
+        return;
+      }
+
+      showStatus('🔄 Получение списка транспорта...', 'loading');
+      log('=== ПОЛУЧЕНИЕ СПИСКА ТРАНСПОРТА ===');
+
+      try {
+        // Получаем список объектов мониторинга
+        const searchResponse = await makeRequest('core/search_items', {
+          spec: {
+            itemsType: 'avl_unit',
+            propName: 'sys_name',
+            propValueMask: '*',
+            sortType: 'sys_name'
+          },
+          force: 1,
+          flags: 0x1,
+          from: 0,
+          to: 0
+        });
+
+        const vehicles = searchResponse.items || [];
+        log(`Найдено транспортных средств: ${vehicles.length}`, 'success');
+
+        if (vehicles.length === 0) {
+          showStatus('⚠️ Транспортные средства не найдены', 'error');
+          return;
+        }
+
+        // Получаем актуальные данные о позициях
+        log('Получение данных о позициях...');
+        const vehicleIds = vehicles.map(v => v.id);
+
+        const updateResponse = await makeRequest('core/update_data_flags', {
+          spec: vehicleIds.map(id => ({
+            type: 'id',
+            data: id,
+            flags: 0x1 | 0x2 // Базовая информация + позиция
+          }))
+        });
+
+        // Отображаем результаты
+        displayVehicles(vehicles);
+        showStatus(`✅ Получено ${vehicles.length} транспортных средств`, 'success');
+
+        log('=== СПИСОК ТРАНСПОРТА ПОЛУЧЕН УСПЕШНО ===', 'success');
+
+      } catch (error) {
+        showStatus(`❌ Ошибка получения транспорта: ${error.message}`, 'error');
+        log(`ОШИБКА: ${error.message}`, 'error');
+      }
+    }
+
+    function displayVehicles(vehicles) {
+      const resultsDiv = document.getElementById('results');
+
+      let html = '<div class="vehicle-list"><h3>🚌 Список транспортных средств:</h3>';
+
+      vehicles.forEach((vehicle, index) => {
+        const pos = vehicle.pos;
+        const isOnline = pos && (Math.floor(Date.now() / 1000) - pos.t) < 600; // 10 минут
+        const speed = pos?.s || 0;
+        const status = !isOnline ? 'Оффлайн' : speed > 5 ? 'В движении' : 'Остановка';
+
+        html += `
+                    <div class="vehicle-item ${!isOnline ? 'vehicle-offline' : ''}">
+                        <strong>${vehicle.nm || `Транспорт ${vehicle.id}`}</strong><br>
+                        <small>
+                            ID: ${vehicle.id} | 
+                            Статус: ${status} | 
+                            Скорость: ${speed} км/ч<br>
+                            ${pos ? `Координаты: ${pos.y?.toFixed(6)}, ${pos.x?.toFixed(6)}` : 'Нет данных о позиции'}<br>
+                            ${pos ? `Последнее обновление: ${new Date(pos.t * 1000).toLocaleString()}` : ''}
+                        </small>
+                    </div>
+                `;
+      });
+
+      html += '</div>';
+      resultsDiv.innerHTML = html;
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+      document.getElementById('results').innerHTML = '';
+      document.getElementById('status').innerHTML = '';
+    }
+
+    // Автоматический запуск теста при загрузке
+    window.onload = function () {
+      log('Страница загружена. Готов к тестированию подключения к Wialon.');
+      log(`Доступно токенов: ${tokens.length}`);
+      log(`Доступно URL: ${baseUrls.length}`);
+      log(`Всего комбинаций: ${configs.length}`);
+      log(`Текущая конфигурация: ${config.name}`);
+      log(`Сервер: ${config.baseUrl}`);
+      log(`Токен: ${config.token.substring(0, 20)}...${config.token.substring(config.token.length - 10)}`);
+
+      document.getElementById('currentConfig').textContent = config.name;
+      document.getElementById('totalConfigs').textContent = configs.length;
+    };
+  </script>
+</body>
+
+</html>

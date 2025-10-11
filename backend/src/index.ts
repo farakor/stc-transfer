@@ -28,15 +28,29 @@ const PORT = process.env.PORT || 3001;
 // Security middleware
 app.use(helmet());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // limit each IP to 100 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP, please try again later.'
-  }
-});
-app.use(limiter);
+// Rate limiting - более мягкие ограничения для development
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+// Применяем rate limiting только в production или если явно указано
+if (!isDevelopment || process.env.FORCE_RATE_LIMIT === 'true') {
+  const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'); // 15 минут
+  const maxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'); // 100 запросов
+  
+  const limiter = rateLimit({
+    windowMs: windowMs,
+    max: maxRequests,
+    message: {
+      error: 'Too many requests from this IP, please try again later.'
+    },
+    standardHeaders: true, // Возвращает rate limit info в заголовках `RateLimit-*`
+    legacyHeaders: false, // Отключает заголовки `X-RateLimit-*`
+  });
+  
+  app.use(limiter);
+  console.log(`🛡️  Rate limiting enabled: ${maxRequests} requests per ${windowMs}ms`);
+} else {
+  console.log('🚧 Rate limiting disabled for development');
+}
 
 // CORS configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [

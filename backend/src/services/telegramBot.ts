@@ -243,6 +243,29 @@ ID заказа: ${booking.id}
     }
   }
 
+  // Отправить уведомление водителю о новом заказе
+  public async sendDriverNewOrderNotification(driverTelegramId: string, booking: any) {
+    const message = `
+🚗 Новый заказ назначен!
+
+📍 Маршрут: ${booking.from_location} → ${booking.to_location}
+👤 Клиент: ${booking.user?.name || booking.user?.first_name || 'Не указано'}
+📞 Телефон: ${booking.user?.phone || 'Не указан'}
+💰 Стоимость: ${booking.price} сум
+📅 Время подачи: ${booking.pickup_time ? new Date(booking.pickup_time).toLocaleString('ru-RU') : 'Как можно скорее'}
+${booking.notes ? `📝 Примечания: ${booking.notes}` : ''}
+
+⏰ Пожалуйста, примите заказ в приложении водителя.
+    `
+
+    try {
+      await this.sendMessage(Number(driverTelegramId), message)
+    } catch (error) {
+      console.error('❌ Failed to send driver new order notification:', error)
+      throw error
+    }
+  }
+
   // Отправить уведомление об отмене заказа
   public async sendCancellationNotification(chatId: number, bookingId: string, reason?: string) {
     const message = `

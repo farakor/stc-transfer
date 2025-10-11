@@ -60,16 +60,17 @@ model Route {
 }
 
 model Driver {
-  id         Int          @id @default(autoincrement())
-  name       String
-  phone      String
-  license    String
-  status     DriverStatus @default(AVAILABLE)
-  vehicle_id Int?         @unique
-  created_at DateTime     @default(now())
-  updated_at DateTime     @default(now())
-  bookings   Booking[]
-  vehicle    Vehicle?     @relation(fields: [vehicle_id], references: [id])
+  id          Int          @id @default(autoincrement())
+  name        String
+  phone       String
+  license     String
+  telegram_id String? // Telegram ID водителя для уведомлений
+  status      DriverStatus @default(AVAILABLE)
+  vehicle_id  Int?         @unique
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @default(now())
+  bookings    Booking[]
+  vehicle     Vehicle?     @relation(fields: [vehicle_id], references: [id])
 
   @@map("Driver")
 }
@@ -92,7 +93,7 @@ model Booking {
   route_type       RouteType?
   distance_km      Float?
   price            Decimal       @db.Decimal(10, 2)
-  vehicle_type     VehicleType?  // Тип автомобиля, выбранный клиентом
+  vehicle_type     VehicleType? // Тип автомобиля, выбранный клиентом
   created_at       DateTime      @default(now())
   updated_at       DateTime      @default(now())
   driver           Driver?       @relation(fields: [driver_id], references: [id])
@@ -113,9 +114,10 @@ enum VehicleType {
 
 enum BookingStatus {
   PENDING
-  CONFIRMED
-  IN_PROGRESS
-  COMPLETED
+  VEHICLE_ASSIGNED // Машина назначена
+  CONFIRMED // Водитель принял заказ (В пути)
+  IN_PROGRESS // Рейс начат (В работе)
+  COMPLETED // Завершен
   CANCELLED
 }
 
@@ -137,14 +139,14 @@ enum RouteType {
 }
 
 model SystemSetting {
-  id          Int      @id @default(autoincrement())
-  key         String   @unique
+  id          Int         @id @default(autoincrement())
+  key         String      @unique
   value       String
   type        SettingType
   category    String
   description String?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @default(now())
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @default(now())
 
   @@map("SystemSetting")
 }
@@ -192,21 +194,21 @@ model TariffRoute {
 }
 
 model Tariff {
-  id                        Int      @id @default(autoincrement())
+  id                        Int       @id @default(autoincrement())
   route_id                  Int
   vehicle_brand             String
   vehicle_model             String
-  base_price                Decimal  @default(0) @db.Decimal(12, 2)
-  price_per_km              Decimal  @default(0) @db.Decimal(10, 2)
-  minimum_price             Decimal? @db.Decimal(12, 2)
-  night_surcharge_percent   Decimal? @default(0) @db.Decimal(5, 2)
-  holiday_surcharge_percent Decimal? @default(0) @db.Decimal(5, 2)
-  waiting_price_per_minute  Decimal? @default(0) @db.Decimal(8, 2)
-  is_active                 Boolean  @default(true)
+  base_price                Decimal   @default(0) @db.Decimal(12, 2)
+  price_per_km              Decimal   @default(0) @db.Decimal(10, 2)
+  minimum_price             Decimal?  @db.Decimal(12, 2)
+  night_surcharge_percent   Decimal?  @default(0) @db.Decimal(5, 2)
+  holiday_surcharge_percent Decimal?  @default(0) @db.Decimal(5, 2)
+  waiting_price_per_minute  Decimal?  @default(0) @db.Decimal(8, 2)
+  is_active                 Boolean   @default(true)
   valid_from                DateTime?
   valid_until               DateTime?
-  created_at                DateTime @default(now())
-  updated_at                DateTime @default(now())
+  created_at                DateTime  @default(now())
+  updated_at                DateTime  @default(now())
 
   route TariffRoute @relation(fields: [route_id], references: [id], onDelete: Cascade)
 

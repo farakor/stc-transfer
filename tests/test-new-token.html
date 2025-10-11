@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест нового токена Wialon</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-weight: 500;
+    }
+
+    .status.loading {
+      background: #e0f2fe;
+      color: #0277bd;
+      border: 1px solid #81d4fa;
+    }
+
+    .status.success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #81c784;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+
+    .btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+
+    .btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .btn.success {
+      background: #28a745;
+    }
+
+    .btn.large {
+      padding: 15px 30px;
+      font-size: 16px;
+    }
+
+    .info-block {
+      background: #e3f2fd;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #2196f3;
+    }
+
+    .token-info {
+      background: #d4edda;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #28a745;
+    }
+
+    .vehicle-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .stat-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 6px;
+      text-align: center;
+      border: 1px solid #dee2e6;
+    }
+
+    .stat-number {
+      font-size: 24px;
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🔑 Тест нового токена Wialon</h1>
+    
+    <div class="token-info">
+      <strong>🆕 Новый токен для тестирования:</strong><br>
+      <small>85991e5f06896e98fe3c0bd49d2fe6d825770468546E156C3088DF44EB44163B2A478841</small><br>
+      <small>Сервер: gps.ent-en.com</small>
+    </div>
+
+    <div class="info-block">
+      <strong>🎯 Что тестируем:</strong><br>
+      1. Авторизация с новым токеном<br>
+      2. Получение списка транспорта<br>
+      3. Обновление данных транспорта<br>
+      4. Проверка стабильности подключения
+    </div>
+
+    <div style="text-align: center; margin: 20px 0;">
+      <button class="btn large success" onclick="runFullTest()">🚀 Полный тест нового токена</button>
+      <button class="btn" onclick="testLogin()">🔐 Только авторизация</button>
+      <button class="btn" onclick="clearResults()">🗑️ Очистить</button>
+    </div>
+
+    <div id="status"></div>
+
+    <!-- Статистика транспорта -->
+    <div class="vehicle-stats" id="vehicleStats" style="display: none;">
+      <div class="stat-card">
+        <div class="stat-number" id="totalVehicles">0</div>
+        <div class="stat-label">Всего транспорта</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="onlineVehicles">0</div>
+        <div class="stat-label">Онлайн</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="movingVehicles">0</div>
+        <div class="stat-label">В движении</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stoppedVehicles">0</div>
+        <div class="stat-label">Остановка</div>
+      </div>
+    </div>
+
+    <div id="log"></div>
+  </div>
+
+  <script>
+    const serverHost = 'gps.ent-en.com';
+    const newToken = '85991e5f06896e98fe3c0bd49d2fe6d825770468546E156C3088DF44EB44163B2A478841';
+    let session = null;
+    let vehicles = [];
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+      logEntry.style.margin = '2px 0';
+      logEntry.style.padding = '3px';
+      logEntry.style.borderRadius = '3px';
+      logEntry.style.fontSize = '12px';
+
+      switch (type) {
+        case 'error':
+          logEntry.style.background = '#ffebee';
+          logEntry.style.color = '#c62828';
+          break;
+        case 'success':
+          logEntry.style.background = '#e8f5e8';
+          logEntry.style.color = '#2e7d32';
+          break;
+        default:
+          logEntry.style.background = '#f8f9fa';
+          logEntry.style.color = '#495057';
+      }
+
+      logDiv.appendChild(logEntry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+    }
+
+    function updateStats(vehicleList) {
+      const now = Math.floor(Date.now() / 1000);
+      let online = 0, moving = 0, stopped = 0;
+
+      vehicleList.forEach(vehicle => {
+        const pos = vehicle.pos;
+        if (pos && (now - pos.t) < 600) { // 10 минут
+          online++;
+          const speed = pos.s || 0;
+          if (speed > 5) {
+            moving++;
+          } else {
+            stopped++;
+          }
+        }
+      });
+
+      document.getElementById('totalVehicles').textContent = vehicleList.length;
+      document.getElementById('onlineVehicles').textContent = online;
+      document.getElementById('movingVehicles').textContent = moving;
+      document.getElementById('stoppedVehicles').textContent = stopped;
+      document.getElementById('vehicleStats').style.display = 'grid';
+    }
+
+    // JSONP запрос
+    function makeJsonpRequest(service, params, sid) {
+      return new Promise((resolve, reject) => {
+        const callbackName = 'wialonCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        window[callbackName] = function(data) {
+          try {
+            if (data.error) {
+              reject(new Error(`Wialon API Error: ${data.error}`));
+            } else {
+              resolve(data);
+            }
+          } catch (error) {
+            reject(error);
+          } finally {
+            delete window[callbackName];
+            const script = document.getElementById(`jsonp-${callbackName}`);
+            if (script) script.remove();
+          }
+        };
+
+        let url = `https://${serverHost}/wialon/ajax.html?svc=${service}`;
+        if (sid) url += `&sid=${sid}`;
+        url += `&params=${encodeURIComponent(JSON.stringify(params))}`;
+        url += `&callback=${callbackName}`;
+
+        const script = document.createElement('script');
+        script.id = `jsonp-${callbackName}`;
+        script.src = url;
+        
+        script.onerror = () => {
+          delete window[callbackName];
+          reject(new Error('JSONP request failed'));
+        };
+
+        setTimeout(() => {
+          if (window[callbackName]) {
+            delete window[callbackName];
+            if (script) script.remove();
+            reject(new Error('JSONP timeout'));
+          }
+        }, 15000);
+
+        document.head.appendChild(script);
+      });
+    }
+
+    // Авторизация
+    async function testLogin() {
+      log('=== ТЕСТ АВТОРИЗАЦИИ С НОВЫМ ТОКЕНОМ ===');
+      showStatus('🔐 Авторизация с новым токеном...', 'loading');
+
+      try {
+        const response = await makeJsonpRequest('token/login', { token: newToken });
+        session = {
+          sid: response.eid,
+          userName: response.user?.nm || 'Unknown',
+          userId: response.user?.id || 0
+        };
+        
+        log(`✅ Авторизация успешна!`, 'success');
+        log(`SID: ${session.sid}`, 'success');
+        log(`Пользователь: ${session.userName}`, 'success');
+        log(`ID пользователя: ${session.userId}`, 'success');
+        
+        showStatus(`✅ Новый токен работает! Пользователь: ${session.userName}`, 'success');
+        return true;
+      } catch (error) {
+        log(`❌ Ошибка авторизации: ${error.message}`, 'error');
+        showStatus(`❌ Новый токен не работает: ${error.message}`, 'error');
+        return false;
+      }
+    }
+
+    // Получение транспорта
+    async function getVehicles() {
+      if (!session) {
+        throw new Error('Не авторизован');
+      }
+
+      log('Получение списка транспорта...');
+      try {
+        const response = await makeJsonpRequest('core/search_items', {
+          spec: {
+            itemsType: 'avl_unit',
+            propName: 'sys_name',
+            propValueMask: '*',
+            sortType: 'sys_name'
+          },
+          force: 1,
+          flags: 1,
+          from: 0,
+          to: 0
+        }, session.sid);
+
+        vehicles = response.items || [];
+        log(`✅ Найдено транспорта: ${vehicles.length}`, 'success');
+        return vehicles;
+      } catch (error) {
+        log(`❌ Ошибка получения транспорта: ${error.message}`, 'error');
+        throw error;
+      }
+    }
+
+    // Обновление данных транспорта
+    async function updateVehicleData() {
+      if (!session || vehicles.length === 0) {
+        return;
+      }
+
+      log('Обновление данных транспорта...');
+      try {
+        const vehicleIds = vehicles.slice(0, 5).map(v => v.id); // Берем первые 5 для теста
+        
+        await makeJsonpRequest('core/update_data_flags', {
+          spec: vehicleIds.map(id => ({
+            type: 'id',
+            data: id,
+            flags: 3
+          }))
+        }, session.sid);
+
+        log(`✅ Данные обновлены для ${vehicleIds.length} единиц транспорта`, 'success');
+      } catch (error) {
+        if (error.message.includes('Wialon API Error: 4')) {
+          log('🔄 Сессия истекла, переавторизация...', 'error');
+          await testLogin();
+          
+          // Повторяем обновление
+          const vehicleIds = vehicles.slice(0, 5).map(v => v.id);
+          await makeJsonpRequest('core/update_data_flags', {
+            spec: vehicleIds.map(id => ({
+              type: 'id',
+              data: id,
+              flags: 3
+            }))
+          }, session.sid);
+          
+          log(`✅ Данные обновлены после переавторизации`, 'success');
+        } else {
+          log(`❌ Ошибка обновления данных: ${error.message}`, 'error');
+          throw error;
+        }
+      }
+    }
+
+    // Полный тест
+    async function runFullTest() {
+      log('=== ПОЛНЫЙ ТЕСТ НОВОГО ТОКЕНА ===');
+      showStatus('🚀 Запуск полного теста...', 'loading');
+
+      try {
+        // Шаг 1: Авторизация
+        const loginSuccess = await testLogin();
+        if (!loginSuccess) return;
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Шаг 2: Получение транспорта
+        log('Шаг 2: Получение списка транспорта...');
+        await getVehicles();
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Шаг 3: Обновление данных
+        log('Шаг 3: Обновление данных транспорта...');
+        await updateVehicleData();
+
+        // Шаг 4: Анализ и статистика
+        log('Шаг 4: Анализ данных...');
+        updateStats(vehicles);
+
+        showStatus(`🎉 Полный тест успешен! Найдено ${vehicles.length} единиц транспорта`, 'success');
+        log(`🎊 НОВЫЙ ТОКЕН ПОЛНОСТЬЮ РАБОТАЕТ!`, 'success');
+        log(`📊 Статистика обновлена`, 'success');
+
+      } catch (error) {
+        showStatus(`❌ Тест провален: ${error.message}`, 'error');
+        log(`💥 ОШИБКА В ТЕСТЕ: ${error.message}`, 'error');
+      }
+    }
+
+    // Очистка результатов
+    function clearResults() {
+      document.getElementById('log').innerHTML = '';
+      document.getElementById('status').innerHTML = '';
+      document.getElementById('vehicleStats').style.display = 'none';
+      session = null;
+      vehicles = [];
+    }
+
+    // Инициализация
+    window.onload = function() {
+      log('🔑 Тест нового токена готов!');
+      log(`Новый токен: ${newToken.substring(0, 30)}...`);
+      log(`Сервер: ${serverHost}`);
+      log('Нажмите "Полный тест нового токена" для начала');
+    };
+  </script>
+</body>
+
+</html>

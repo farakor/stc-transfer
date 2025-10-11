@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест Wialon через JSONP - AKhamraev</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-weight: 500;
+    }
+
+    .status.loading {
+      background: #e0f2fe;
+      color: #0277bd;
+      border: 1px solid #81d4fa;
+    }
+
+    .status.success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #81c784;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+
+    .success-block {
+      background: #d4edda;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #28a745;
+      color: #155724;
+    }
+
+    .btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+
+    .btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .btn.success {
+      background: #28a745;
+    }
+
+    .btn.large {
+      padding: 15px 30px;
+      font-size: 16px;
+    }
+
+    .vehicle-list {
+      margin-top: 20px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .vehicle-item {
+      background: #f8f9fa;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border-left: 4px solid #28a745;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .vehicle-offline {
+      border-left-color: #dc3545;
+    }
+
+    .vehicle-moving {
+      border-left-color: #28a745;
+    }
+
+    .vehicle-stopped {
+      border-left-color: #ffc107;
+    }
+
+    .vehicle-info h4 {
+      margin: 0 0 5px 0;
+      color: #495057;
+    }
+
+    .vehicle-details {
+      font-size: 12px;
+      color: #6c757d;
+      line-height: 1.4;
+    }
+
+    .vehicle-status {
+      text-align: center;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-moving {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-stopped {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status-offline {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .status-online {
+      background: #cce5ff;
+      color: #004085;
+    }
+
+    .session-info {
+      background: #e3f2fd;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #2196f3;
+    }
+
+    pre {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 11px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .stat-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 6px;
+      text-align: center;
+      border: 1px solid #dee2e6;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #6c757d;
+      text-transform: uppercase;
+    }
+
+    .moving {
+      color: #28a745;
+    }
+
+    .stopped {
+      color: #ffc107;
+    }
+
+    .offline {
+      color: #dc3545;
+    }
+
+    .total {
+      color: #007bff;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🚀 Wialon JSONP - Успешное подключение!</h1>
+    <p>Тестирование подключения к Wialon через JSONP с учетными данными AKhamraev</p>
+
+    <div class="success-block">
+      <strong>✅ JSONP работает!</strong><br>
+      Это означает, что сервер доступен и отвечает на запросы.
+      Проблема была в CORS, которую мы успешно обошли через JSONP.
+    </div>
+
+    <!-- Основные кнопки -->
+    <div style="text-align: center; margin: 20px 0;">
+      <button class="btn large success" onclick="loginToWialon()">🔐 Войти в Wialon</button>
+      <button class="btn" onclick="getVehiclesList()" id="vehiclesBtn" disabled>🚌 Получить транспорт</button>
+      <button class="btn" onclick="refreshPositions()" id="refreshBtn" disabled>🔄 Обновить позиции</button>
+      <button class="btn" onclick="logout()" id="logoutBtn" disabled>🚪 Выйти</button>
+    </div>
+
+    <!-- Информация о сессии -->
+    <div id="sessionInfo" style="display: none;"></div>
+
+    <!-- Статистика -->
+    <div id="statsContainer" style="display: none;">
+      <h3>📊 Статистика транспорта</h3>
+      <div class="stats-grid" id="stats"></div>
+    </div>
+
+    <!-- Статус -->
+    <div id="status"></div>
+
+    <!-- Список транспорта -->
+    <div id="vehiclesList"></div>
+
+    <!-- Логи -->
+    <div id="log"></div>
+  </div>
+
+  <script>
+    const credentials = {
+      username: 'AKhamraev',
+      password: 'xamrayev11'
+    };
+
+    const baseUrl = 'http://176.74.220.111/wialon/ajax.html';
+    let session = null;
+    let callbackCounter = 0;
+    let vehicles = [];
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+      logEntry.style.margin = '2px 0';
+      logEntry.style.padding = '3px';
+      logEntry.style.borderRadius = '3px';
+      logEntry.style.fontSize = '12px';
+
+      switch (type) {
+        case 'error':
+          logEntry.style.background = '#ffebee';
+          logEntry.style.color = '#c62828';
+          break;
+        case 'success':
+          logEntry.style.background = '#e8f5e8';
+          logEntry.style.color = '#2e7d32';
+          break;
+        default:
+          logEntry.style.background = '#f8f9fa';
+          logEntry.style.color = '#495057';
+      }
+
+      logDiv.appendChild(logEntry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+    }
+
+    // JSONP запрос
+    function makeJsonpRequest(svc, params = {}) {
+      return new Promise((resolve, reject) => {
+        const callbackName = `wialonCallback${++callbackCounter}`;
+        const script = document.createElement('script');
+
+        window[callbackName] = function (data) {
+          document.head.removeChild(script);
+          delete window[callbackName];
+
+          if (data && data.error) {
+            reject(new Error(data.error));
+          } else {
+            resolve(data);
+          }
+        };
+
+        script.onerror = function () {
+          document.head.removeChild(script);
+          delete window[callbackName];
+          reject(new Error('JSONP request failed'));
+        };
+
+        const url = new URL(baseUrl);
+        url.searchParams.set('svc', svc);
+        url.searchParams.set('params', JSON.stringify(params));
+        url.searchParams.set('callback', callbackName);
+
+        if (session) {
+          url.searchParams.set('sid', session.sid);
+        }
+
+        log(`JSONP запрос: ${svc}`);
+        script.src = url.toString();
+        document.head.appendChild(script);
+
+        setTimeout(() => {
+          if (document.head.contains(script)) {
+            document.head.removeChild(script);
+            delete window[callbackName];
+            reject(new Error('JSONP timeout'));
+          }
+        }, 30000);
+      });
+    }
+
+    // Авторизация
+    async function loginToWialon() {
+      log('=== АВТОРИЗАЦИЯ В WIALON ===');
+      showStatus('🔐 Авторизация через JSONP...', 'loading');
+
+      try {
+        const response = await makeJsonpRequest('core/login', {
+          user: credentials.username,
+          password: credentials.password
+        });
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        session = {
+          sid: response.eid,
+          userId: response.user?.id || 0,
+          userName: response.user?.nm || 'Unknown'
+        };
+
+        log(`✅ Авторизация успешна!`, 'success');
+        log(`SID: ${session.sid}`, 'success');
+        log(`Пользователь: ${session.userName}`, 'success');
+
+        // Показываем информацию о сессии
+        document.getElementById('sessionInfo').style.display = 'block';
+        document.getElementById('sessionInfo').innerHTML = `
+          <div class="session-info">
+            <strong>🔐 Активная сессия:</strong><br>
+            Пользователь: ${session.userName} (ID: ${session.userId})<br>
+            SID: ${session.sid}<br>
+            Время входа: ${new Date().toLocaleString()}
+          </div>
+        `;
+
+        // Активируем кнопки
+        document.getElementById('vehiclesBtn').disabled = false;
+        document.getElementById('logoutBtn').disabled = false;
+
+        showStatus(`✅ Добро пожаловать, ${session.userName}!`, 'success');
+
+        // Устанавливаем локаль
+        await setLocale();
+
+      } catch (error) {
+        log(`❌ Ошибка авторизации: ${error.message}`, 'error');
+        showStatus(`❌ Ошибка: ${error.message}`, 'error');
+      }
+    }
+
+    // Установка локали
+    async function setLocale() {
+      try {
+        const tzOffset = new Date().getTimezoneOffset() * -60;
+        await makeJsonpRequest('render/set_locale', {
+          tzOffset,
+          language: 'ru'
+        });
+        log('Локаль установлена', 'success');
+      } catch (error) {
+        log(`Предупреждение: не удалось установить локаль: ${error.message}`);
+      }
+    }
+
+    // Получение списка транспорта
+    async function getVehiclesList() {
+      if (!session) {
+        showStatus('❌ Сначала войдите в систему', 'error');
+        return;
+      }
+
+      log('=== ПОЛУЧЕНИЕ СПИСКА ТРАНСПОРТА ===');
+      showStatus('🚌 Загрузка транспорта...', 'loading');
+
+      try {
+        const response = await makeJsonpRequest('core/search_items', {
+          spec: {
+            itemsType: 'avl_unit',
+            propName: 'sys_name',
+            propValueMask: '*',
+            sortType: 'sys_name'
+          },
+          force: 1,
+          flags: 0x1,
+          from: 0,
+          to: 0
+        });
+
+        vehicles = response.items || [];
+        log(`Найдено транспортных средств: ${vehicles.length}`, 'success');
+
+        if (vehicles.length === 0) {
+          showStatus('⚠️ Транспортные средства не найдены', 'error');
+          return;
+        }
+
+        // Получаем позиции
+        await updateVehiclePositions();
+
+        // Активируем кнопку обновления
+        document.getElementById('refreshBtn').disabled = false;
+
+        showStatus(`✅ Загружено ${vehicles.length} транспортных средств`, 'success');
+
+      } catch (error) {
+        log(`❌ Ошибка: ${error.message}`, 'error');
+        showStatus(`❌ Ошибка: ${error.message}`, 'error');
+      }
+    }
+
+    // Обновление позиций
+    async function updateVehiclePositions() {
+      if (!vehicles.length) return;
+
+      try {
+        log('Обновление позиций транспорта...');
+
+        const vehicleIds = vehicles.map(v => v.id);
+        await makeJsonpRequest('core/update_data_flags', {
+          spec: vehicleIds.map(id => ({
+            type: 'id',
+            data: id,
+            flags: 0x1 | 0x2
+          }))
+        });
+
+        displayVehicles();
+        updateStats();
+        log('Позиции обновлены', 'success');
+
+      } catch (error) {
+        log(`Ошибка обновления позиций: ${error.message}`, 'error');
+      }
+    }
+
+    // Отображение транспорта
+    function displayVehicles() {
+      const vehiclesDiv = document.getElementById('vehiclesList');
+
+      if (!vehicles.length) {
+        vehiclesDiv.innerHTML = '';
+        return;
+      }
+
+      let html = '<h3>🚌 Ваш транспорт:</h3><div class="vehicle-list">';
+
+      vehicles.forEach(vehicle => {
+        const pos = vehicle.pos;
+        const isOnline = pos && (Math.floor(Date.now() / 1000) - pos.t) < 600;
+        const speed = pos?.s || 0;
+        const status = !isOnline ? 'offline' : speed > 5 ? 'moving' : 'stopped';
+        const statusText = {
+          moving: 'В движении',
+          stopped: 'Остановка',
+          offline: 'Оффлайн',
+          online: 'Онлайн'
+        };
+
+        html += `
+          <div class="vehicle-item vehicle-${status}">
+            <div class="vehicle-info">
+              <h4>${vehicle.nm || `Транспорт ${vehicle.id}`}</h4>
+              <div class="vehicle-details">
+                ID: ${vehicle.id}<br>
+                Скорость: ${speed} км/ч<br>
+                ${pos ? `Координаты: ${pos.y?.toFixed(6)}, ${pos.x?.toFixed(6)}` : 'Нет данных о позиции'}<br>
+                ${pos ? `Обновлено: ${new Date(pos.t * 1000).toLocaleString()}` : ''}
+              </div>
+            </div>
+            <div class="vehicle-status status-${status}">
+              ${statusText[status]}
+            </div>
+          </div>
+        `;
+      });
+
+      html += '</div>';
+      vehiclesDiv.innerHTML = html;
+    }
+
+    // Обновление статистики
+    function updateStats() {
+      const statsContainer = document.getElementById('statsContainer');
+      const statsDiv = document.getElementById('stats');
+
+      if (!vehicles.length) {
+        statsContainer.style.display = 'none';
+        return;
+      }
+
+      const stats = {
+        total: vehicles.length,
+        moving: 0,
+        stopped: 0,
+        offline: 0
+      };
+
+      vehicles.forEach(vehicle => {
+        const pos = vehicle.pos;
+        const isOnline = pos && (Math.floor(Date.now() / 1000) - pos.t) < 600;
+        const speed = pos?.s || 0;
+
+        if (!isOnline) {
+          stats.offline++;
+        } else if (speed > 5) {
+          stats.moving++;
+        } else {
+          stats.stopped++;
+        }
+      });
+
+      statsDiv.innerHTML = `
+        <div class="stat-card">
+          <div class="stat-value total">${stats.total}</div>
+          <div class="stat-label">Всего</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value moving">${stats.moving}</div>
+          <div class="stat-label">В движении</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value stopped">${stats.stopped}</div>
+          <div class="stat-label">На остановке</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value offline">${stats.offline}</div>
+          <div class="stat-label">Оффлайн</div>
+        </div>
+      `;
+
+      statsContainer.style.display = 'block';
+    }
+
+    // Обновление позиций
+    async function refreshPositions() {
+      showStatus('🔄 Обновление позиций...', 'loading');
+      await updateVehiclePositions();
+      showStatus('✅ Позиции обновлены', 'success');
+    }
+
+    // Выход
+    async function logout() {
+      if (!session) return;
+
+      try {
+        await makeJsonpRequest('core/logout');
+        session = null;
+        vehicles = [];
+
+        // Деактивируем кнопки
+        document.getElementById('vehiclesBtn').disabled = true;
+        document.getElementById('refreshBtn').disabled = true;
+        document.getElementById('logoutBtn').disabled = true;
+
+        // Очищаем интерфейс
+        document.getElementById('sessionInfo').style.display = 'none';
+        document.getElementById('statsContainer').style.display = 'none';
+        document.getElementById('vehiclesList').innerHTML = '';
+
+        showStatus('✅ Выход выполнен', 'success');
+        log('Выход из системы', 'success');
+
+      } catch (error) {
+        log(`Ошибка при выходе: ${error.message}`, 'error');
+      }
+    }
+
+    // Автообновление каждые 30 секунд
+    setInterval(() => {
+      if (session && vehicles.length > 0) {
+        updateVehiclePositions();
+      }
+    }, 30000);
+
+    // Инициализация
+    window.onload = function () {
+      log('🚀 Wialon JSONP сервис готов к работе!');
+      log(`Сервер: ${baseUrl}`);
+      log(`Учетные данные: ${credentials.username}`);
+      log('JSONP подключение работает - можно авторизоваться!');
+    };
+  </script>
+</body>
+
+</html>

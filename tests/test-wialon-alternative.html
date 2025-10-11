@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Альтернативные методы подключения к Wialon</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      font-weight: 500;
+    }
+
+    .status.loading {
+      background: #e0f2fe;
+      color: #0277bd;
+      border: 1px solid #81d4fa;
+    }
+
+    .status.success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #81c784;
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+
+    .warning-block {
+      background: #fff3cd;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #ffc107;
+      color: #856404;
+    }
+
+    .info-block {
+      background: #e3f2fd;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+      border-left: 4px solid #2196f3;
+    }
+
+    .btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+
+    .btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .btn.success {
+      background: #28a745;
+    }
+
+    .btn.warning {
+      background: #ffc107;
+      color: #212529;
+    }
+
+    .method-card {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 15px 0;
+      border: 1px solid #dee2e6;
+    }
+
+    .method-card h4 {
+      margin: 0 0 10px 0;
+      color: #495057;
+    }
+
+    .test-result {
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+
+    .test-result.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .test-result.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .test-result.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    pre {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 11px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .form-group {
+      margin: 15px 0;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .form-group textarea {
+      height: 100px;
+      resize: vertical;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🔧 Альтернативные методы подключения к Wialon</h1>
+    <p>Поскольку стандартные методы не сработали, попробуем альтернативные подходы</p>
+
+    <div class="warning-block">
+      <strong>Проблема:</strong> Все стандартные методы подключения к серверу 176.74.220.111 не работают.<br>
+      <strong>Возможные причины:</strong> CORS, брандмауэр, нестандартная конфигурация сервера, или требуется прокси.
+    </div>
+
+    <!-- Метод 1: JSONP -->
+    <div class="method-card">
+      <h4>🔄 Метод 1: JSONP (обход CORS)</h4>
+      <p>Попытка подключения через JSONP для обхода ограничений CORS</p>
+      <button class="btn" onclick="testJSONP()">Тестировать JSONP</button>
+      <div id="jsonpResult"></div>
+    </div>
+
+    <!-- Метод 2: Прокси сервер -->
+    <div class="method-card">
+      <h4>🌐 Метод 2: Через прокси-сервер</h4>
+      <p>Использование публичного CORS-прокси для подключения</p>
+      <button class="btn" onclick="testProxy()">Тестировать через прокси</button>
+      <div id="proxyResult"></div>
+    </div>
+
+    <!-- Метод 3: WebSocket -->
+    <div class="method-card">
+      <h4>⚡ Метод 3: WebSocket подключение</h4>
+      <p>Попытка подключения через WebSocket (если поддерживается)</p>
+      <button class="btn" onclick="testWebSocket()">Тестировать WebSocket</button>
+      <div id="websocketResult"></div>
+    </div>
+
+    <!-- Метод 4: Server-Sent Events -->
+    <div class="method-card">
+      <h4>📡 Метод 4: Server-Sent Events</h4>
+      <p>Попытка подключения через SSE</p>
+      <button class="btn" onclick="testSSE()">Тестировать SSE</button>
+      <div id="sseResult"></div>
+    </div>
+
+    <!-- Метод 5: Прямой HTTP без AJAX -->
+    <div class="method-card">
+      <h4>🔗 Метод 5: Прямой HTTP запрос</h4>
+      <p>Создание формы для прямого POST запроса</p>
+      <button class="btn" onclick="testDirectHTTP()">Тестировать прямой HTTP</button>
+      <div id="directResult"></div>
+    </div>
+
+    <!-- Метод 6: Пользовательский прокси -->
+    <div class="method-card">
+      <h4>🛠️ Метод 6: Локальный прокси-сервер</h4>
+      <p>Инструкции по настройке локального прокси-сервера</p>
+      <div class="info-block">
+        <strong>Создайте простой прокси-сервер:</strong><br>
+        1. Установите Node.js<br>
+        2. Создайте файл proxy-server.js<br>
+        3. Запустите: node proxy-server.js<br>
+        4. Используйте http://localhost:3001 как прокси
+      </div>
+      <button class="btn warning" onclick="showProxyCode()">Показать код прокси</button>
+      <div id="proxyCode" style="display: none;">
+        <pre id="proxyCodeContent"></pre>
+      </div>
+    </div>
+
+    <!-- Метод 7: Альтернативные домены -->
+    <div class="method-card">
+      <h4>🌍 Метод 7: Альтернативные домены/IP</h4>
+      <div class="form-group">
+        <label>Попробуйте альтернативный URL:</label>
+        <input type="text" id="altUrl" placeholder="Например: wialon.your-domain.com" />
+      </div>
+      <button class="btn" onclick="testAlternativeUrl()">Тестировать альтернативный URL</button>
+      <div id="altUrlResult"></div>
+    </div>
+
+    <!-- Диагностика -->
+    <div class="method-card">
+      <h4>🔍 Диагностика сети</h4>
+      <button class="btn" onclick="runNetworkDiagnostics()">Запустить диагностику</button>
+      <div id="diagnosticsResult"></div>
+    </div>
+
+    <!-- Общий статус -->
+    <div id="status"></div>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    const credentials = {
+      username: 'AKhamraev',
+      password: 'xamrayev11'
+    };
+
+    const baseServer = '176.74.220.111';
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+      logEntry.style.margin = '2px 0';
+      logEntry.style.padding = '3px';
+      logEntry.style.borderRadius = '3px';
+      logEntry.style.fontSize = '12px';
+
+      switch (type) {
+        case 'error':
+          logEntry.style.background = '#ffebee';
+          logEntry.style.color = '#c62828';
+          break;
+        case 'success':
+          logEntry.style.background = '#e8f5e8';
+          logEntry.style.color = '#2e7d32';
+          break;
+        default:
+          logEntry.style.background = '#f8f9fa';
+          logEntry.style.color = '#495057';
+      }
+
+      logDiv.appendChild(logEntry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function showResult(elementId, message, type) {
+      const element = document.getElementById(elementId);
+      element.innerHTML = `<div class="test-result ${type}">${message}</div>`;
+    }
+
+    // Метод 1: JSONP
+    function testJSONP() {
+      log('Тестирование JSONP подключения...');
+      showResult('jsonpResult', '🔄 Тестирование JSONP...', 'info');
+
+      // JSONP не работает с POST запросами, но можем попробовать GET
+      const script = document.createElement('script');
+      const callbackName = 'wialonCallback' + Date.now();
+
+      window[callbackName] = function (data) {
+        log('JSONP ответ получен', 'success');
+        showResult('jsonpResult', '✅ JSONP работает! Получен ответ.', 'success');
+        document.head.removeChild(script);
+        delete window[callbackName];
+      };
+
+      script.onerror = function () {
+        log('JSONP не работает', 'error');
+        showResult('jsonpResult', '❌ JSONP не поддерживается сервером', 'error');
+        document.head.removeChild(script);
+        delete window[callbackName];
+      };
+
+      script.src = `http://${baseServer}/wialon/ajax.html?svc=core/login&callback=${callbackName}`;
+      document.head.appendChild(script);
+
+      // Таймаут
+      setTimeout(() => {
+        if (document.head.contains(script)) {
+          document.head.removeChild(script);
+          delete window[callbackName];
+          showResult('jsonpResult', '❌ JSONP таймаут', 'error');
+        }
+      }, 10000);
+    }
+
+    // Метод 2: Прокси
+    async function testProxy() {
+      log('Тестирование через CORS прокси...');
+      showResult('proxyResult', '🔄 Тестирование через прокси...', 'info');
+
+      const proxies = [
+        'https://cors-anywhere.herokuapp.com/',
+        'https://api.allorigins.win/raw?url=',
+        'https://corsproxy.io/?'
+      ];
+
+      for (const proxy of proxies) {
+        try {
+          log(`Попытка через прокси: ${proxy}`);
+
+          const url = `${proxy}http://${baseServer}/wialon/ajax.html?svc=core/login`;
+          const body = new URLSearchParams();
+          body.append('params', JSON.stringify({
+            user: credentials.username,
+            password: credentials.password
+          }));
+
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: body.toString()
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            log(`Прокси ${proxy} работает!`, 'success');
+            showResult('proxyResult', `✅ Прокси работает: ${proxy}`, 'success');
+            return;
+          }
+        } catch (error) {
+          log(`Прокси ${proxy} не работает: ${error.message}`, 'error');
+        }
+      }
+
+      showResult('proxyResult', '❌ Ни один прокси не работает', 'error');
+    }
+
+    // Метод 3: WebSocket
+    function testWebSocket() {
+      log('Тестирование WebSocket подключения...');
+      showResult('websocketResult', '🔄 Тестирование WebSocket...', 'info');
+
+      const wsUrls = [
+        `ws://${baseServer}:80`,
+        `ws://${baseServer}:8080`,
+        `wss://${baseServer}:443`,
+        `wss://${baseServer}:8443`
+      ];
+
+      let tested = 0;
+      let success = false;
+
+      wsUrls.forEach(url => {
+        const ws = new WebSocket(url);
+
+        ws.onopen = function () {
+          log(`WebSocket подключение установлено: ${url}`, 'success');
+          showResult('websocketResult', `✅ WebSocket работает: ${url}`, 'success');
+          success = true;
+          ws.close();
+        };
+
+        ws.onerror = function () {
+          tested++;
+          if (tested === wsUrls.length && !success) {
+            showResult('websocketResult', '❌ WebSocket не поддерживается', 'error');
+          }
+        };
+
+        // Таймаут для каждого подключения
+        setTimeout(() => {
+          if (ws.readyState === WebSocket.CONNECTING) {
+            ws.close();
+          }
+        }, 5000);
+      });
+    }
+
+    // Метод 4: Server-Sent Events
+    function testSSE() {
+      log('Тестирование Server-Sent Events...');
+      showResult('sseResult', '🔄 Тестирование SSE...', 'info');
+
+      try {
+        const eventSource = new EventSource(`http://${baseServer}/wialon/ajax.html?svc=core/login`);
+
+        eventSource.onopen = function () {
+          log('SSE подключение установлено', 'success');
+          showResult('sseResult', '✅ SSE работает!', 'success');
+          eventSource.close();
+        };
+
+        eventSource.onerror = function () {
+          log('SSE не работает', 'error');
+          showResult('sseResult', '❌ SSE не поддерживается', 'error');
+          eventSource.close();
+        };
+
+        // Таймаут
+        setTimeout(() => {
+          eventSource.close();
+        }, 10000);
+      } catch (error) {
+        showResult('sseResult', `❌ SSE ошибка: ${error.message}`, 'error');
+      }
+    }
+
+    // Метод 5: Прямой HTTP
+    function testDirectHTTP() {
+      log('Создание прямого HTTP запроса...');
+      showResult('directResult', '🔄 Создание формы для прямого запроса...', 'info');
+
+      // Создаем скрытую форму
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `http://${baseServer}/wialon/ajax.html?svc=core/login`;
+      form.target = '_blank';
+      form.style.display = 'none';
+
+      const paramsInput = document.createElement('input');
+      paramsInput.type = 'hidden';
+      paramsInput.name = 'params';
+      paramsInput.value = JSON.stringify({
+        user: credentials.username,
+        password: credentials.password
+      });
+
+      form.appendChild(paramsInput);
+      document.body.appendChild(form);
+
+      // Отправляем форму
+      form.submit();
+
+      showResult('directResult', '✅ Форма отправлена в новом окне. Проверьте результат.', 'success');
+
+      // Удаляем форму
+      setTimeout(() => {
+        document.body.removeChild(form);
+      }, 1000);
+    }
+
+    // Показать код прокси
+    function showProxyCode() {
+      const proxyCode = `
+const express = require('express');
+const { createProxyMiddleware } = require('http-proxy-middleware');
+const cors = require('cors');
+
+const app = express();
+
+// Включаем CORS для всех запросов
+app.use(cors());
+
+// Прокси для Wialon API
+app.use('/wialon', createProxyMiddleware({
+  target: 'http://176.74.220.111',
+  changeOrigin: true,
+  pathRewrite: {
+    '^/wialon': '/wialon'
+  }
+}));
+
+app.listen(3001, () => {
+  console.log('Прокси сервер запущен на http://localhost:3001');
+  console.log('Используйте http://localhost:3001/wialon/ajax.html вместо прямого подключения');
+});
+
+// Установка зависимостей:
+// npm install express http-proxy-middleware cors
+      `;
+
+      document.getElementById('proxyCodeContent').textContent = proxyCode;
+      document.getElementById('proxyCode').style.display = 'block';
+    }
+
+    // Тест альтернативного URL
+    async function testAlternativeUrl() {
+      const altUrl = document.getElementById('altUrl').value.trim();
+      if (!altUrl) {
+        showResult('altUrlResult', '❌ Введите альтернативный URL', 'error');
+        return;
+      }
+
+      log(`Тестирование альтернативного URL: ${altUrl}`);
+      showResult('altUrlResult', `🔄 Тестирование ${altUrl}...`, 'info');
+
+      try {
+        const response = await fetch(`${altUrl}/wialon/ajax.html?svc=core/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `params=${JSON.stringify({
+            user: credentials.username,
+            password: credentials.password
+          })}`
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          log(`Альтернативный URL работает!`, 'success');
+          showResult('altUrlResult', `✅ Альтернативный URL работает!`, 'success');
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        log(`Альтернативный URL не работает: ${error.message}`, 'error');
+        showResult('altUrlResult', `❌ Не работает: ${error.message}`, 'error');
+      }
+    }
+
+    // Диагностика сети
+    async function runNetworkDiagnostics() {
+      log('Запуск диагностики сети...');
+      showResult('diagnosticsResult', '🔄 Диагностика сети...', 'info');
+
+      let diagnostics = '<div class="test-result info"><strong>Диагностика сети:</strong><br>';
+
+      // Проверка доступности через разные методы
+      const tests = [
+        { name: 'Ping через fetch HEAD', url: `http://${baseServer}`, method: 'HEAD' },
+        { name: 'Ping через fetch GET', url: `http://${baseServer}`, method: 'GET' },
+        { name: 'HTTPS проверка', url: `https://${baseServer}`, method: 'HEAD' },
+        { name: 'Порт 8080', url: `http://${baseServer}:8080`, method: 'HEAD' },
+        { name: 'Wialon путь', url: `http://${baseServer}/wialon`, method: 'HEAD' }
+      ];
+
+      for (const test of tests) {
+        try {
+          const response = await fetch(test.url, {
+            method: test.method,
+            mode: 'no-cors',
+            cache: 'no-cache'
+          });
+          diagnostics += `✅ ${test.name}: Ответ получен<br>`;
+        } catch (error) {
+          diagnostics += `❌ ${test.name}: ${error.message}<br>`;
+        }
+      }
+
+      // Информация о браузере
+      diagnostics += `<br><strong>Информация о браузере:</strong><br>`;
+      diagnostics += `User Agent: ${navigator.userAgent}<br>`;
+      diagnostics += `Язык: ${navigator.language}<br>`;
+      diagnostics += `Онлайн: ${navigator.onLine}<br>`;
+      diagnostics += `Cookies включены: ${navigator.cookieEnabled}<br>`;
+
+      diagnostics += '</div>';
+      showResult('diagnosticsResult', diagnostics, 'info');
+    }
+
+    // Инициализация
+    window.onload = function () {
+      log('Система альтернативных методов подключения готова');
+      log(`Цель: подключение к серверу ${baseServer}`);
+      log(`Учетные данные: ${credentials.username} / ${credentials.password}`);
+    };
+  </script>
+</body>
+
+</html>
