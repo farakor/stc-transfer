@@ -12,10 +12,13 @@ import routeRoutes from './routes/routes';
 import adminRoutes from './routes/admin';
 import driverRoutes from './routes/drivers';
 import wialonRoutes from './routes/wialonRoutes';
+import authRoutes from './routes/auth';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
+import { authenticate, authorize } from './middleware/auth';
+import { AdminRole } from '@prisma/client';
 
 // Import services
 import { TelegramBotService } from './services/telegramBot';
@@ -92,13 +95,21 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
+// Публичные маршруты
+app.use('/api/auth', authRoutes);
+
+// Публичные маршруты для пользователей (Telegram бот)
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/routes', routeRoutes);
+
+// Защищенные маршруты для водителей
 app.use('/api/drivers', driverRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/wialon', wialonRoutes);
+
+// Защищенные админские маршруты (требуют аутентификацию и права администратора)
+app.use('/api/admin', authenticate, authorize(AdminRole.SUPER_ADMIN, AdminRole.ADMIN, AdminRole.MANAGER), adminRoutes);
+app.use('/api/wialon', authenticate, authorize(AdminRole.SUPER_ADMIN, AdminRole.ADMIN), wialonRoutes);
 
 // Telegram webhook endpoint
 app.use('/webhook', (req, res, next) => {

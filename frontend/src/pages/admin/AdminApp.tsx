@@ -7,9 +7,10 @@ import VehiclesManagement from './VehiclesManagement';
 import SystemSettings from './SystemSettings';
 import TariffsManagement from './TariffsManagement';
 import UsersManagement from './UsersManagement';
+import AdminsManagement from './AdminsManagement';
 
 interface AdminAppProps {
-  page?: 'dashboard' | 'bookings' | 'drivers' | 'vehicles' | 'users' | 'tariffs' | 'settings';
+  page?: 'dashboard' | 'bookings' | 'drivers' | 'vehicles' | 'users' | 'tariffs' | 'settings' | 'admins';
 }
 
 const AdminApp: React.FC<AdminAppProps> = ({ page = 'dashboard' }) => {
@@ -29,6 +30,8 @@ const AdminApp: React.FC<AdminAppProps> = ({ page = 'dashboard' }) => {
         return <TariffsManagement />;
       case 'settings':
         return <SystemSettings />;
+      case 'admins':
+        return <AdminsManagement />;
       default:
         return <AdminDashboard />;
     }

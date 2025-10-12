@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Calendar,
@@ -11,18 +12,73 @@ import {
   X,
   Bell,
   Search,
-  DollarSign
+  DollarSign,
+  Shield
 } from 'lucide-react';
 import Logo from '@/assets/STC-transfer.svg';
 import FarukBadge from '@/assets/faruk-badge.svg';
+import { AuthService, Admin } from '@/services/authService';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-  currentPage: 'dashboard' | 'bookings' | 'drivers' | 'vehicles' | 'users' | 'tariffs' | 'settings';
+  currentPage: 'dashboard' | 'bookings' | 'drivers' | 'vehicles' | 'users' | 'tariffs' | 'settings' | 'admins';
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [admin, setAdmin] = useState<Admin | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  // Загрузка профиля администратора
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        if (!AuthService.isAuthenticated()) {
+          navigate('/admin/login');
+          return;
+        }
+        
+        const profile = await AuthService.getProfile();
+        setAdmin(profile);
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+        // Если токен невалиден, перенаправляем на страницу входа
+        AuthService.logout();
+        navigate('/admin/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [navigate]);
+
+  // Функция выхода из системы
+  const handleLogout = () => {
+    AuthService.logout();
+    navigate('/admin/login');
+  };
+
+  // Получить первую букву имени для аватара
+  const getInitials = () => {
+    if (!admin) return '?';
+    const firstName = admin.firstName || '';
+    const lastName = admin.lastName || '';
+    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || '?';
+  };
+
+  // Получить отображаемое имя роли
+  const getRoleLabel = () => {
+    if (!admin) return '';
+    const roleLabels: Record<string, string> = {
+      SUPER_ADMIN: 'Суперадминистратор',
+      ADMIN: 'Администратор',
+      MANAGER: 'Менеджер',
+      OPERATOR: 'Оператор'
+    };
+    return roleLabels[admin.role] || admin.role;
+  };
 
   const navigation = [
     {
@@ -62,6 +118,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage }) => {
       key: 'tariffs'
     },
     {
+      name: 'Администраторы',
+      href: '/admin/admins',
+      icon: Shield,
+      key: 'admins'
+    },
+    {
       name: 'Настройки',
       href: '/admin/settings',
       icon: Settings,
@@ -84,14 +146,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage }) => {
                 <X className="h-6 w-6 text-white" />
               </button>
             </div>
-            <SidebarContent navigation={navigation} currentPage={currentPage} />
+            <SidebarContent navigation={navigation} currentPage={currentPage} onLogout={handleLogout} />
           </div>
         </div>
       )}
 
       {/* Десктопное меню */}
       <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-        <SidebarContent navigation={navigation} currentPage={currentPage} />
+        <SidebarContent navigation={navigation} currentPage={currentPage} onLogout={handleLogout} />
       </div>
 
       {/* Основной контент */}
@@ -131,12 +193,18 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage }) => {
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
                     <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
-                      <span className="text-sm font-medium text-white">Д</span>
+                      <span className="text-sm font-medium text-white">
+                        {loading ? '...' : getInitials()}
+                      </span>
                     </div>
                   </div>
                   <div className="ml-3">
-                    <div className="text-sm font-medium text-gray-700">Диспетчер</div>
-                    <div className="text-xs text-gray-500">STC Transfer</div>
+                    <div className="text-sm font-medium text-gray-700">
+                      {loading ? 'Загрузка...' : `${admin?.firstName || ''} ${admin?.lastName || ''}`}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {loading ? '' : getRoleLabel()}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -163,9 +231,10 @@ interface SidebarContentProps {
     key: string;
   }>;
   currentPage: string;
+  onLogout: () => void;
 }
 
-const SidebarContent: React.FC<SidebarContentProps> = ({ navigation, currentPage }) => {
+const SidebarContent: React.FC<SidebarContentProps> = ({ navigation, currentPage, onLogout }) => {
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white border-r border-gray-200">
       <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
@@ -199,11 +268,14 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ navigation, currentPage
       </div>
 
       <div className="flex-shrink-0 flex flex-col border-t border-gray-200 p-4 space-y-3">
-        <button className="flex items-center w-full group">
+        <button 
+          onClick={onLogout}
+          className="flex items-center w-full group hover:bg-red-50 rounded-md p-2 transition-colors"
+        >
           <div className="flex items-center">
-            <LogOut className="h-5 w-5 text-gray-400 group-hover:text-gray-500" />
+            <LogOut className="h-5 w-5 text-gray-400 group-hover:text-red-600" />
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Выйти</p>
+              <p className="text-sm font-medium text-gray-700 group-hover:text-red-600">Выйти</p>
             </div>
           </div>
         </button>

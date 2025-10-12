@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx src/utils/seed.ts"
+    "db:seed": "tsx src/utils/seed.ts",
+    "create-super-admin": "tsx src/utils/createSuperAdmin.ts"
   },
   "keywords": [
     "telegram",

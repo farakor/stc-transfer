@@ -38,6 +38,7 @@ interface Vehicle {
   model?: string;
   license_plate?: string;
   capacity: number;
+  baggageCapacity: number;
   pricePerKm: number;
   status: 'AVAILABLE' | 'BUSY' | 'MAINTENANCE';
   description?: string;
@@ -65,6 +66,7 @@ interface VehicleFormData {
   brand: string;
   model: string;
   capacity: number;
+  baggageCapacity: number;
   pricePerKm: number;
   description: string;
   features: string[];
@@ -106,6 +108,7 @@ const VehiclesManagement: React.FC = () => {
     brand: '',
     model: '',
     capacity: 3,
+    baggageCapacity: 2,
     pricePerKm: 1500,
     description: '',
     features: [],
@@ -214,6 +217,7 @@ const VehiclesManagement: React.FC = () => {
       brand: '',
       model: '',
       capacity: 3,
+      baggageCapacity: 2,
       pricePerKm: 1500,
       description: '',
       features: [],
@@ -233,6 +237,7 @@ const VehiclesManagement: React.FC = () => {
       brand: vehicle.brand || '',
       model: vehicle.model || '',
       capacity: vehicle.capacity,
+      baggageCapacity: vehicle.baggageCapacity || 2,
       pricePerKm: vehicle.pricePerKm,
       description: vehicle.description || '',
       features: vehicle.features || [],
@@ -314,6 +319,7 @@ const VehiclesManagement: React.FC = () => {
               brand: formData.brand,
               model: formData.model,
               capacity: formData.capacity,
+              baggageCapacity: formData.baggageCapacity,
               pricePerKm: formData.pricePerKm,
               description: formData.description,
               features: formData.features,
@@ -565,6 +571,7 @@ const VehiclesManagement: React.FC = () => {
       brand: existingVehicle.brand || '',
       model: existingVehicle.model || '',
       capacity: existingVehicle.capacity,
+      baggageCapacity: existingVehicle.baggageCapacity || 2,
       pricePerKm: existingVehicle.pricePerKm,
       description: existingVehicle.description || '',
       features: existingVehicle.features || [],
@@ -594,6 +601,7 @@ const VehiclesManagement: React.FC = () => {
       brand: vehicle.brand || '',
       model: vehicle.model || '',
       capacity: vehicle.capacity,
+      baggageCapacity: vehicle.baggageCapacity || 2,
       pricePerKm: vehicle.pricePerKm,
       description: vehicle.description || '',
       features: vehicle.features || [],
@@ -621,6 +629,7 @@ const VehiclesManagement: React.FC = () => {
       brand: groupInfo.brand || '',
       model: groupInfo.model || '',
       capacity: groupInfo.capacity,
+      baggageCapacity: groupInfo.baggageCapacity || 2,
       pricePerKm: groupInfo.pricePerKm,
       description: groupInfo.description || '',
       features: groupInfo.features || [],
@@ -1200,6 +1209,21 @@ const VehiclesManagement: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                     max="50"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Количество чемоданов *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.baggageCapacity}
+                    onChange={(e) => setFormData({ ...formData, baggageCapacity: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min="0"
+                    max="20"
                     required
                   />
                 </div>

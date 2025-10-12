@@ -24,23 +24,24 @@ model User {
 }
 
 model Vehicle {
-  id             Int           @id @default(autoincrement())
-  type           VehicleType
-  name           String
-  capacity       Int
-  price_per_km   Decimal       @db.Decimal(10, 2)
-  image_url      String?
-  description    String?
-  features       String[]
-  status         VehicleStatus @default(AVAILABLE)
-  created_at     DateTime      @default(now())
-  updated_at     DateTime      @default(now())
-  brand          String?
-  license_plate  String?
-  model          String?
-  wialon_unit_id String?       @unique // ID юнита в Wialon для отслеживания
-  bookings       Booking[]
-  driver         Driver?
+  id               Int           @id @default(autoincrement())
+  type             VehicleType
+  name             String
+  capacity         Int
+  baggage_capacity Int           @default(2) // Количество чемоданов
+  price_per_km     Decimal       @db.Decimal(10, 2)
+  image_url        String?
+  description      String?
+  features         String[]
+  status           VehicleStatus @default(AVAILABLE)
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @default(now())
+  brand            String?
+  license_plate    String?
+  model            String?
+  wialon_unit_id   String?       @unique // ID юнита в Wialon для отслеживания
+  bookings         Booking[]
+  driver           Driver?
 
   @@map("Vehicle")
 }
@@ -159,6 +160,29 @@ enum SettingType {
   NUMBER
   BOOLEAN
   JSON
+}
+
+// Модель для администраторов системы
+model Admin {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  password   String // Захешированный пароль
+  first_name String
+  last_name  String
+  role       AdminRole @default(ADMIN)
+  is_active  Boolean   @default(true)
+  last_login DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+
+  @@map("Admin")
+}
+
+enum AdminRole {
+  SUPER_ADMIN // Полный доступ ко всему
+  ADMIN // Управление заказами, водителями, автомобилями
+  MANAGER // Просмотр и базовое управление заказами
+  OPERATOR // Только просмотр данных
 }
 
 // Новые модели для конструктора тарифов

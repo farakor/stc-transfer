@@ -7,6 +7,7 @@ import { BookingConfirmation } from '@/pages/BookingConfirmation'
 import { BookingStatus } from '@/pages/BookingStatus'
 import TrackingPage from '@/pages/TrackingPage'
 import AdminApp from '@/pages/admin/AdminApp'
+import AdminLogin from '@/pages/admin/AdminLogin'
 import DriverApp from '@/pages/DriverApp'
 import DriverLogin from '@/pages/driver/DriverLogin'
 import DriverDashboard from '@/pages/driver/DriverDashboard'
@@ -18,13 +19,15 @@ export function AppRoutes() {
       <Route path="/" element={<Navigate to="/language" replace />} />
 
       {/* Admin panel routes */}
-      <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+      <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin/dashboard" element={<AdminApp page="dashboard" />} />
       <Route path="/admin/bookings" element={<AdminApp page="bookings" />} />
       <Route path="/admin/drivers" element={<AdminApp page="drivers" />} />
       <Route path="/admin/vehicles" element={<AdminApp page="vehicles" />} />
       <Route path="/admin/users" element={<AdminApp page="users" />} />
       <Route path="/admin/tariffs" element={<AdminApp page="tariffs" />} />
+      <Route path="/admin/admins" element={<AdminApp page="admins" />} />
       <Route path="/admin/settings" element={<AdminApp page="settings" />} />
 
       {/* Driver app routes */}
