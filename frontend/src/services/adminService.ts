@@ -10,12 +10,13 @@ import {
 import { BookingStatus, Driver } from '../types';
 
 class AdminService {
-  private baseUrl = '/api/admin';
+  private baseUrl = '/admin';
 
   // Статистика заказов
   async getBookingStats(period?: 'day' | 'week' | 'month'): Promise<AdminApiResponse<BookingStats>> {
     const params = period ? { period } : {};
-    return api.get('/api/bookings/stats', { params });
+    const response = await api.get('/bookings/stats', { params });
+    return response.data;
   }
 
   // Получить все заказы с фильтрацией и пагинацией
@@ -27,7 +28,8 @@ class AdminService {
       ...filter,
       ...pagination
     };
-    return api.get(`${this.baseUrl}/bookings`, { params });
+    const response = await api.get(`${this.baseUrl}/bookings`, { params });
+    return response.data;
   }
 
   // Получить активные заказы
@@ -63,17 +65,20 @@ class AdminService {
     status: BookingStatus,
     notes?: string
   ): Promise<AdminApiResponse<any>> {
-    return api.put(`/api/bookings/${bookingId}/status`, { status, notes });
+    const response = await api.put(`/bookings/${bookingId}/status`, { status, notes });
+    return response.data;
   }
 
   // Назначить водителя
   async assignDriver(bookingId: string, driverId: string): Promise<AdminApiResponse<any>> {
-    return api.put(`/api/bookings/${bookingId}/assign-driver`, { driverId });
+    const response = await api.put(`/bookings/${bookingId}/assign-driver`, { driverId });
+    return response.data;
   }
 
   // Получить доступных водителей
   async getAvailableDrivers(): Promise<AdminApiResponse<Driver[]>> {
-    return api.get(`${this.baseUrl}/drivers/available`);
+    const response = await api.get(`${this.baseUrl}/drivers/available`);
+    return response.data;
   }
 
   // Получить список автомобилей
@@ -90,7 +95,8 @@ class AdminService {
 
   // Получить всех водителей
   async getAllDrivers(): Promise<AdminApiResponse<Driver[]>> {
-    return api.get(`${this.baseUrl}/drivers`);
+    const response = await api.get(`${this.baseUrl}/drivers`);
+    return response.data;
   }
 
   // Создать водителя
@@ -100,7 +106,8 @@ class AdminService {
     license: string;
     vehicleId?: string;
   }): Promise<AdminApiResponse<Driver>> {
-    return api.post(`${this.baseUrl}/drivers`, driverData);
+    const response = await api.post(`${this.baseUrl}/drivers`, driverData);
+    return response.data;
   }
 
   // Обновить водителя
@@ -108,12 +115,14 @@ class AdminService {
     driverId: string,
     driverData: Partial<Driver>
   ): Promise<AdminApiResponse<Driver>> {
-    return api.put(`${this.baseUrl}/drivers/${driverId}`, driverData);
+    const response = await api.put(`${this.baseUrl}/drivers/${driverId}`, driverData);
+    return response.data;
   }
 
   // Удалить водителя
   async deleteDriver(driverId: string): Promise<AdminApiResponse<any>> {
-    return api.delete(`${this.baseUrl}/drivers/${driverId}`);
+    const response = await api.delete(`${this.baseUrl}/drivers/${driverId}`);
+    return response.data;
   }
 
   // Отправить Telegram уведомление
@@ -205,7 +214,7 @@ class AdminService {
 
   // Аналитика
   async getRevenueAnalytics(
-    period: 'week' | 'month' | 'year'
+    period: 'day' | 'week' | 'month'
   ): Promise<AdminApiResponse<any>> {
     return api.get(`${this.baseUrl}/analytics/revenue`, {
       params: { period }
@@ -218,6 +227,17 @@ class AdminService {
 
   async getDriverPerformance(): Promise<AdminApiResponse<any[]>> {
     return api.get(`${this.baseUrl}/analytics/driver-performance`);
+  }
+
+  // Метрики в реальном времени
+  async getRealTimeMetrics(): Promise<AdminApiResponse<any>> {
+    return api.get(`${this.baseUrl}/analytics/realtime`);
+  }
+
+  // Данные о статусах заказов
+  async getOrdersStatusData(period?: 'day' | 'week' | 'month'): Promise<AdminApiResponse<any>> {
+    const params = period ? { period } : {};
+    return api.get(`${this.baseUrl}/analytics/orders-status`, { params });
   }
 
   // Тестирование Telegram бота

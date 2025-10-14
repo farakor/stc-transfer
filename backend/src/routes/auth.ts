@@ -1,45 +1,16 @@
 import { Router } from 'express'
 import { AuthController } from '@/controllers/authController'
-import { authenticate, authorize } from '@/middleware/auth'
-import { AdminRole } from '@prisma/client'
+import { clientAuth } from '@/middleware/clientAuth'
 
 const router = Router()
 
-// Публичные маршруты (не требуют аутентификации)
-router.post('/login', AuthController.login)
+// Публичные маршруты (без авторизации)
+router.post('/telegram', AuthController.authenticateWithTelegram)
+router.post('/driver/telegram', AuthController.authenticateDriverWithTelegram)
 
-// Защищенные маршруты (требуют аутентификации)
-router.get('/profile', authenticate, AuthController.getProfile)
-router.post('/change-password', authenticate, AuthController.changePassword)
-
-// Маршруты для управления администраторами (только для SUPER_ADMIN)
-router.post(
-  '/admins',
-  authenticate,
-  authorize(AdminRole.SUPER_ADMIN),
-  AuthController.createAdmin
-)
-
-router.get(
-  '/admins',
-  authenticate,
-  authorize(AdminRole.SUPER_ADMIN),
-  AuthController.getAllAdmins
-)
-
-router.put(
-  '/admins/:id',
-  authenticate,
-  authorize(AdminRole.SUPER_ADMIN),
-  AuthController.updateAdmin
-)
-
-router.delete(
-  '/admins/:id',
-  authenticate,
-  authorize(AdminRole.SUPER_ADMIN),
-  AuthController.deleteAdmin
-)
+// Защищенные маршруты (требуют авторизации)
+router.get('/me', clientAuth, AuthController.getCurrentUser)
+router.put('/phone', clientAuth, AuthController.updatePhone)
+router.post('/logout', clientAuth, AuthController.logout)
 
 export default router
-

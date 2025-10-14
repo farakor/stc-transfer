@@ -3,6 +3,8 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Navigation, RefreshCw, AlertCircle, MapPin, Activity, Clock } from 'lucide-react';
 import { wialonJsonpService } from '../services/wialonJsonpService';
+import { wialonBackendService } from '../services/wialonBackendService';
+import { supportsJSONP } from '../utils/telegram';
 import { wialonConfig, vehicleMarkerStyles } from '../config/wialon.config';
 import 'leaflet/dist/leaflet.css';
 
@@ -222,54 +224,75 @@ const VehicleTracker: React.FC<VehicleTrackerProps> = ({
   const loadVehiclePosition = async () => {
     setLoading(true);
     setError(null);
+    
+    // Определяем, какой метод использовать
+    const useBackendAPI = !supportsJSONP();
+    
     try {
-      console.log(`🚗 Loading position for unit ${wialonUnitId} via JSONP...`);
-      
-      // Инициализируем JSONP сервис
-      wialonJsonpService.initialize(wialonConfig);
-      
-      // Авторизуемся если еще не авторизованы
-      if (!wialonJsonpService.isAuthenticated()) {
-        console.log('🔐 Logging in to Wialon...');
-        await wialonJsonpService.login();
-      }
-      
-      // Получаем все units через JSONP
-      const vehicles = await wialonJsonpService.getVehicles();
-      
-      // Ищем нужный unit
-      const vehicle = vehicles.find((v: any) => v.id.toString() === wialonUnitId);
-      
-      if (vehicle) {
-        const pos = vehicle.pos;
-        const now = Math.floor(Date.now() / 1000);
+      if (useBackendAPI) {
+        // Используем backend API для Telegram WebApp
+        console.log(`🚗 Loading position for unit ${wialonUnitId} via Backend API...`);
         
-        let status: 'online' | 'offline' | 'moving' | 'stopped' = 'offline';
+        const unit = await wialonBackendService.getUnitById(wialonUnitId);
         
-        if (pos && (now - pos.t) < 600) {
-          const speed = pos.s || 0;
-          status = speed > 5 ? 'moving' : 'stopped';
+        if (unit) {
+          setUnit(unit);
+          setLastUpdate(new Date());
+          console.log('✅ Position loaded successfully via Backend API');
+        } else {
+          setError('Транспорт не найден в системе Wialon');
+          console.error(`Unit ${wialonUnitId} not found in Wialon`);
+        }
+      } else {
+        // Используем JSONP для обычного браузера
+        console.log(`🚗 Loading position for unit ${wialonUnitId} via JSONP...`);
+        
+        // Инициализируем JSONP сервис
+        wialonJsonpService.initialize(wialonConfig);
+        
+        // Авторизуемся если еще не авторизованы
+        if (!wialonJsonpService.isAuthenticated()) {
+          console.log('🔐 Logging in to Wialon...');
+          await wialonJsonpService.login();
         }
         
-        const unitData: WialonUnit = {
-          id: vehicle.id.toString(),
-          name: vehicle.nm || `Unit ${vehicle.id}`,
-          position: pos ? {
-            lat: pos.y,
-            lng: pos.x,
-            speed: pos.s || 0,
-            course: pos.c || 0,
-            time: pos.t || 0
-          } : undefined,
-          status
-        };
+        // Получаем все units через JSONP
+        const vehicles = await wialonJsonpService.getVehicles();
         
-        setUnit(unitData);
-        setLastUpdate(new Date());
-        console.log('✅ Position loaded successfully');
-      } else {
-        setError('Транспорт не найден в системе Wialon');
-        console.error(`Unit ${wialonUnitId} not found in Wialon`);
+        // Ищем нужный unit
+        const vehicle = vehicles.find((v: any) => v.id.toString() === wialonUnitId);
+        
+        if (vehicle) {
+          const pos = vehicle.pos;
+          const now = Math.floor(Date.now() / 1000);
+          
+          let status: 'online' | 'offline' | 'moving' | 'stopped' = 'offline';
+          
+          if (pos && (now - pos.t) < 600) {
+            const speed = pos.s || 0;
+            status = speed > 5 ? 'moving' : 'stopped';
+          }
+          
+          const unitData: WialonUnit = {
+            id: vehicle.id.toString(),
+            name: vehicle.nm || `Unit ${vehicle.id}`,
+            position: pos ? {
+              lat: pos.y,
+              lng: pos.x,
+              speed: pos.s || 0,
+              course: pos.c || 0,
+              time: pos.t || 0
+            } : undefined,
+            status
+          };
+          
+          setUnit(unitData);
+          setLastUpdate(new Date());
+          console.log('✅ Position loaded successfully via JSONP');
+        } else {
+          setError('Транспорт не найден в системе Wialon');
+          console.error(`Unit ${wialonUnitId} not found in Wialon`);
+        }
       }
     } catch (err: any) {
       console.error('Failed to load vehicle position:', err);

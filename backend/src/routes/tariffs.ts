@@ -27,7 +27,19 @@ router.delete('/:id', TariffController.deleteTariff)
 // Создать новую локацию
 router.post('/locations', TariffController.createLocation)
 
+// Обновить локацию
+router.put('/locations/:id', TariffController.updateLocation)
+
+// Удалить локацию
+router.delete('/locations/:id', TariffController.deleteLocation)
+
 // Создать новый маршрут
 router.post('/routes', TariffController.createRoute)
+
+// Обновить маршрут
+router.put('/routes/:id', TariffController.updateRoute)
+
+// Удалить маршрут
+router.delete('/routes/:id', TariffController.deleteRoute)
 
 export default router

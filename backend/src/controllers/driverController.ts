@@ -71,6 +71,7 @@ export class DriverController {
         } : null,
         activeBookings: driver.bookings.map(booking => ({
           id: booking.id,
+          bookingNumber: booking.booking_number,
           fromLocation: booking.from_location,
           toLocation: booking.to_location,
           pickupLocation: booking.pickup_location,
@@ -81,7 +82,10 @@ export class DriverController {
           status: booking.status,
           user: {
             name: booking.user.name || booking.user.first_name,
-            phone: booking.user.phone
+            phone: booking.user.phone,
+            photoUrl: booking.user.photo_url,
+            username: booking.user.username,
+            telegramId: booking.user.telegram_id
           },
           notes: booking.notes,
           createdAt: booking.created_at
@@ -139,6 +143,7 @@ export class DriverController {
 
       const formattedBookings = bookings.map(booking => ({
         id: booking.id,
+        bookingNumber: booking.booking_number,
         fromLocation: booking.from_location,
         toLocation: booking.to_location,
         pickupLocation: booking.pickup_location,
@@ -149,7 +154,10 @@ export class DriverController {
         status: booking.status,
         user: {
           name: booking.user.name || booking.user.first_name,
-          phone: booking.user.phone
+          phone: booking.user.phone,
+          photoUrl: booking.user.photo_url,
+          username: booking.user.username,
+          telegramId: booking.user.telegram_id
         },
         notes: booking.notes,
         distanceKm: booking.distance_km,

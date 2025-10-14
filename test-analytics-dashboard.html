@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тестирование Аналитического Дашборда</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            font-size: 24px;
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .endpoint {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            margin-bottom: 16px;
+            border-radius: 4px;
+        }
+
+        .endpoint h3 {
+            font-size: 16px;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .endpoint .url {
+            font-family: 'Courier New', monospace;
+            background: #e2e8f0;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .endpoint .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .status.pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin-right: 10px;
+            transition: background 0.2s;
+        }
+
+        .button:hover {
+            background: #5568d3;
+        }
+
+        .button.secondary {
+            background: #48bb78;
+        }
+
+        .button.secondary:hover {
+            background: #38a169;
+        }
+
+        .results {
+            background: #1a202c;
+            color: #a0aec0;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .metric {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .metric .value {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+
+        .metric .label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 Тестирование Аналитического Дашборда</h1>
+            <p>Проверка работы API эндпоинтов для аналитики</p>
+        </div>
+
+        <div class="card">
+            <h2>⚙️ Настройки</h2>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">API URL:</label>
+                <input type="text" id="apiUrl" value="http://localhost:3001/api" 
+                       style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px; font-size: 14px;">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Admin Token:</label>
+                <input type="password" id="adminToken" placeholder="Введите токен администратора" 
+                       style="width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 4px; font-size: 14px;">
+                <p style="margin-top: 8px; font-size: 12px; color: #718096;">Токен можно получить из localStorage после входа в админ-панель</p>
+            </div>
+            <button class="button" onclick="testAllEndpoints()">🧪 Тестировать все эндпоинты</button>
+            <button class="button secondary" onclick="clearResults()">🗑️ Очистить результаты</button>
+        </div>
+
+        <div class="card">
+            <h2>📊 Метрики в реальном времени</h2>
+            <div class="grid" id="realTimeMetrics">
+                <div class="metric">
+                    <div class="label">Активные заказы</div>
+                    <div class="value" id="activeOrders">-</div>
+                </div>
+                <div class="metric">
+                    <div class="label">Доступные водители</div>
+                    <div class="value" id="availableDrivers">-</div>
+                </div>
+                <div class="metric">
+                    <div class="label">Занятые водители</div>
+                    <div class="value" id="busyDrivers">-</div>
+                </div>
+                <div class="metric">
+                    <div class="label">Выручка сегодня</div>
+                    <div class="value" id="currentRevenue">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔗 Эндпоинты</h2>
+            
+            <div class="endpoint">
+                <h3>1. Метрики в реальном времени</h3>
+                <div class="url">GET /admin/analytics/realtime</div>
+                <span class="status pending" id="status-realtime">Ожидание</span>
+            </div>
+
+            <div class="endpoint">
+                <h3>2. Данные о выручке</h3>
+                <div class="url">GET /admin/analytics/revenue?period=week</div>
+                <span class="status pending" id="status-revenue">Ожидание</span>
+            </div>
+
+            <div class="endpoint">
+                <h3>3. Популярные маршруты</h3>
+                <div class="url">GET /admin/analytics/popular-routes</div>
+                <span class="status pending" id="status-routes">Ожидание</span>
+            </div>
+
+            <div class="endpoint">
+                <h3>4. Производительность водителей</h3>
+                <div class="url">GET /admin/analytics/driver-performance</div>
+                <span class="status pending" id="status-drivers">Ожидание</span>
+            </div>
+
+            <div class="endpoint">
+                <h3>5. Статусы заказов</h3>
+                <div class="url">GET /admin/analytics/orders-status?period=week</div>
+                <span class="status pending" id="status-status">Ожидание</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📝 Результаты</h2>
+            <div class="results" id="results">Нажмите "Тестировать все эндпоинты" для начала...</div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const emoji = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+            resultsDiv.textContent += `[${timestamp}] ${emoji} ${message}\n`;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function updateStatus(endpoint, status) {
+            const element = document.getElementById(`status-${endpoint}`);
+            element.className = `status ${status}`;
+            element.textContent = status === 'success' ? 'Успешно' : status === 'error' ? 'Ошибка' : 'Загрузка...';
+        }
+
+        function clearResults() {
+            document.getElementById('results').textContent = 'Результаты очищены. Готов к новому тесту...\n';
+            ['realtime', 'revenue', 'routes', 'drivers', 'status'].forEach(endpoint => {
+                updateStatus(endpoint, 'pending');
+            });
+        }
+
+        async function testEndpoint(name, url, statusId) {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const token = document.getElementById('adminToken').value;
+
+            if (!token) {
+                log(`Ошибка: Не указан токен администратора`, 'error');
+                updateStatus(statusId, 'error');
+                return null;
+            }
+
+            log(`Запрос к ${name}...`);
+            updateStatus(statusId, 'loading');
+
+            try {
+                const response = await fetch(`${apiUrl}${url}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    log(`${name}: Успешно`, 'success');
+                    log(`Данные: ${JSON.stringify(data.data, null, 2)}`);
+                    updateStatus(statusId, 'success');
+                    return data.data;
+                } else {
+                    log(`${name}: Ошибка - ${data.error || 'Неизвестная ошибка'}`, 'error');
+                    updateStatus(statusId, 'error');
+                    return null;
+                }
+            } catch (error) {
+                log(`${name}: Ошибка сети - ${error.message}`, 'error');
+                updateStatus(statusId, 'error');
+                return null;
+            }
+        }
+
+        async function testAllEndpoints() {
+            clearResults();
+            log('Начало тестирования всех эндпоинтов...');
+            log('');
+
+            // 1. Метрики в реальном времени
+            const realtime = await testEndpoint('Метрики в реальном времени', '/admin/analytics/realtime', 'realtime');
+            if (realtime) {
+                document.getElementById('activeOrders').textContent = realtime.activeOrders || 0;
+                document.getElementById('availableDrivers').textContent = realtime.availableDrivers || 0;
+                document.getElementById('busyDrivers').textContent = realtime.busyDrivers || 0;
+                document.getElementById('currentRevenue').textContent = 
+                    new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'UZS' }).format(realtime.currentRevenue || 0);
+            }
+            log('');
+
+            // 2. Данные о выручке
+            await testEndpoint('Данные о выручке', '/admin/analytics/revenue?period=week', 'revenue');
+            log('');
+
+            // 3. Популярные маршруты
+            await testEndpoint('Популярные маршруты', '/admin/analytics/popular-routes', 'routes');
+            log('');
+
+            // 4. Производительность водителей
+            await testEndpoint('Производительность водителей', '/admin/analytics/driver-performance', 'drivers');
+            log('');
+
+            // 5. Статусы заказов
+            await testEndpoint('Статусы заказов', '/admin/analytics/orders-status?period=week', 'status');
+            log('');
+
+            log('🎉 Тестирование завершено!', 'success');
+        }
+
+        // Автозагрузка токена из localStorage (если открыто с того же домена)
+        window.addEventListener('load', () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    document.getElementById('adminToken').value = token;
+                    log('Токен загружен из localStorage');
+                }
+            } catch (e) {
+                // Игнорируем ошибки доступа к localStorage
+            }
+        });
+    </script>
+</body>
+</html>
+

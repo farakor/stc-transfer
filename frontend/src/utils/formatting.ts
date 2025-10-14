@@ -107,10 +107,10 @@ export function getVehicleImage(brand?: string, model?: string): string | null {
   const fullName = `${brand} ${model}`.toLowerCase()
 
   // Проверяем полные названия
-  if (fullName.includes('hongqi ehs 5') || fullName.includes('hongqi ehs5')) {
+  if (fullName.includes('hongqi ehs 5') || fullName.includes('hongqi ehs5') || fullName.includes('hongqi ehs eq5')) {
     return new URL('../assets/eqm5_black.png', import.meta.url).href
   }
-  if (fullName.includes('hongqi ehs 9') || fullName.includes('hongqi ehs9')) {
+  if (fullName.includes('hongqi ehs 9') || fullName.includes('hongqi ehs9') || fullName.includes('hongqi ehs eq9')) {
     return new URL('../assets/ehs9.png', import.meta.url).href
   }
   if (fullName.includes('kia carnival')) {

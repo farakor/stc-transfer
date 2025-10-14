@@ -34,6 +34,8 @@ router.post('/telegram/test', AdminController.testTelegramBot)
 router.get('/analytics/revenue', AdminController.getRevenueAnalytics)
 router.get('/analytics/popular-routes', AdminController.getPopularRoutes)
 router.get('/analytics/driver-performance', AdminController.getDriverPerformance)
+router.get('/analytics/realtime', AdminController.getRealTimeMetrics)
+router.get('/analytics/orders-status', AdminController.getOrdersStatusData)
 
 // Настройки системы
 router.get('/settings', SettingsController.getAllSettings)

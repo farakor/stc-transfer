@@ -1,5 +1,20 @@
-import api from './api'
-import { VehicleType, ApiResponse } from '@/types'
+import { api } from './api'
+
+export interface LocationData {
+  id: number
+  name: string
+  type: string
+  is_active: boolean
+}
+
+export interface RouteData {
+  id: number
+  from_location: LocationData
+  to_location: LocationData
+  distance_km?: number | null
+  estimated_duration_minutes?: number | null
+  is_active: boolean
+}
 
 export interface TariffData {
   id: number
@@ -13,148 +28,188 @@ export interface TariffData {
   holiday_surcharge_percent?: number
   waiting_price_per_minute?: number
   is_active: boolean
-  valid_from?: string
-  valid_until?: string
-  route?: {
-    id: number
-    from_location: {
-      id: number
-      name: string
-      type: string
-    }
-    to_location: {
-      id: number
-      name: string
-      type: string
-    }
-    distance_km: number | null
-    estimated_duration_minutes: number
-    is_active: boolean
-  }
+  valid_from?: Date
+  valid_until?: Date
+  route?: RouteData
 }
 
 export interface VehicleModel {
   brand: string
   model: string
+  name: string
   type: string
+  capacity: number
+  features: string[]
+  description?: string
   count: number
 }
 
 export interface TariffMatrix {
-  routes: Array<{
-    id: number
-    from_location: {
-      id: number
-      name: string
-      type: string
-    }
-    to_location: {
-      id: number
-      name: string
-      type: string
-    }
-    distance_km: number | null
-    estimated_duration_minutes: number
-    is_active: boolean
-  }>
+  routes: RouteData[]
   vehicleModels: VehicleModel[]
   tariffs: { [routeId: number]: { [vehicleKey: string]: TariffData } }
 }
 
 export class TariffService {
-  // Получить матрицу тарифов
+  /**
+   * Получить матрицу тарифов (публичный эндпоинт)
+   */
   static async getTariffMatrix(): Promise<TariffMatrix> {
-    const response = await api.get<ApiResponse<TariffMatrix>>('/admin/tariffs/matrix')
-    return response.data.data || { routes: [], vehicleModels: [], tariffs: {} }
+    const response = await api.get('/tariffs/matrix')
+    if (response.data.success) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || 'Ошибка загрузки матрицы тарифов')
   }
 
-  // Получить все тарифы
+  /**
+   * Получить все тарифы (публичный эндпоинт)
+   */
   static async getTariffs(): Promise<TariffData[]> {
-    const response = await api.get<ApiResponse<TariffData[]>>('/admin/tariffs')
-    return response.data.data || []
+    const response = await api.get('/tariffs')
+    if (response.data.success) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || 'Ошибка загрузки тарифов')
   }
 
-  // Получить модели автомобилей
+  /**
+   * Получить модели автомобилей (публичный эндпоинт)
+   */
   static async getVehicleModels(): Promise<VehicleModel[]> {
-    const response = await api.get<ApiResponse<VehicleModel[]>>('/admin/tariffs/vehicle-models')
-    return response.data.data || []
+    const response = await api.get('/tariffs/vehicle-models')
+    if (response.data.success) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || 'Ошибка загрузки моделей')
   }
 
-  // Получить тариф для конкретного маршрута и типа автомобиля
-  static async getTariffForRoute(fromLocation: string, toLocation: string, vehicleType: VehicleType): Promise<TariffData | null> {
-    try {
-      const matrix = await this.getTariffMatrix()
-      
-      // Найти маршрут
-      const route = matrix.routes.find(r => 
-        r.from_location.name === fromLocation && r.to_location.name === toLocation
-      )
-      
-      if (!route) {
-        return null
-      }
+  /**
+   * Получить тарифы для поездок по Самарканду
+   */
+  static async getSamarkandTariffs(vehicleType: string): Promise<TariffData[]> {
+    const response = await api.get('/tariffs/samarkand', {
+      params: { vehicleType }
+    })
+    if (response.data.success) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || 'Ошибка загрузки тарифов')
+  }
 
-      // Найти тариф для этого маршрута и типа автомобиля
-      const routeTariffs = matrix.tariffs[route.id]
-      if (!routeTariffs) {
-        return null
-      }
+  /**
+   * Получить тариф для конкретного маршрута
+   */
+  static async getTariffForRoute(fromLocation: string, toLocation: string, vehicleType: string): Promise<TariffData | null> {
+    const response = await api.get('/tariffs/route', {
+      params: { fromLocation, toLocation, vehicleType }
+    })
+    if (response.data.success) {
+      return response.data.data
+    }
+    return null
+  }
 
-      // Поиск по типу автомобиля
-      for (const [vehicleKey, tariff] of Object.entries(routeTariffs)) {
-        if (vehicleKey.includes(vehicleType)) {
-          return tariff
-        }
-      }
+  /**
+   * Получить все локации (публичный эндпоинт)
+   */
+  static async getLocations(): Promise<LocationData[]> {
+    const response = await api.get('/tariffs/locations')
+    if (response.data.success) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || 'Ошибка загрузки локаций')
+  }
 
-      return null
-    } catch (error) {
-      console.error('Error fetching tariff for route:', error)
-      return null
+  /**
+   * Создать локацию (защищенный эндпоинт, только для админ-панели)
+   */
+  static async createLocation(data: { name: string; type: string }): Promise<LocationData> {
+    const response = await api.post('/admin/tariffs/locations', data)
+    if (response.data.success) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || 'Ошибка создания локации')
+  }
+
+  /**
+   * Обновить локацию (защищенный эндпоинт, только для админ-панели)
+   */
+  static async updateLocation(id: number, data: {
+    name?: string
+    type?: string
+    is_active?: boolean
+  }): Promise<LocationData> {
+    const response = await api.put(`/admin/tariffs/locations/${id}`, data)
+    if (response.data.success) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || 'Ошибка обновления локации')
+  }
+
+  /**
+   * Удалить локацию (защищенный эндпоинт, только для админ-панели)
+   */
+  static async deleteLocation(id: number): Promise<void> {
+    const response = await api.delete(`/admin/tariffs/locations/${id}`)
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Ошибка удаления локации')
     }
   }
 
-  // Получить тарифы для поездок по Самарканду
-  static async getSamarkandTariffs(vehicleType: string): Promise<{ perKm: number; hourly: number }> {
-    try {
-      const tariffs = await this.getTariffs()
-      
-      // Найти тариф для поездок по Самарканду
-      const samarkandTariff = tariffs.find(tariff => 
-        tariff.route?.to_location.name === 'Поездка по Самарканду' &&
-        (tariff.vehicle_brand + ' ' + tariff.vehicle_model).includes(vehicleType)
-      )
-
-      if (samarkandTariff) {
-        return {
-          perKm: samarkandTariff.price_per_km,
-          hourly: samarkandTariff.waiting_price_per_minute ? samarkandTariff.waiting_price_per_minute * 60 : 0
-        }
-      }
-
-      // Fallback к захардкоженным значениям
-      const fallbackTariffs: Record<string, { perKm: number; hourly: number }> = {
-        'SEDAN': { perKm: 15000, hourly: 150000 },
-        'PREMIUM': { perKm: 40000, hourly: 400000 },
-        'BUS': { perKm: 0, hourly: 325000 },
-        'MICROBUS': { perKm: 25000, hourly: 200000 },
-        'MINIVAN': { perKm: 20000, hourly: 180000 },
-      }
-
-      return fallbackTariffs[vehicleType] || { perKm: 0, hourly: 0 }
-    } catch (error) {
-      console.error('Error fetching Samarkand tariffs:', error)
-      
-      // Fallback к захардкоженным значениям при ошибке
-      const fallbackTariffs: Record<string, { perKm: number; hourly: number }> = {
-        'SEDAN': { perKm: 15000, hourly: 150000 },
-        'PREMIUM': { perKm: 40000, hourly: 400000 },
-        'BUS': { perKm: 0, hourly: 325000 },
-        'MICROBUS': { perKm: 25000, hourly: 200000 },
-        'MINIVAN': { perKm: 20000, hourly: 180000 },
-      }
-
-      return fallbackTariffs[vehicleType] || { perKm: 0, hourly: 0 }
+  /**
+   * Создать маршрут (защищенный эндпоинт, только для админ-панели)
+   */
+  static async createRoute(data: {
+    from_location_id: number
+    to_location_id: number
+    distance_km: number
+    estimated_duration_minutes: number
+  }): Promise<RouteData> {
+    const response = await api.post('/admin/tariffs/routes', data)
+    if (response.data.success) {
+      return response.data.data
     }
+    throw new Error(response.data.error || 'Ошибка создания маршрута')
+  }
+
+  /**
+   * Обновить маршрут (защищенный эндпоинт, только для админ-панели)
+   */
+  static async updateRoute(id: number, data: {
+    from_location_id?: number
+    to_location_id?: number
+    distance_km?: number
+    estimated_duration_minutes?: number
+    is_active?: boolean
+  }): Promise<RouteData> {
+    const response = await api.put(`/admin/tariffs/routes/${id}`, data)
+    if (response.data.success) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || 'Ошибка обновления маршрута')
+  }
+
+  /**
+   * Удалить маршрут (защищенный эндпоинт, только для админ-панели)
+   */
+  static async deleteRoute(id: number): Promise<void> {
+    const response = await api.delete(`/admin/tariffs/routes/${id}`)
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Ошибка удаления маршрута')
+    }
+  }
+
+  /**
+   * Сохранить тариф (защищенный эндпоинт, только для админ-панели)
+   */
+  static async saveTariff(data: Partial<TariffData>): Promise<TariffData> {
+    const response = await api.post('/admin/tariffs', data)
+    if (response.data.success) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || 'Ошибка сохранения тарифа')
   }
 }
+
+export default TariffService

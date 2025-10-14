@@ -17,6 +17,7 @@ import {
   DollarSign,
   Activity
 } from 'lucide-react';
+import UserService from '../../services/userService';
 
 interface UserData {
   id: number;
@@ -78,41 +79,38 @@ const UsersManagement: React.FC = () => {
       setLoading(true);
       console.log('👥 Загружаем пользователей...');
 
-      const response = await fetch('/api/admin/users');
-      const data = await response.json();
-
+      const data = await UserService.getAllUsers();
       console.log('📦 Получены пользователи:', data);
 
-      if (data.success && data.data) {
-        // Преобразуем данные API в формат компонента
-        const apiUsers: UserData[] = data.data.map((apiUser: any) => ({
-          id: parseInt(apiUser.id),
-          telegram_id: apiUser.telegramId,
-          first_name: apiUser.firstName || null,
-          last_name: apiUser.lastName || null,
-          name: apiUser.name,
-          phone: apiUser.phone,
-          language_code: apiUser.language || 'ru',
-          created_at: apiUser.createdAt,
-          updated_at: apiUser.updatedAt || apiUser.createdAt,
-          stats: {
-            totalBookings: apiUser.totalBookings || 0,
-            totalSpent: apiUser.totalSpent || 0,
-            completedBookings: apiUser.completedBookings || 0,
-            cancelledBookings: apiUser.cancelledBookings || 0,
-            avgRating: apiUser.avgRating,
-            lastBookingDate: apiUser.recentBookings && apiUser.recentBookings.length > 0
-              ? apiUser.recentBookings[0].createdAt
-              : undefined
-          }
-        }));
+      // Преобразуем данные API в формат компонента
+      const apiUsers: UserData[] = (data as any[]).map((apiUser: any) => ({
+        id: parseInt(apiUser.id),
+        telegram_id: apiUser.telegram_id || apiUser.telegramId,
+        first_name: apiUser.first_name || apiUser.firstName || null,
+        last_name: apiUser.last_name || apiUser.lastName || null,
+        name: apiUser.name || `${apiUser.first_name || ''} ${apiUser.last_name || ''}`.trim(),
+        phone: apiUser.phone,
+        language_code: apiUser.language || 'ru',
+        created_at: apiUser.created_at || apiUser.createdAt,
+        updated_at: apiUser.updated_at || apiUser.updatedAt || apiUser.createdAt,
+        stats: {
+          totalBookings: apiUser.totalBookings || 0,
+          totalSpent: apiUser.totalSpent || 0,
+          completedBookings: apiUser.completedBookings || 0,
+          cancelledBookings: apiUser.cancelledBookings || 0,
+          avgRating: apiUser.avgRating,
+          lastBookingDate: apiUser.recentBookings && apiUser.recentBookings.length > 0
+            ? apiUser.recentBookings[0].createdAt
+            : undefined
+        }
+      }));
 
-        setUsers(apiUsers);
-        console.log(`✅ Загружено ${apiUsers.length} пользователей из API`);
-      } else {
-        console.error('❌ API пользователей вернул ошибку:', data.error);
-        // Заглушка для демонстрации, если API не работает
-        const mockUsers: UserData[] = [
+      setUsers(apiUsers);
+      console.log(`✅ Загружено ${apiUsers.length} пользователей из API`);
+    } catch (error) {
+      console.error('❌ Ошибка загрузки пользователей:', error);
+      // Заглушка для демонстрации при ошибке
+      const mockUsers: UserData[] = [
           {
             id: 1,
             telegram_id: '123456789',
@@ -192,13 +190,9 @@ const UsersManagement: React.FC = () => {
               lastBookingDate: '2025-01-11T11:20:00Z'
             }
           }
-        ];
-        setUsers(mockUsers);
-        console.log('✅ Загружены тестовые пользователи');
-      }
-    } catch (error) {
-      console.error('❌ Ошибка при получении пользователей:', error);
-      setUsers([]);
+      ];
+      setUsers(mockUsers);
+      console.log('✅ Загружены тестовые пользователи');
     } finally {
       setLoading(false);
     }
@@ -208,49 +202,47 @@ const UsersManagement: React.FC = () => {
     try {
       console.log(`👤 Загружаем детали пользователя ${userId}...`);
 
-      const response = await fetch(`/api/admin/users/${userId}`);
-      const data = await response.json();
+      const data = await UserService.getUserDetails(userId.toString());
+      
+      // Преобразуем данные API в формат компонента
+      const apiUserDetails = {
+        ...(data as any),
+        id: parseInt((data as any).id),
+        telegram_id: (data as any).telegram_id || (data as any).telegramId,
+        first_name: (data as any).first_name || (data as any).firstName || null,
+        last_name: (data as any).last_name || (data as any).lastName || null,
+        language_code: (data as any).language || 'ru',
+        created_at: (data as any).created_at || (data as any).createdAt,
+        updated_at: (data as any).updated_at || (data as any).updatedAt || (data as any).createdAt,
+        bookings: (data as any).bookings ? (data as any).bookings.map((booking: any) => ({
+          id: booking.id,
+          bookingNumber: booking.bookingNumber || booking.booking_number,
+          from_location: booking.fromLocation || booking.from_location,
+          to_location: booking.toLocation || booking.to_location,
+          price: booking.price,
+          status: booking.status,
+          created_at: booking.createdAt || booking.created_at,
+          pickup_time: booking.pickupTime || booking.pickup_time,
+          vehicle: booking.vehicle,
+          driver: booking.driver
+        })) : [],
+        stats: {
+          totalBookings: (data as any).totalBookings || 0,
+          totalSpent: (data as any).totalSpent || 0,
+          completedBookings: (data as any).completedBookings || 0,
+          cancelledBookings: (data as any).cancelledBookings || 0,
+          avgRating: (data as any).avgRating,
+          lastBookingDate: (data as any).recentBookings && (data as any).recentBookings.length > 0
+            ? (data as any).recentBookings[0].createdAt || (data as any).recentBookings[0].created_at
+            : undefined
+        }
+      };
 
-      if (data.success && data.data) {
-        // Преобразуем данные API в формат компонента
-        const apiUserDetails = {
-          ...data.data,
-          id: parseInt(data.data.id),
-          telegram_id: data.data.telegramId,
-          first_name: data.data.firstName || null,
-          last_name: data.data.lastName || null,
-          language_code: data.data.language || 'ru',
-          created_at: data.data.createdAt,
-          updated_at: data.data.updatedAt || data.data.createdAt,
-          bookings: data.data.bookings ? data.data.bookings.map((booking: any) => ({
-            id: booking.id,
-            bookingNumber: booking.bookingNumber,
-            from_location: booking.fromLocation,
-            to_location: booking.toLocation,
-            price: booking.price,
-            status: booking.status,
-            created_at: booking.createdAt,
-            pickup_time: booking.pickupTime,
-            vehicle: booking.vehicle,
-            driver: booking.driver
-          })) : [],
-          stats: {
-            totalBookings: data.data.totalBookings || 0,
-            totalSpent: data.data.totalSpent || 0,
-            completedBookings: data.data.completedBookings || 0,
-            cancelledBookings: data.data.cancelledBookings || 0,
-            avgRating: data.data.avgRating,
-            lastBookingDate: data.data.recentBookings && data.data.recentBookings.length > 0
-              ? data.data.recentBookings[0].createdAt
-              : undefined
-          }
-        };
-
-        setSelectedUser(apiUserDetails);
-        setShowUserModal(true);
-        console.log('✅ Детали пользователя загружены из API');
-      } else {
-        console.warn('❌ Детали пользователя не найдены, используем заглушку');
+      setSelectedUser(apiUserDetails);
+      setShowUserModal(true);
+      console.log('✅ Детали пользователя загружены из API');
+    } catch (error) {
+      console.error('❌ Ошибка загрузки деталей пользователя:', error);
         // Заглушка для демонстрации, если API не работает
         const mockBookings: BookingData[] = [
           {
@@ -299,16 +291,13 @@ const UsersManagement: React.FC = () => {
           }
         ];
 
-        const userWithBookings = {
-          ...users.find(u => u.id === userId)!,
-          bookings: mockBookings
-        };
+      const userWithBookings = {
+        ...users.find(u => u.id === userId)!,
+        bookings: mockBookings
+      };
 
-        setSelectedUser(userWithBookings);
-        setShowUserModal(true);
-      }
-    } catch (error) {
-      console.error('❌ Ошибка при получении деталей пользователя:', error);
+      setSelectedUser(userWithBookings);
+      setShowUserModal(true);
     }
   };
 

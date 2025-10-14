@@ -19,7 +19,7 @@ interface LoginResponse {
 }
 
 const DriverLogin: React.FC = () => {
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('+998 ');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -28,17 +28,28 @@ const DriverLogin: React.FC = () => {
     // Убираем все нецифровые символы
     const numbers = value.replace(/\D/g, '');
     
-    // Форматируем как +7 (XXX) XXX-XX-XX
-    if (numbers.length === 0) return '';
-    if (numbers.length <= 1) return `+7`;
-    if (numbers.length <= 4) return `+7 (${numbers.slice(1)}`;
-    if (numbers.length <= 7) return `+7 (${numbers.slice(1, 4)}) ${numbers.slice(4)}`;
-    if (numbers.length <= 9) return `+7 (${numbers.slice(1, 4)}) ${numbers.slice(4, 7)}-${numbers.slice(7)}`;
-    return `+7 (${numbers.slice(1, 4)}) ${numbers.slice(4, 7)}-${numbers.slice(7, 9)}-${numbers.slice(9, 11)}`;
+    // Всегда начинаем с 998, берем только цифры после 998
+    const phoneDigits = numbers.startsWith('998') ? numbers.slice(3) : numbers;
+    
+    // Форматируем как +998 xx-xxx-xx-xx
+    if (phoneDigits.length === 0) return '+998 ';
+    if (phoneDigits.length <= 2) return `+998 ${phoneDigits}`;
+    if (phoneDigits.length <= 5) return `+998 ${phoneDigits.slice(0, 2)}-${phoneDigits.slice(2)}`;
+    if (phoneDigits.length <= 7) return `+998 ${phoneDigits.slice(0, 2)}-${phoneDigits.slice(2, 5)}-${phoneDigits.slice(5)}`;
+    return `+998 ${phoneDigits.slice(0, 2)}-${phoneDigits.slice(2, 5)}-${phoneDigits.slice(5, 7)}-${phoneDigits.slice(7, 9)}`;
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value);
+    const input = e.target.value;
+    
+    // Если пользователь пытается удалить +998, возвращаем минимальное значение
+    if (!input.startsWith('+998')) {
+      setPhone('+998 ');
+      if (error) setError('');
+      return;
+    }
+    
+    const formatted = formatPhone(input);
     setPhone(formatted);
     if (error) setError('');
   };
@@ -46,7 +57,7 @@ const DriverLogin: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!phone || phone.length < 18) {
+    if (!phone || phone.length < 17) {
       setError('Введите корректный номер телефона');
       return;
     }
@@ -109,8 +120,8 @@ const DriverLogin: React.FC = () => {
                 type="tel"
                 value={phone}
                 onChange={handlePhoneChange}
-                placeholder="+7 (___) ___-__-__"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors"
+                placeholder="+998 __-___-__-__"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-colors text-gray-900 font-semibold text-lg placeholder:text-gray-400 placeholder:font-normal"
                 disabled={loading}
               />
             </div>
@@ -125,7 +136,7 @@ const DriverLogin: React.FC = () => {
 
           <button
             type="submit"
-            disabled={loading || !phone || phone.length < 18}
+            disabled={loading || !phone || phone.length < 17}
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? (

@@ -69,40 +69,42 @@ export function NotificationToast({
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.div
-          initial={{ opacity: 0, y: -50, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -50, scale: 0.9 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-sm w-full mx-4"
-        >
-          <div className={clsx(
-            'rounded-lg border shadow-lg p-4',
-            getStyles()
-          )}>
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                {getIcon()}
-              </div>
-              <div className="ml-3 flex-1">
-                <p className="text-sm font-medium">
-                  {message}
-                </p>
-              </div>
-              <div className="ml-4 flex-shrink-0">
-                <button
-                  onClick={onClose}
-                  className="inline-flex text-current hover:opacity-75 transition-opacity"
-                >
-                  <span className="sr-only">Закрыть</span>
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
+        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center px-4 pt-4">
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="w-full max-w-md"
+          >
+            <div className={clsx(
+              'rounded-lg border shadow-lg p-4',
+              getStyles()
+            )}>
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  {getIcon()}
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium">
+                    {message}
+                  </p>
+                </div>
+                <div className="ml-4 flex-shrink-0">
+                  <button
+                    onClick={onClose}
+                    className="inline-flex text-current hover:opacity-75 transition-opacity"
+                  >
+                    <span className="sr-only">Закрыть</span>
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       )}
     </AnimatePresence>
   )

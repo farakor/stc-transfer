@@ -1,5 +1,9 @@
 import TelegramBot from 'node-telegram-bot-api'
 import { Request, Response, NextFunction } from 'express'
+import { PrismaClient } from '@prisma/client'
+import { getBotMessage, Language } from '../locales/botMessages'
+
+const prisma = new PrismaClient()
 
 export class TelegramBotService {
   private static instance: TelegramBotService
@@ -58,32 +62,259 @@ export class TelegramBotService {
   private async handleMessage(message: any) {
     const chatId = message.chat.id
     const text = message.text
+    const telegramId = message.from.id.toString()
+
+    // Обработка получения контакта (номера телефона)
+    if (message.contact) {
+      await this.handleContactShared(message)
+      return
+    }
 
     if (text === '/start') {
-      await this.sendWelcomeMessage(chatId)
+      // Проверяем, есть ли пользователь в базе и выбран ли язык
+      const user = await this.getOrCreateUser(message.from)
+      
+      if (user.language_code === 'ru' && !message.text.includes('change_lang')) {
+        // Если язык не выбран (по умолчанию ru), показываем выбор языка
+        await this.sendLanguageSelection(chatId)
+      } else if (!user.phone || !user.is_phone_verified) {
+        // Если номер телефона не указан, запрашиваем его
+        await this.requestPhoneNumber(chatId, user.language_code as Language)
+      } else {
+        // Если язык выбран и телефон указан, показываем кнопку запуска приложения
+        await this.sendWelcomeMessage(chatId, user.language_code as Language)
+      }
+    } else if (text === '/language') {
+      // Команда для изменения языка
+      await this.sendLanguageSelection(chatId)
+    }
+  }
+
+  private async handleContactShared(message: any) {
+    const chatId = message.chat.id
+    const contact = message.contact
+    const telegramId = message.from.id.toString()
+
+    try {
+      // Проверяем, что пользователь поделился своим номером
+      if (contact.user_id && contact.user_id.toString() !== telegramId) {
+        // Пользователь поделился чужим номером
+        await this.bot.sendMessage(
+          chatId,
+          'Пожалуйста, поделитесь своим номером телефона.\nPlease share your phone number.\nIltimos, telefon raqamingizni ulashing.'
+        )
+        return
+      }
+
+      // Сохраняем номер телефона
+      const user = await prisma.user.update({
+        where: { telegram_id: telegramId },
+        data: {
+          phone: contact.phone_number,
+          is_phone_verified: true,
+        },
+      })
+
+      const language = (user.language_code || 'ru') as Language
+      const messages = getBotMessage(language)
+
+      // Отправляем подтверждение
+      await this.bot.sendMessage(chatId, messages.phoneVerified, {
+        reply_markup: {
+          remove_keyboard: true,
+        },
+      })
+
+      // Показываем welcome сообщение с кнопкой запуска приложения
+      await this.sendWelcomeMessage(chatId, language)
+    } catch (error) {
+      console.error('❌ Error handling contact:', error)
+      await this.bot.sendMessage(
+        chatId,
+        'Произошла ошибка. Попробуйте еще раз.\nAn error occurred. Please try again.\nXatolik yuz berdi. Qayta urinib ko\'ring.'
+      )
+    }
+  }
+
+  private async requestPhoneNumber(chatId: number, language: Language = 'ru') {
+    const messages = getBotMessage(language)
+
+    const keyboard = {
+      keyboard: [
+        [
+          {
+            text: messages.sharePhone,
+            request_contact: true,
+          },
+        ],
+      ],
+      resize_keyboard: true,
+      one_time_keyboard: true,
+    }
+
+    try {
+      await this.bot.sendMessage(chatId, messages.phoneRequest, {
+        reply_markup: keyboard,
+      })
+    } catch (error) {
+      console.error('❌ Failed to request phone number:', error)
     }
   }
 
   private async handleCallbackQuery(callbackQuery: any) {
     const chatId = callbackQuery.message.chat.id
-    // Handle callback queries here
+    const data = callbackQuery.data
+    const telegramId = callbackQuery.from.id.toString()
+
+    // Обработка выбора языка
+    if (data?.startsWith('lang_')) {
+      const language = data.split('_')[1] as Language
+      const user = await this.updateUserLanguage(telegramId, language)
+      
+      // Отправляем подтверждение
+      await this.bot.answerCallbackQuery(callbackQuery.id, {
+        text: '✅',
+      })
+      
+      // Удаляем старое сообщение
+      try {
+        await this.bot.deleteMessage(chatId, callbackQuery.message.message_id)
+      } catch (e) {
+        // Игнорируем ошибки удаления
+      }
+      
+      // Проверяем, есть ли номер телефона
+      if (!user.phone || !user.is_phone_verified) {
+        // Запрашиваем номер телефона
+        await this.requestPhoneNumber(chatId, language)
+      } else {
+        // Показываем welcome сообщение с кнопкой запуска приложения
+        await this.sendWelcomeMessage(chatId, language)
+      }
+    } else if (data === 'change_language') {
+      // Показываем выбор языка
+      await this.bot.answerCallbackQuery(callbackQuery.id)
+      await this.sendLanguageSelection(chatId)
+    }
   }
 
-  private async sendWelcomeMessage(chatId: number) {
+  private async getUserPhotoUrl(userId: number): Promise<string | null> {
+    try {
+      const photos = await this.bot.getUserProfilePhotos(userId, { limit: 1 })
+      
+      if (photos.total_count > 0 && photos.photos.length > 0) {
+        const photo = photos.photos[0]
+        // Берем фото наибольшего размера
+        const largestPhoto = photo[photo.length - 1]
+        const file = await this.bot.getFile(largestPhoto.file_id)
+        
+        // Формируем URL фото
+        return `https://api.telegram.org/file/bot${this.token}/${file.file_path}`
+      }
+    } catch (error) {
+      console.error('❌ Error getting user photo:', error)
+    }
+    
+    return null
+  }
+
+  private async getOrCreateUser(from: any) {
+    const telegramId = from.id.toString()
+    
+    let user = await prisma.user.findUnique({
+      where: { telegram_id: telegramId },
+    })
+
+    // Получаем URL фото профиля
+    const photoUrl = await this.getUserPhotoUrl(from.id)
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          telegram_id: telegramId,
+          first_name: from.first_name,
+          last_name: from.last_name,
+          username: from.username,
+          language_code: 'ru', // По умолчанию русский, но будет предложен выбор
+          photo_url: photoUrl,
+        },
+      })
+    } else if (photoUrl && user.photo_url !== photoUrl) {
+      // Обновляем фото, если оно изменилось
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { photo_url: photoUrl },
+      })
+    }
+
+    return user
+  }
+
+  private async updateUserLanguage(telegramId: string, language: Language) {
+    return await prisma.user.update({
+      where: { telegram_id: telegramId },
+      data: { language_code: language },
+    })
+  }
+
+  private async sendLanguageSelection(chatId: number) {
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: '🇷🇺 Русский', callback_data: 'lang_ru' },
+        ],
+        [
+          { text: '🇺🇸 English', callback_data: 'lang_en' },
+        ],
+        [
+          { text: '🇺🇿 O\'zbek', callback_data: 'lang_uz' },
+        ],
+      ],
+    }
+
+    try {
+      await this.bot.sendMessage(
+        chatId,
+        'Пожалуйста, выберите язык:\nPlease select your language:\nIltimos, tilni tanlang:',
+        {
+          reply_markup: keyboard,
+        }
+      )
+    } catch (error) {
+      console.error('❌ Failed to send language selection:', error)
+    }
+  }
+
+  private async sendWelcomeMessage(chatId: number, language: Language = 'ru') {
+    const messages = getBotMessage(language)
+    
     const welcomeText = `
-🚗 Добро пожаловать в STC Transfer!
+${messages.welcome.title}
 
-Мы поможем вам заказать комфортный трансфер по Самарканду и в другие города Узбекистана.
+${messages.welcome.description}
 
-Нажмите кнопку ниже, чтобы начать заказ.
+${messages.languageSelected}
     `
+
+    // Формируем URL с параметром языка
+    const webAppUrl = process.env.TELEGRAM_WEBAPP_URL || process.env.TELEGRAM_WEBHOOK_URL || ''
+    const urlWithLang = `${webAppUrl}?lang=${language}`
+    
+    console.log('🌐 Sending Web App URL:', urlWithLang)
+    console.log('🌐 Language:', language)
 
     const keyboard = {
       inline_keyboard: [
         [
           {
-            text: '🚗 Заказать трансфер',
-            web_app: { url: process.env.TELEGRAM_WEBHOOK_URL || '' }
+            text: messages.welcome.openApp,
+            web_app: { url: urlWithLang }
+          }
+        ],
+        [
+          {
+            text: '🌐 Change language / Изменить язык / Tilni o\'zgartirish',
+            callback_data: 'change_language'
           }
         ]
       ]
@@ -94,6 +325,7 @@ export class TelegramBotService {
         reply_markup: keyboard,
         parse_mode: 'HTML'
       })
+      console.log('✅ Welcome message sent successfully')
     } catch (error) {
       console.error('❌ Failed to send welcome message:', error)
     }
@@ -109,71 +341,97 @@ export class TelegramBotService {
   }
 
   public async sendBookingNotification(chatId: number, bookingData: any) {
+    // Получаем язык пользователя
+    const userId = bookingData.userId || bookingData.user_id
+    if (!userId) {
+      console.error('❌ User ID not found in booking data')
+      return
+    }
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    })
+    const language = (user?.language_code || 'ru') as Language
+    const messages = getBotMessage(language)
+
     const message = `
-🎉 Ваш заказ принят!
+${messages.booking.created}
 
-📍 Маршрут: ${bookingData.fromLocation} → ${bookingData.toLocation}
-🚗 Транспорт: ${bookingData.vehicleType}
-💰 Стоимость: ${bookingData.price} сум
+${messages.booking.route}: ${bookingData.fromLocation} → ${bookingData.toLocation}
+${messages.booking.vehicle}: ${bookingData.vehicleType}
+${messages.booking.price}: ${bookingData.price} ${language === 'uz' ? 'so\'m' : language === 'en' ? 'sum' : 'сум'}
 
-Мы свяжемся с вами в ближайшее время.
+${messages.booking.contact}
     `
 
     await this.sendNotification(chatId, message)
   }
 
   public async sendStatusUpdateNotification(chatId: number, booking: any, status: string) {
+    // Получаем язык пользователя
+    const userId = booking.user_id || booking.userId
+    if (!userId) {
+      console.error('❌ User ID not found in booking')
+      return
+    }
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    })
+    const language = (user?.language_code || 'ru') as Language
+    const messages = getBotMessage(language)
+    const currency = language === 'uz' ? 'so\'m' : language === 'en' ? 'sum' : 'сум'
+    
     let message = ''
 
     switch (status) {
       case 'CONFIRMED':
         message = `
-✅ Ваш заказ подтвержден!
+${messages.status.confirmed.title}
 
-📍 Маршрут: ${booking.fromLocation} → ${booking.toLocation}
-🚗 Автомобиль: ${booking.vehicle?.brand} ${booking.vehicle?.model}
-🚗 Номер: ${booking.vehicle?.licensePlate}
-👤 Водитель: ${booking.driver?.name}
-📞 Телефон: ${booking.driver?.phone}
+${messages.status.confirmed.route}: ${booking.fromLocation || booking.from_location} → ${booking.toLocation || booking.to_location}
+${messages.status.confirmed.vehicle}: ${booking.vehicle?.brand} ${booking.vehicle?.model}
+${messages.status.confirmed.number}: ${booking.vehicle?.licensePlate || booking.vehicle?.license_plate}
+${messages.status.confirmed.driver}: ${booking.driver?.name}
+${messages.status.confirmed.phone}: ${booking.driver?.phone}
 
-Водитель уже в пути к вам!
+${messages.status.confirmed.message}
         `
         break
 
       case 'IN_PROGRESS':
         message = `
-🚗 Поездка началась!
+${messages.status.inProgress.title}
 
-Водитель ${booking.driver?.name} начал поездку.
-Желаем приятного путешествия!
+${messages.status.inProgress.message}
         `
         break
 
       case 'COMPLETED':
         message = `
-🎯 Поездка завершена!
+${messages.status.completed.title}
 
-Спасибо за использование наших услуг!
-Будем рады видеть вас снова.
+${messages.status.completed.thanks}
+${messages.status.completed.again}
 
-💰 Итоговая стоимость: ${booking.price} сум
+${messages.status.completed.totalPrice}: ${booking.price} ${currency}
         `
         break
 
       case 'CANCELLED':
         message = `
-❌ Заказ отменен
+${messages.status.cancelled.title}
 
-Ваш заказ был отменен.
-Если у вас есть вопросы, свяжитесь с нами.
+${messages.status.cancelled.message}
+${messages.status.cancelled.question}
         `
         break
 
       default:
         message = `
-📊 Статус заказа изменен
+📊 ${language === 'en' ? 'Order status changed' : language === 'uz' ? 'Buyurtma holati o\'zgartirildi' : 'Статус заказа изменен'}
 
-Новый статус: ${status}
+${language === 'en' ? 'New status' : language === 'uz' ? 'Yangi holat' : 'Новый статус'}: ${status}
         `
     }
 
@@ -223,16 +481,29 @@ ID заказа: ${booking.id}
 
   // Отправить уведомление о назначении водителя
   public async sendDriverAssignmentNotification(chatId: number, booking: any, driver: any) {
+    // Получаем язык пользователя
+    const userId = booking.user_id || booking.userId
+    if (!userId) {
+      console.error('❌ User ID not found in booking')
+      return
+    }
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    })
+    const language = (user?.language_code || 'ru') as Language
+    const messages = getBotMessage(language)
+
     const message = `
-✅ Водитель назначен!
+${messages.driver.assigned}
 
-📍 Маршрут: ${booking.fromLocation} → ${booking.toLocation}
-👤 Водитель: ${driver.name}
-📞 Телефон водителя: ${driver.phone}
-🚗 Автомобиль: ${booking.vehicle?.brand} ${booking.vehicle?.model}
-🔢 Номер: ${booking.vehicle?.licensePlate}
+${messages.status.confirmed.route}: ${booking.fromLocation || booking.from_location} → ${booking.toLocation || booking.to_location}
+${messages.status.confirmed.driver}: ${driver.name}
+${messages.status.confirmed.phone}: ${driver.phone}
+${messages.status.confirmed.vehicle}: ${booking.vehicle?.brand} ${booking.vehicle?.model}
+${messages.status.confirmed.number}: ${booking.vehicle?.licensePlate || booking.vehicle?.license_plate}
 
-Водитель уже направляется к вам!
+${messages.driver.onTheWay}
     `
 
     try {

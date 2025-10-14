@@ -183,6 +183,8 @@ export interface AppState {
 export interface VehicleDisplayData {
   type: VehicleType
   name: string
+  brand?: string
+  model?: string
   description?: string
   capacity: number
   baggageCapacity: number

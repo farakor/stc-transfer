@@ -5,12 +5,15 @@ import { useAppStore } from '@/services/store'
 import { VehicleType } from '@/types'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { VehicleIcon } from '@/components/VehicleIcon'
+import { useTranslation } from '@/hooks/useTranslation'
+import { ArrowLeft, Car } from 'lucide-react'
 import FarukBadge from '@/assets/faruk-badge.svg'
 
 export function VehicleSelection() {
   const navigate = useNavigate()
   const { data: vehicleTypes, isLoading, error } = useVehicleTypes()
   const { selectedVehicleType, setSelectedVehicleType, setCurrentStep } = useAppStore()
+  const { t } = useTranslation()
 
   const handleVehicleSelect = (vehicleType: VehicleType) => {
     setSelectedVehicleType(vehicleType)
@@ -27,16 +30,16 @@ export function VehicleSelection() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="text-center">
           <h1 className="text-xl font-semibold text-gray-900 mb-2">
-            Ошибка загрузки
+            {t.route.loadingError}
           </h1>
           <p className="text-gray-600 mb-4">
-            Не удалось загрузить типы транспорта
+            {t.route.failedToLoadLocations}
           </p>
           <button
             onClick={() => window.location.reload()}
             className="btn-primary"
           >
-            Попробовать снова
+            {t.route.tryAgain}
           </button>
         </div>
       </div>
@@ -44,32 +47,53 @@ export function VehicleSelection() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 px-4 py-8">
-      <motion.div
-        className="max-w-lg mx-auto"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* Header */}
-        <div className="text-center mb-8">
-          <motion.h1
-            className="text-3xl font-bold text-gray-900 mb-2"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            Выберите транспорт
-          </motion.h1>
-          <motion.p
-            className="text-gray-600"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            Подберите подходящий автомобиль для вашей поездки
-          </motion.p>
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50">
+      {/* Header with Back Button */}
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => navigate('/client/dashboard')}
+              className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+              <span className="font-medium">{t.common.back}</span>
+            </button>
+            <div className="flex items-center space-x-2">
+              <Car className="w-6 h-6 text-blue-600" />
+              <h1 className="text-xl font-bold text-gray-900">STC Transfer</h1>
+            </div>
+            <div className="w-20"></div> {/* Spacer for centering */}
+          </div>
         </div>
+      </header>
+
+      <div className="px-4 py-8">
+        <motion.div
+          className="max-w-lg mx-auto"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* Title Section */}
+          <div className="text-center mb-8">
+            <motion.h1
+              className="text-3xl font-bold text-gray-900 mb-2"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              {t.vehicle.title}
+            </motion.h1>
+            <motion.p
+              className="text-gray-600"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              {t.vehicle.subtitle}
+            </motion.p>
+          </div>
 
         {/* Vehicle Types */}
         <motion.div
@@ -82,12 +106,25 @@ export function VehicleSelection() {
             <motion.button
               key={vehicle.type}
               onClick={() => handleVehicleSelect(vehicle.type)}
-              className="w-full p-6 bg-white rounded-2xl shadow-card border border-gray-100 hover:shadow-card-hover transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 text-left"
+              className="w-full p-6 bg-white rounded-2xl shadow-card border border-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 text-left"
+              style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5 + index * 0.1 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              transition={{ 
+                delay: 0.5 + index * 0.1,
+                type: "spring",
+                stiffness: 260,
+                damping: 20
+              }}
+              whileHover={{ 
+                scale: 1.02,
+                boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                transition: { duration: 0.2 }
+              }}
+              whileTap={{ 
+                scale: 0.98,
+                transition: { duration: 0.1 }
+              }}
             >
               <div className="flex items-center space-x-4">
                 {/* Vehicle Image */}
@@ -122,14 +159,14 @@ export function VehicleSelection() {
                   {/* Features */}
                   <div className="flex flex-wrap gap-1 mb-3">
                     <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">
-                      👥 {vehicle.capacity} мест
+                      👥 {vehicle.capacity} {t.vehicle.passengers}
                     </span>
                     <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-50 text-green-700 text-xs font-medium">
-                      🧳 {vehicle.baggageCapacity} чемодана
+                      🧳 {vehicle.baggageCapacity} {t.vehicle.pieces}
                     </span>
                     {vehicle.availableCount !== undefined && (
                       <span className="inline-flex items-center px-2 py-1 rounded-md bg-orange-50 text-orange-700 text-xs font-medium">
-                        🚗 {vehicle.availableCount} доступно
+                        🚗 {vehicle.availableCount} {t.vehicle.availableVehicles}
                       </span>
                     )}
                   </div>
@@ -172,34 +209,20 @@ export function VehicleSelection() {
           ))}
         </motion.div>
 
-        {/* Back Button */}
-        <motion.div
-          className="mt-8 text-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-        >
-          <button
-            onClick={() => navigate('/language')}
-            className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
+          {/* Footer */}
+          <motion.div
+            className="text-center mt-8 space-y-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.0 }}
           >
-            ← Назад к выбору языка
-          </button>
+            <div className="flex flex-col items-center">
+              <p className="text-xs text-gray-400 mb-2">{t.footer.developedBy}</p>
+              <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
+            </div>
+          </motion.div>
         </motion.div>
-
-        {/* Footer */}
-        <motion.div
-          className="text-center mt-8 space-y-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.0 }}
-        >
-          <div className="flex flex-col items-center">
-            <p className="text-xs text-gray-400 mb-2">Developed by</p>
-            <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
-          </div>
-        </motion.div>
-      </motion.div>
+      </div>
     </div>
   )
 }

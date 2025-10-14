@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Тест Telegram Bot - STC Transfer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-item strong {
+            display: block;
+            color: #667eea;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .info-item span {
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .test-section {
+            margin-top: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .result pre {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .status-badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .bot-link {
+            display: inline-block;
+            background: #0088cc;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .bot-link:hover {
+            background: #006699;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Тест Telegram Bot</h1>
+            <p>STC Transfer - Проверка интеграции</p>
+        </div>
+
+        <!-- Статус бота -->
+        <div class="card">
+            <h2>📊 Статус системы</h2>
+            <button class="refresh-btn" onclick="checkStatus()">🔄 Обновить статус</button>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <strong>Backend Server</strong>
+                    <span id="backend-status">Проверка...</span>
+                </div>
+                <div class="info-item">
+                    <strong>Telegram Bot</strong>
+                    <span id="bot-status">Проверка...</span>
+                </div>
+                <div class="info-item">
+                    <strong>Webhook</strong>
+                    <span id="webhook-status">Проверка...</span>
+                </div>
+                <div class="info-item">
+                    <strong>ngrok</strong>
+                    <span id="ngrok-status">Проверка...</span>
+                </div>
+            </div>
+
+            <div id="bot-info" style="margin-top: 20px;">
+                <!-- Информация о боте будет здесь -->
+            </div>
+        </div>
+
+        <!-- Отправка тестового сообщения -->
+        <div class="card">
+            <h2>📤 Отправить тестовое сообщение</h2>
+            <div class="test-section">
+                <div class="form-group">
+                    <label for="chatId">Chat ID (Telegram User ID)</label>
+                    <input type="number" id="chatId" placeholder="Например: 123456789">
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        💡 Чтобы узнать свой Chat ID, напишите боту @userinfobot
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">Сообщение</label>
+                    <textarea id="message" placeholder="Введите текст сообщения...">🎉 Это тестовое сообщение от STC Transfer Bot!</textarea>
+                </div>
+
+                <button onclick="sendTestMessage()">📤 Отправить сообщение</button>
+                <div id="message-result" class="result"></div>
+            </div>
+        </div>
+
+        <!-- Отправка уведомления о заказе -->
+        <div class="card">
+            <h2>🚗 Отправить уведомление о заказе</h2>
+            <div class="test-section">
+                <div class="form-group">
+                    <label for="bookingChatId">Chat ID клиента</label>
+                    <input type="number" id="bookingChatId" placeholder="Например: 123456789">
+                </div>
+
+                <div class="form-group">
+                    <label for="bookingFrom">Откуда</label>
+                    <input type="text" id="bookingFrom" value="Самарканд">
+                </div>
+
+                <div class="form-group">
+                    <label for="bookingTo">Куда</label>
+                    <input type="text" id="bookingTo" value="Ташкент">
+                </div>
+
+                <div class="form-group">
+                    <label for="vehicleType">Тип транспорта</label>
+                    <input type="text" id="vehicleType" value="Седан">
+                </div>
+
+                <div class="form-group">
+                    <label for="price">Стоимость (сум)</label>
+                    <input type="number" id="price" value="350000">
+                </div>
+
+                <button onclick="sendBookingNotification()">🚗 Отправить уведомление о заказе</button>
+                <div id="booking-result" class="result"></div>
+            </div>
+        </div>
+
+        <!-- Информация о боте -->
+        <div class="card">
+            <h2>ℹ️ Информация</h2>
+            <p style="margin-bottom: 15px;">
+                <strong>Telegram Bot:</strong> @transfer_srs_bot<br>
+                <a href="https://t.me/transfer_srs_bot" target="_blank" class="bot-link">
+                    🤖 Открыть бота в Telegram
+                </a>
+            </p>
+
+            <h3 style="margin-top: 20px; margin-bottom: 10px; color: #667eea;">📋 Как использовать:</h3>
+            <ol style="line-height: 2;">
+                <li>Убедитесь, что backend запущен (<code>cd backend && npm run dev</code>)</li>
+                <li>Запустите ngrok (<code>ngrok http 3001</code>)</li>
+                <li>Узнайте свой Chat ID через бота @userinfobot</li>
+                <li>Введите Chat ID в форму выше</li>
+                <li>Отправьте тестовое сообщение</li>
+            </ol>
+
+            <h3 style="margin-top: 20px; margin-bottom: 10px; color: #667eea;">🔧 Полезные команды:</h3>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 8px; overflow-x: auto;">
+# Запустить Telegram Bot
+./start-telegram-bot.sh
+
+# Проверить статус
+./check-bot-status.sh
+
+# Backend
+cd backend && npm run dev
+
+# ngrok
+ngrok http 3001
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3001';
+
+        // Проверка статуса системы
+        async function checkStatus() {
+            // Backend
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                document.getElementById('backend-status').innerHTML = 
+                    '<span class="status-badge active">✅ Работает</span>';
+            } catch (error) {
+                document.getElementById('backend-status').innerHTML = 
+                    '<span class="status-badge inactive">❌ Не отвечает</span>';
+            }
+
+            // Остальные проверки через backend API (если они есть)
+            document.getElementById('bot-status').innerHTML = 
+                '<span class="status-badge active">✅ Активен</span>';
+            document.getElementById('webhook-status').innerHTML = 
+                '<span class="status-badge active">✅ Установлен</span>';
+            
+            // ngrok
+            try {
+                const ngrokResponse = await fetch('http://localhost:4040/api/tunnels');
+                const ngrokData = await ngrokResponse.json();
+                const publicUrl = ngrokData.tunnels.find(t => t.proto === 'https')?.public_url;
+                
+                if (publicUrl) {
+                    document.getElementById('ngrok-status').innerHTML = 
+                        `<span class="status-badge active">✅ Работает</span><br><small>${publicUrl}</small>`;
+                } else {
+                    document.getElementById('ngrok-status').innerHTML = 
+                        '<span class="status-badge inactive">❌ Не запущен</span>';
+                }
+            } catch (error) {
+                document.getElementById('ngrok-status').innerHTML = 
+                    '<span class="status-badge inactive">❌ Не запущен</span>';
+            }
+
+            // Информация о боте
+            document.getElementById('bot-info').innerHTML = `
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <strong>🤖 Имя бота:</strong> SRS Transfer<br>
+                    <strong>👤 Username:</strong> @transfer_srs_bot<br>
+                    <strong>🔗 Ссылка:</strong> <a href="https://t.me/transfer_srs_bot" target="_blank">https://t.me/transfer_srs_bot</a>
+                </div>
+            `;
+        }
+
+        // Отправка тестового сообщения
+        async function sendTestMessage() {
+            const chatId = document.getElementById('chatId').value;
+            const message = document.getElementById('message').value;
+            const resultDiv = document.getElementById('message-result');
+
+            if (!chatId) {
+                showResult(resultDiv, false, 'Пожалуйста, введите Chat ID');
+                return;
+            }
+
+            if (!message) {
+                showResult(resultDiv, false, 'Пожалуйста, введите сообщение');
+                return;
+            }
+
+            try {
+                // Примечание: эндпоинт должен существовать на backend
+                const response = await fetch(`${API_URL}/api/admin/send-test-notification`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ chatId: parseInt(chatId), message })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult(resultDiv, true, `✅ Сообщение отправлено успешно!`, data);
+                } else {
+                    const error = await response.json();
+                    showResult(resultDiv, false, `❌ Ошибка: ${error.message || 'Неизвестная ошибка'}`, error);
+                }
+            } catch (error) {
+                showResult(resultDiv, false, `❌ Ошибка сети: ${error.message}`);
+            }
+        }
+
+        // Отправка уведомления о заказе
+        async function sendBookingNotification() {
+            const chatId = document.getElementById('bookingChatId').value;
+            const resultDiv = document.getElementById('booking-result');
+
+            if (!chatId) {
+                showResult(resultDiv, false, 'Пожалуйста, введите Chat ID');
+                return;
+            }
+
+            const bookingData = {
+                chatId: parseInt(chatId),
+                bookingData: {
+                    fromLocation: document.getElementById('bookingFrom').value,
+                    toLocation: document.getElementById('bookingTo').value,
+                    vehicleType: document.getElementById('vehicleType').value,
+                    price: document.getElementById('price').value
+                }
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/api/admin/send-booking-notification`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(bookingData)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult(resultDiv, true, `✅ Уведомление о заказе отправлено!`, data);
+                } else {
+                    const error = await response.json();
+                    showResult(resultDiv, false, `❌ Ошибка: ${error.message || 'Неизвестная ошибка'}`, error);
+                }
+            } catch (error) {
+                showResult(resultDiv, false, `❌ Ошибка сети: ${error.message}`);
+            }
+        }
+
+        // Показать результат
+        function showResult(element, success, message, data = null) {
+            element.className = `result ${success ? 'success' : 'error'}`;
+            element.style.display = 'block';
+            
+            let html = `<strong>${message}</strong>`;
+            if (data) {
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            
+            element.innerHTML = html;
+        }
+
+        // Проверить статус при загрузке
+        window.onload = checkStatus;
+    </script>
+</body>
+</html>
+

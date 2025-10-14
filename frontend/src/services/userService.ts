@@ -1,67 +1,38 @@
-import api from './api'
-import { User, ApiResponse } from '@/types'
+import { api } from './api'
 
-export interface CreateUserRequest {
-  telegramId: number
-  name?: string
+export interface User {
+  id: string
+  telegram_id: string
+  first_name: string
+  last_name?: string
+  username?: string
   phone?: string
-  language?: string
-}
-
-export interface UpdateUserRequest {
-  name?: string
-  phone?: string
-  language?: string
+  created_at: string
+  updated_at: string
 }
 
 export class UserService {
-  // Создать или обновить пользователя
-  static async createOrUpdateUser(request: CreateUserRequest): Promise<User> {
-    const response = await api.post<ApiResponse<User>>('/users', request)
-
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error || 'Failed to create or update user')
+  /**
+   * Получить всех пользователей
+   */
+  static async getAllUsers(): Promise<User[]> {
+    const response = await api.get('/admin/users')
+    if (response.data.success) {
+      return response.data.data
     }
-
-    return response.data.data
+    throw new Error(response.data.error || 'Ошибка загрузки пользователей')
   }
 
-  // Получить пользователя по Telegram ID
-  static async getUserByTelegramId(telegramId: number): Promise<User | null> {
-    try {
-      const response = await api.get<ApiResponse<User>>(`/users/telegram/${telegramId}`)
-      return response.data.data || null
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        return null
-      }
-      throw error
+  /**
+   * Получить детали пользователя
+   */
+  static async getUserDetails(id: string): Promise<User> {
+    const response = await api.get(`/admin/users/${id}`)
+    if (response.data.success) {
+      return response.data.data
     }
-  }
-
-  // Обновить данные пользователя
-  static async updateUser(telegramId: number, request: UpdateUserRequest): Promise<User> {
-    const response = await api.put<ApiResponse<User>>(`/users/telegram/${telegramId}`, request)
-
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error || 'Failed to update user')
-    }
-
-    return response.data.data
-  }
-
-  // Получить статистику пользователя
-  static async getUserStats(telegramId: number): Promise<any> {
-    try {
-      const response = await api.get<ApiResponse<any>>(`/users/telegram/${telegramId}/stats`)
-      return response.data.data || null
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        return null
-      }
-      throw error
-    }
+    throw new Error(response.data.error || 'Ошибка загрузки пользователя')
   }
 }
 
-import axios from 'axios'
+export default UserService

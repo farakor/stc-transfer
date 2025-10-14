@@ -1,309 +1,177 @@
 import { Request, Response } from 'express'
 import { AuthService } from '@/services/authService'
-import { AdminRole } from '@prisma/client'
 
 export class AuthController {
   /**
-   * POST /api/auth/login - Вход администратора
+   * POST /api/auth/telegram - Авторизация клиента через Telegram Web App
    */
-  static async login(req: Request, res: Response): Promise<void> {
+  static async authenticateWithTelegram(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password } = req.body
+      const { initData, userData } = req.body
 
-      if (!email || !password) {
-        res.status(400).json({
-          success: false,
-          error: 'Email and password are required'
-        })
-        return
+      console.log('🔐 Авторизация клиента через Telegram...')
+      console.log('📝 Init Data:', initData)
+      console.log('👤 User Data:', userData)
+
+      // Если есть initData, верифицируем его
+      let verifiedUserData = userData
+      if (initData) {
+        try {
+          verifiedUserData = AuthService.verifyTelegramWebAppData(initData)
+          console.log('✅ Telegram Web App data verified')
+        } catch (error) {
+          console.warn('⚠️ Could not verify initData, using provided userData:', error)
+          // Продолжаем с предоставленными данными, если верификация не удалась
+        }
       }
 
-      const result = await AuthService.login(email, password)
+      // Авторизуем пользователя
+      const result = await AuthService.authenticateUser(verifiedUserData)
+
+      console.log('✅ Пользователь авторизован:', result.user.id)
 
       res.json({
         success: true,
         data: result,
-        message: 'Login successful'
       })
     } catch (error) {
-      console.error('❌ Login error:', error)
-
-      if (error instanceof Error) {
-        if (error.message === 'Invalid email or password') {
-          res.status(401).json({
-            success: false,
-            error: 'Invalid email or password'
-          })
-          return
-        }
-
-        if (error.message === 'Admin account is deactivated') {
-          res.status(403).json({
-            success: false,
-            error: 'Admin account is deactivated'
-          })
-          return
-        }
-      }
-
-      res.status(500).json({
+      console.error('❌ Error authenticating with Telegram:', error)
+      res.status(401).json({
         success: false,
-        error: 'Login failed'
+        error: 'Authentication failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
       })
     }
   }
 
   /**
-   * POST /api/auth/admins - Создание нового администратора
-   * (только для SUPER_ADMIN)
+   * POST /api/auth/driver/telegram - Авторизация водителя через Telegram Web App
    */
-  static async createAdmin(req: Request, res: Response): Promise<void> {
+  static async authenticateDriverWithTelegram(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password, firstName, lastName, role } = req.body
+      const { initData, userData } = req.body
 
-      if (!email || !password || !firstName || !lastName || !role) {
+      console.log('🚗 Авторизация водителя через Telegram...')
+      console.log('📝 Init Data:', initData)
+      console.log('👤 User Data:', userData)
+
+      // Если есть initData, верифицируем его
+      let verifiedUserData = userData
+      if (initData) {
+        try {
+          verifiedUserData = AuthService.verifyDriverTelegramWebAppData(initData)
+          console.log('✅ Driver Telegram Web App data verified')
+        } catch (error) {
+          console.warn('⚠️ Could not verify initData, using provided userData:', error)
+          // Продолжаем с предоставленными данными, если верификация не удалась
+        }
+      }
+
+      // Авторизуем водителя
+      const result = await AuthService.authenticateDriver(verifiedUserData)
+
+      console.log('✅ Водитель авторизован:', result.driver.id)
+
+      res.json({
+        success: true,
+        data: result,
+      })
+    } catch (error) {
+      console.error('❌ Error authenticating driver with Telegram:', error)
+      res.status(401).json({
+        success: false,
+        error: 'Authentication failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  /**
+   * PUT /api/auth/phone - Обновление номера телефона
+   */
+  static async updatePhone(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = (req as any).userId // Из middleware
+      const { phone } = req.body
+
+      if (!phone) {
         res.status(400).json({
           success: false,
-          error: 'All fields are required: email, password, firstName, lastName, role'
+          error: 'Phone number is required',
         })
         return
       }
 
-      // Проверяем валидность роли
-      if (!Object.values(AdminRole).includes(role)) {
-        res.status(400).json({
-          success: false,
-          error: `Invalid role. Allowed roles: ${Object.values(AdminRole).join(', ')}`
-        })
-        return
-      }
+      console.log(`📞 Обновление номера телефона для пользователя ${userId}`)
 
-      const admin = await AuthService.createAdmin({
-        email,
-        password,
-        firstName,
-        lastName,
-        role
-      })
-
-      res.status(201).json({
-        success: true,
-        data: admin,
-        message: 'Admin created successfully'
-      })
-    } catch (error) {
-      console.error('❌ Create admin error:', error)
-
-      if (error instanceof Error && error.message === 'Admin with this email already exists') {
-        res.status(409).json({
-          success: false,
-          error: 'Admin with this email already exists'
-        })
-        return
-      }
-
-      res.status(500).json({
-        success: false,
-        error: 'Failed to create admin'
-      })
-    }
-  }
-
-  /**
-   * GET /api/auth/admins - Получение всех администраторов
-   * (только для SUPER_ADMIN)
-   */
-  static async getAllAdmins(req: Request, res: Response): Promise<void> {
-    try {
-      const admins = await AuthService.getAllAdmins()
+      const result = await AuthService.updateUserPhone(userId, phone)
 
       res.json({
         success: true,
-        data: admins
+        data: result,
       })
     } catch (error) {
-      console.error('❌ Get all admins error:', error)
+      console.error('❌ Error updating phone:', error)
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch admins'
+        error: 'Failed to update phone number',
       })
     }
   }
 
   /**
-   * PUT /api/auth/admins/:id - Обновление администратора
-   * (только для SUPER_ADMIN)
+   * GET /api/auth/me - Получение информации о текущем пользователе
    */
-  static async updateAdmin(req: Request, res: Response): Promise<void> {
+  static async getCurrentUser(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params
-      const { email, firstName, lastName, role, isActive, password } = req.body
+      const userId = (req as any).userId // Из middleware
 
-      const admin = await AuthService.updateAdmin(Number(id), {
-        email,
-        firstName,
-        lastName,
-        role,
-        isActive,
-        password
-      })
-
-      res.json({
-        success: true,
-        data: admin,
-        message: 'Admin updated successfully'
-      })
-    } catch (error) {
-      console.error('❌ Update admin error:', error)
-
-      if (error instanceof Error) {
-        if (error.message === 'Admin not found') {
-          res.status(404).json({
-            success: false,
-            error: 'Admin not found'
-          })
-          return
-        }
-
-        if (error.message === 'Admin with this email already exists') {
-          res.status(409).json({
-            success: false,
-            error: 'Admin with this email already exists'
-          })
-          return
-        }
-      }
-
-      res.status(500).json({
-        success: false,
-        error: 'Failed to update admin'
-      })
-    }
-  }
-
-  /**
-   * DELETE /api/auth/admins/:id - Удаление администратора
-   * (только для SUPER_ADMIN)
-   */
-  static async deleteAdmin(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params
-
-      await AuthService.deleteAdmin(Number(id))
-
-      res.json({
-        success: true,
-        message: 'Admin deleted successfully'
-      })
-    } catch (error) {
-      console.error('❌ Delete admin error:', error)
-
-      if (error instanceof Error) {
-        if (error.message === 'Admin not found') {
-          res.status(404).json({
-            success: false,
-            error: 'Admin not found'
-          })
-          return
-        }
-
-        if (error.message === 'Cannot delete the last super admin') {
-          res.status(400).json({
-            success: false,
-            error: 'Cannot delete the last super admin'
-          })
-          return
-        }
-      }
-
-      res.status(500).json({
-        success: false,
-        error: 'Failed to delete admin'
-      })
-    }
-  }
-
-  /**
-   * GET /api/auth/profile - Получение профиля текущего администратора
-   */
-  static async getProfile(req: Request, res: Response): Promise<void> {
-    try {
-      if (!req.admin) {
+      const authHeader = req.headers.authorization
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
         res.status(401).json({
           success: false,
-          error: 'Authentication required'
+          error: 'No authorization token provided',
         })
         return
       }
 
-      const profile = await AuthService.getProfile(req.admin.id)
+      const token = authHeader.split(' ')[1]
+      const user = await AuthService.getUserByToken(token)
 
       res.json({
         success: true,
-        data: profile
+        data: user,
       })
     } catch (error) {
-      console.error('❌ Get profile error:', error)
-      res.status(500).json({
+      console.error('❌ Error getting current user:', error)
+      res.status(401).json({
         success: false,
-        error: 'Failed to fetch profile'
+        error: 'Invalid or expired token',
       })
     }
   }
 
   /**
-   * POST /api/auth/change-password - Изменение пароля
+   * POST /api/auth/logout - Выход из системы
    */
-  static async changePassword(req: Request, res: Response): Promise<void> {
+  static async logout(req: Request, res: Response): Promise<void> {
     try {
-      if (!req.admin) {
-        res.status(401).json({
-          success: false,
-          error: 'Authentication required'
-        })
-        return
-      }
+      const userId = (req as any).userId // Из middleware
 
-      const { oldPassword, newPassword } = req.body
+      console.log(`👋 Выход пользователя ${userId}`)
 
-      if (!oldPassword || !newPassword) {
-        res.status(400).json({
-          success: false,
-          error: 'Old password and new password are required'
-        })
-        return
-      }
-
-      if (newPassword.length < 8) {
-        res.status(400).json({
-          success: false,
-          error: 'New password must be at least 8 characters long'
-        })
-        return
-      }
-
-      await AuthService.changePassword(req.admin.id, oldPassword, newPassword)
+      await AuthService.logout(userId)
 
       res.json({
         success: true,
-        message: 'Password changed successfully'
+        message: 'Logged out successfully',
       })
     } catch (error) {
-      console.error('❌ Change password error:', error)
-
-      if (error instanceof Error && error.message === 'Invalid old password') {
-        res.status(400).json({
-          success: false,
-          error: 'Invalid old password'
-        })
-        return
-      }
-
+      console.error('❌ Error logging out:', error)
       res.status(500).json({
         success: false,
-        error: 'Failed to change password'
+        error: 'Failed to logout',
       })
     }
   }
 }
-

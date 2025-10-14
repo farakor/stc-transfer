@@ -13,23 +13,8 @@ import {
   X,
   Save
 } from 'lucide-react';
-
-interface Driver {
-  id: string;
-  name: string;
-  phone: string;
-  license: string;
-  status: 'AVAILABLE' | 'BUSY' | 'OFFLINE';
-  vehicle?: {
-    id: string;
-    brand: string;
-    model: string;
-    licensePlate: string;
-    type: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
+import DriverService, { Driver, Vehicle as DriverVehicle } from '../../services/driverService';
+import { api } from '../../services/api';
 
 interface Vehicle {
   id: string;
@@ -73,41 +58,11 @@ const DriversManagement: React.FC = () => {
       console.log('📋 Начинаем загрузку водителей...');
       setLoading(true);
 
-      // Используем реальный API endpoint
-      const response = await fetch('/api/admin/drivers');
-      const data = await response.json();
-
-      console.log('📦 Получен ответ от API водителей:', data);
-
-      if (data.success && data.data) {
-        setDrivers(data.data);
-        console.log(`✅ Загружено ${data.data.length} водителей`);
-      } else {
-        console.error('❌ API вернул ошибку:', data.error);
-        // Если API не работает, используем заглушку
-        const mockDrivers: Driver[] = [
-          {
-            id: '1',
-            name: 'Ибрагим Азизов',
-            phone: '+998 90 123 45 67',
-            license: 'AB1234567',
-            status: 'AVAILABLE',
-            vehicle: {
-              id: '1',
-              brand: 'Hongqi',
-              model: 'EHS5',
-              licensePlate: '01 A 123 BC',
-              type: 'SEDAN'
-            },
-            createdAt: '2025-01-15T10:30:00Z',
-            updatedAt: '2025-01-15T10:30:00Z'
-          }
-        ];
-        setDrivers(mockDrivers);
-      }
+      const drivers = await DriverService.getAllDrivers();
+      setDrivers(drivers);
+      console.log(`✅ Загружено ${drivers.length} водителей`);
     } catch (error) {
       console.error('❌ Ошибка при получении водителей:', error);
-      // Fallback к заглушке при ошибке сети
       setDrivers([]);
     } finally {
       setLoading(false);
@@ -118,17 +73,14 @@ const DriversManagement: React.FC = () => {
     try {
       console.log('🚗 Начинаем загрузку автомобилей...');
 
-      // Используем реальный API endpoint
-      const response = await fetch('/api/vehicles/all');
-      const data = await response.json();
+      const response = await api.get('/vehicles/all');
+      console.log('📦 Получен ответ от API автомобилей:', response.data);
 
-      console.log('📦 Получен ответ от API автомобилей:', data);
-
-      if (data.success && data.data) {
-        setVehicles(data.data);
-        console.log(`✅ Загружено ${data.data.length} автомобилей`);
+      if (response.data.success && response.data.data) {
+        setVehicles(response.data.data);
+        console.log(`✅ Загружено ${response.data.data.length} автомобилей`);
       } else {
-        console.error('❌ API автомобилей вернул ошибку:', data.error);
+        console.error('❌ API автомобилей вернул ошибку:', response.data.error);
         setVehicles([]);
       }
     } catch (error) {
@@ -137,11 +89,26 @@ const DriversManagement: React.FC = () => {
     }
   };
 
+  const formatPhone = (value: string) => {
+    // Убираем все нецифровые символы
+    const numbers = value.replace(/\D/g, '');
+    
+    // Всегда начинаем с 998, берем только цифры после 998
+    const phoneDigits = numbers.startsWith('998') ? numbers.slice(3) : numbers;
+    
+    // Форматируем как +998 xx-xxx-xx-xx
+    if (phoneDigits.length === 0) return '+998 ';
+    if (phoneDigits.length <= 2) return `+998 ${phoneDigits}`;
+    if (phoneDigits.length <= 5) return `+998 ${phoneDigits.slice(0, 2)}-${phoneDigits.slice(2)}`;
+    if (phoneDigits.length <= 7) return `+998 ${phoneDigits.slice(0, 2)}-${phoneDigits.slice(2, 5)}-${phoneDigits.slice(5)}`;
+    return `+998 ${phoneDigits.slice(0, 2)}-${phoneDigits.slice(2, 5)}-${phoneDigits.slice(5, 7)}-${phoneDigits.slice(7, 9)}`;
+  };
+
   const handleCreate = () => {
     setEditingDriver(null);
     setFormData({
       name: '',
-      phone: '',
+      phone: '+998 ',
       license: '',
       vehicleId: ''
     });
@@ -150,9 +117,16 @@ const DriversManagement: React.FC = () => {
 
   const handleEdit = (driver: Driver) => {
     setEditingDriver(driver);
+    // Форматируем номер телефона
+    let phoneToFormat = driver.phone;
+    if (!phoneToFormat.startsWith('+998')) {
+      phoneToFormat = `+998${phoneToFormat}`;
+    }
+    const formattedPhone = formatPhone(phoneToFormat);
+    
     setFormData({
       name: driver.name,
-      phone: driver.phone,
+      phone: formattedPhone,
       license: driver.license,
       vehicleId: driver.vehicle?.id || ''
     });
@@ -171,98 +145,35 @@ const DriversManagement: React.FC = () => {
       if (editingDriver) {
         // Обновление существующего водителя
         console.log('🔄 Обновление водителя через API...');
-        const response = await fetch(`/api/admin/drivers/${editingDriver.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: formData.name,
-            phone: formData.phone,
-            license: formData.license,
-            vehicleId: formData.vehicleId || null
-          }),
+        await DriverService.updateDriver(editingDriver.id, {
+          name: formData.name,
+          phone: formData.phone,
+          license: formData.license,
+          vehicleId: formData.vehicleId || undefined
         });
-
-        const result = await response.json();
-        console.log('📦 Ответ API обновления водителя:', result);
-
-        if (result.success) {
-          // Обновляем локальное состояние
-          const updatedDrivers = drivers.map(driver => {
-            if (driver.id === editingDriver.id) {
-              const selectedVehicle = vehicles.find(v => v.id === formData.vehicleId);
-              return {
-                ...driver,
-                name: formData.name,
-                phone: formData.phone,
-                license: formData.license,
-                vehicle: selectedVehicle ? {
-                  id: selectedVehicle.id,
-                  brand: selectedVehicle.brand || '',
-                  model: selectedVehicle.model || '',
-                  licensePlate: selectedVehicle.license_plate || '',
-                  type: selectedVehicle.type
-                } : undefined,
-                updatedAt: new Date().toISOString()
-              };
-            }
-            return driver;
-          });
-          setDrivers(updatedDrivers);
-          alert('✅ Водитель успешно обновлен!');
-        } else {
-          throw new Error(result.error || 'Ошибка при обновлении водителя');
-        }
+        
+        // Перезагружаем список водителей
+        await fetchDrivers();
+        alert('✅ Водитель успешно обновлен!');
       } else {
         // Создание нового водителя
         console.log('➕ Создание нового водителя через API...');
-        const response = await fetch('/api/admin/drivers', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: formData.name,
-            phone: formData.phone,
-            license: formData.license,
-            vehicleId: formData.vehicleId || null
-          }),
+        await DriverService.createDriver({
+          name: formData.name,
+          phone: formData.phone,
+          license: formData.license,
+          vehicleId: formData.vehicleId || undefined
         });
-
-        const result = await response.json();
-        console.log('📦 Ответ API создания водителя:', result);
-
-        if (result.success) {
-          // Добавляем нового водителя в локальное состояние
-          const selectedVehicle = vehicles.find(v => v.id === formData.vehicleId);
-          const newDriver: Driver = {
-            id: result.data.id,
-            name: result.data.name,
-            phone: result.data.phone,
-            license: result.data.license,
-            status: result.data.status,
-            vehicle: selectedVehicle ? {
-              id: selectedVehicle.id,
-              brand: selectedVehicle.brand || '',
-              model: selectedVehicle.model || '',
-              licensePlate: selectedVehicle.license_plate || '',
-              type: selectedVehicle.type
-            } : undefined,
-            createdAt: result.data.createdAt,
-            updatedAt: result.data.createdAt
-          };
-          setDrivers([...drivers, newDriver]);
-          alert('✅ Водитель успешно добавлен в базу данных!');
-        } else {
-          throw new Error(result.error || 'Ошибка при создании водителя');
-        }
+        
+        // Перезагружаем список водителей
+        await fetchDrivers();
+        alert('✅ Водитель успешно добавлен в базу данных!');
       }
 
       // Сбрасываем форму и закрываем модал
       setFormData({
         name: '',
-        phone: '',
+        phone: '+998 ',
         license: '',
         vehicleId: ''
       });
@@ -281,19 +192,11 @@ const DriversManagement: React.FC = () => {
 
     try {
       console.log('🗑️ Удаление водителя через API:', driverId);
-      const response = await fetch(`/api/admin/drivers/${driverId}`, {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
-      console.log('📦 Ответ API удаления водителя:', result);
-
-      if (result.success) {
-        setDrivers(drivers.filter(driver => driver.id !== driverId));
-        alert('✅ Водитель удален из базы данных!');
-      } else {
-        throw new Error(result.error || 'Ошибка при удалении водителя');
-      }
+      await DriverService.deleteDriver(driverId);
+      
+      // Перезагружаем список водителей
+      await fetchDrivers();
+      alert('✅ Водитель удален из базы данных!');
     } catch (error) {
       console.error('❌ Ошибка при удалении водителя:', error);
       alert(`❌ Ошибка при удалении водителя: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
@@ -537,9 +440,18 @@ const DriversManagement: React.FC = () => {
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => {
+                    const input = e.target.value;
+                    // Если пользователь пытается удалить +998, возвращаем минимальное значение
+                    if (!input.startsWith('+998')) {
+                      setFormData({ ...formData, phone: '+998 ' });
+                      return;
+                    }
+                    const formatted = formatPhone(input);
+                    setFormData({ ...formData, phone: formatted });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="+998 90 123 45 67"
+                  placeholder="+998 90-123-45-67"
                   required
                 />
               </div>

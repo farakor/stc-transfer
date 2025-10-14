@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { RouteService } from '@/services/routeService'
+import { TariffService } from '@/services/tariffService'
 
 export class RouteController {
   // GET /api/routes - Получить список активных маршрутов
@@ -161,6 +162,50 @@ export class RouteController {
       res.status(500).json({
         success: false,
         error: 'Failed to search routes'
+      })
+    }
+  }
+
+  // GET /api/routes/locations - Получить все локации (публичный эндпоинт)
+  static async getLocations(req: Request, res: Response): Promise<void> {
+    try {
+      console.log('📍 Получение локаций (публичный эндпоинт)...')
+
+      const locations = await TariffService.getLocations()
+
+      console.log(`✅ Найдено ${locations.length} локаций`)
+
+      res.json({
+        success: true,
+        data: locations
+      })
+    } catch (error) {
+      console.error('❌ Ошибка получения локаций:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch locations'
+      })
+    }
+  }
+
+  // GET /api/routes/all-routes - Получить все маршруты (публичный эндпоинт)
+  static async getAllRoutes(req: Request, res: Response): Promise<void> {
+    try {
+      console.log('🛣️ Получение всех маршрутов (публичный эндпоинт)...')
+
+      const routes = await TariffService.getRoutes()
+
+      console.log(`✅ Найдено ${routes.length} маршрутов`)
+
+      res.json({
+        success: true,
+        data: routes
+      })
+    } catch (error) {
+      console.error('❌ Ошибка получения маршрутов:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch routes'
       })
     }
   }

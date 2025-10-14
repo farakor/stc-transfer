@@ -4,17 +4,18 @@ import { useState, useEffect, useMemo } from 'react'
 import { useAppStore } from '@/services/store'
 import { useCalculatePrice, useAllLocations } from '@/hooks/useRoutes'
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
+import { useTranslation } from '@/hooks/useTranslation'
 import { ProgressBar } from '@/components/ProgressBar'
 import { NotificationToast } from '@/components/NotificationToast'
 import { LoadingScreen } from '@/components/LoadingScreen'
+import { CustomSelect } from '@/components/CustomSelect'
 import { LocationData } from '@/services/routeService'
 import FarukBadge from '@/assets/faruk-badge.svg'
-
-const BOOKING_STEPS = ['Язык', 'Транспорт', 'Маршрут', 'Данные', 'Подтверждение']
 
 export function RouteSelection() {
   const navigate = useNavigate()
   const { webApp } = useTelegramWebApp()
+  const { t } = useTranslation()
   const {
     selectedVehicleType,
     fromLocation,
@@ -23,8 +24,17 @@ export function RouteSelection() {
     setToLocation,
     setPriceCalculation,
     currentStep,
-    setCurrentStep
+    setCurrentStep,
+    hasHydrated
   } = useAppStore()
+  
+  const BOOKING_STEPS = [
+    t.bookingSteps.language,
+    t.bookingSteps.vehicle,
+    t.bookingSteps.route,
+    t.bookingSteps.details,
+    t.bookingSteps.confirmation
+  ]
 
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
@@ -39,13 +49,7 @@ export function RouteSelection() {
 
   // Функция для получения иконки типа локации
   const getLocationTypeIcon = (type: string) => {
-    switch (type) {
-      case 'city': return '🏙️'
-      case 'airport': return '✈️'
-      case 'station': return '🚉'
-      case 'attraction': return '🏛️'
-      default: return '📍'
-    }
+    return t.locationType[type as keyof typeof t.locationType] || t.locationType.other
   }
 
   // Мемоизированные списки локаций
@@ -92,12 +96,12 @@ export function RouteSelection() {
     return !restrictedDestinations.includes(destination)
   }
 
-  // Redirect if no vehicle selected
+  // Redirect if no vehicle selected (только после загрузки состояния из localStorage)
   useEffect(() => {
-    if (!selectedVehicleType) {
+    if (hasHydrated && !selectedVehicleType) {
       navigate('/vehicles')
     }
-  }, [selectedVehicleType, navigate])
+  }, [hasHydrated, selectedVehicleType, navigate])
 
   // Очистить место назначения если оно стало недоступным при смене транспорта
   useEffect(() => {
@@ -114,7 +118,7 @@ export function RouteSelection() {
 
   const handleLocationChange = (type: 'from' | 'to', value: string) => {
     if (type === 'from') {
-      if (value === 'Другое') {
+      if (value === t.route.other) {
         setShowCustomFromInput(true)
         setFromLocation('')
       } else {
@@ -122,7 +126,7 @@ export function RouteSelection() {
         setFromLocation(value)
       }
     } else {
-      if (value === 'Другое') {
+      if (value === t.route.other) {
         setShowCustomToInput(true)
         setToLocation('')
       } else {
@@ -151,7 +155,7 @@ export function RouteSelection() {
 
   const handleCalculatePrice = async () => {
     if (!fromLocation || !toLocation || !selectedVehicleType) {
-      setNotificationMessage('Пожалуйста, заполните все поля')
+      setNotificationMessage(t.route.fillAllFields)
       setShowNotification(true)
       return
     }
@@ -173,7 +177,7 @@ export function RouteSelection() {
         webApp.HapticFeedback.notificationOccurred('success')
       }
     } catch (error) {
-      setNotificationMessage('Ошибка расчета стоимости. Попробуйте снова.')
+      setNotificationMessage(t.route.calculationError)
       setShowNotification(true)
 
       if (webApp?.HapticFeedback) {
@@ -195,16 +199,16 @@ export function RouteSelection() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="text-center">
           <h1 className="text-xl font-semibold text-gray-900 mb-2">
-            Ошибка загрузки
+            {t.route.loadingError}
           </h1>
           <p className="text-gray-600 mb-4">
-            Не удалось загрузить список локаций
+            {t.route.failedToLoadLocations}
           </p>
           <button
             onClick={() => window.location.reload()}
             className="btn-primary"
           >
-            Попробовать снова
+            {t.route.tryAgain}
           </button>
         </div>
       </div>
@@ -234,7 +238,7 @@ export function RouteSelection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            Выберите маршрут
+            {t.route.title}
           </motion.h1>
           <motion.p
             className="text-gray-600"
@@ -242,7 +246,7 @@ export function RouteSelection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            Укажите точки отправления и назначения
+            {t.route.subtitle}
           </motion.p>
         </div>
 
@@ -255,63 +259,56 @@ export function RouteSelection() {
         >
           {/* From Location */}
           <div className="mb-4">
-            <label className="label">Откуда</label>
-            <select
-              value={showCustomFromInput ? 'Другое' : fromLocation}
-              onChange={(e) => handleLocationChange('from', e.target.value)}
-              className="input"
-            >
-              <option value="">Выберите место отправления</option>
-              {fromLocations.map((location) => (
-                <option key={location.value} value={location.value}>
-                  {location.label}
-                </option>
-              ))}
-            </select>
+            <CustomSelect
+              label={t.route.from}
+              value={showCustomFromInput ? t.route.other : fromLocation}
+              onChange={(value) => handleLocationChange('from', value)}
+              options={fromLocations.map(loc => ({
+                value: loc.value,
+                label: loc.label
+              }))}
+              placeholder={t.route.selectFrom}
+            />
             {showCustomFromInput && (
-              <input
+              <motion.input
                 type="text"
                 value={customFromLocation}
                 onChange={(e) => handleCustomLocationChange('from', e.target.value)}
-                placeholder="Введите адрес отправления"
+                placeholder={t.route.enterFromAddress}
                 className="input mt-2"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
               />
             )}
           </div>
 
           {/* To Location */}
           <div className="mb-6">
-            <label className="label">Куда</label>
-            <select
-              value={showCustomToInput ? 'Другое' : toLocation}
-              onChange={(e) => handleLocationChange('to', e.target.value)}
-              className="input"
-            >
-              <option value="">Выберите место назначения</option>
-              {toLocations.map((location) => {
-                const isAvailable = isDestinationAvailable(location.value, selectedVehicleType)
-                return (
-                  <option
-                    key={location.value}
-                    value={location.value}
-                    disabled={!isAvailable}
-                    style={{
-                      color: isAvailable ? 'inherit' : '#999',
-                      backgroundColor: isAvailable ? 'inherit' : '#f5f5f5'
-                    }}
-                  >
-                    {location.label} {!isAvailable ? '(недоступно)' : ''}
-                  </option>
-                )
+            <CustomSelect
+              label={t.route.to}
+              value={showCustomToInput ? t.route.other : toLocation}
+              onChange={(value) => handleLocationChange('to', value)}
+              options={toLocations.map(loc => {
+                const isAvailable = isDestinationAvailable(loc.value, selectedVehicleType)
+                return {
+                  value: loc.value,
+                  label: `${loc.label}${!isAvailable ? ` (${t.route.unavailable})` : ''}`,
+                  disabled: !isAvailable
+                }
               })}
-            </select>
+              placeholder={t.route.selectTo}
+            />
             {showCustomToInput && (
-              <input
+              <motion.input
                 type="text"
                 value={customToLocation}
                 onChange={(e) => handleCustomLocationChange('to', e.target.value)}
-                placeholder="Введите адрес назначения"
+                placeholder={t.route.enterToAddress}
                 className="input mt-2"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
               />
             )}
           </div>
@@ -320,22 +317,22 @@ export function RouteSelection() {
           <button
             onClick={handleCalculatePrice}
             disabled={isCalculating || !fromLocation || !toLocation}
-            className="btn-primary w-full"
+            className="btn-primary w-full py-4 text-base"
           >
             {isCalculating ? (
               <div className="flex items-center justify-center space-x-2">
                 <div className="loading-spinner"></div>
-                <span>Расчет стоимости...</span>
+                <span>{t.route.calculating}</span>
               </div>
             ) : (
-              'Рассчитать стоимость'
+              t.route.calculatePrice
             )}
           </button>
         </motion.div>
 
         {/* Back Button */}
         <motion.div
-          className="mt-8 text-center"
+          className="mt-16 text-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
@@ -344,19 +341,19 @@ export function RouteSelection() {
             onClick={() => navigate('/vehicles')}
             className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
           >
-            ← Назад к выбору транспорта
+            {t.route.backToVehicles}
           </button>
         </motion.div>
 
         {/* Footer */}
         <motion.div
-          className="text-center mt-8 space-y-4"
+          className="text-center mt-12 space-y-4 pb-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.0 }}
         >
           <div className="flex flex-col items-center">
-            <p className="text-xs text-gray-400 mb-2">Developed by</p>
+            <p className="text-xs text-gray-400 mb-2">{t.footer.developedBy}</p>
             <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
           </div>
         </motion.div>

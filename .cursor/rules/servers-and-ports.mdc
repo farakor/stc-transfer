@@ -5,3 +5,5 @@ alwaysApply: true
 - Never change ports in frontend and backend
 
 - Never start and stop process unless you are asked to!
+
+- Never create documentations unless you are asked to

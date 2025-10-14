@@ -12,6 +12,7 @@ import {
   X,
   Plus
 } from 'lucide-react';
+import SettingsService from '../../services/settingsService';
 
 interface SystemSetting {
   id: number;
@@ -90,13 +91,23 @@ const SystemSettings: React.FC = () => {
       setLoading(true);
       console.log('⚙️ Загружаем настройки системы...');
 
-      const response = await fetch('/api/admin/settings');
-      const data = await response.json();
+      const settingsData = await SettingsService.getAllSettings();
+      console.log('📦 Получены настройки:', settingsData);
 
-      console.log('📦 Получены настройки:', data);
+      // Группируем настройки по категориям
+      const groupedSettings: any = {};
+      (settingsData as any[]).forEach((setting: any) => {
+        if (!groupedSettings[setting.category]) {
+          groupedSettings[setting.category] = [];
+        }
+        groupedSettings[setting.category].push({
+          ...setting,
+          parsedValue: setting.value // Упрощенная версия парсинга
+        });
+      });
 
-      if (data.success) {
-        const groupedSettings = data.data;
+      if (true) {
+        // Заменяем data.success на true, т.к. если мы здесь - значит запрос успешен
 
         // Парсим настройки по категориям
         if (groupedSettings.tariffs) {
@@ -208,22 +219,10 @@ const SystemSettings: React.FC = () => {
 
       console.log('📋 Настройки для сохранения:', settingsToSave);
 
-      const response = await fetch('/api/admin/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: settingsToSave })
-      });
-
-      const data = await response.json();
-      console.log('📦 Ответ от API сохранения:', data);
-
-      if (data.success) {
-        console.log('✅ Настройки сохранены через API');
-        setHasChanges(false);
-        alert('✅ Настройки успешно сохранены!');
-      } else {
-        throw new Error(data.error || 'Failed to save settings');
-      }
+      await SettingsService.upsertSettings(settingsToSave);
+      console.log('✅ Настройки сохранены через API');
+      setHasChanges(false);
+      alert('✅ Настройки успешно сохранены!');
     } catch (error) {
       console.error('❌ Ошибка сохранения настроек:', error);
       alert('❌ Ошибка при сохранении настроек');

@@ -1,287 +1,477 @@
-import { prisma } from '@/utils/prisma'
-import { generateToken } from '@/middleware/auth'
-import { AdminRole } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 import crypto from 'crypto'
+import jwt from 'jsonwebtoken'
 
-/**
- * Функция для хеширования пароля с использованием crypto (встроенный модуль Node.js)
- */
-const hashPassword = (password: string): string => {
-  const salt = crypto.randomBytes(16).toString('hex')
-  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex')
-  return `${salt}:${hash}`
-}
-
-/**
- * Функция для проверки пароля
- */
-const verifyPassword = (password: string, hashedPassword: string): boolean => {
-  const [salt, originalHash] = hashedPassword.split(':')
-  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex')
-  return hash === originalHash
-}
+const prisma = new PrismaClient()
 
 export class AuthService {
   /**
-   * Вход администратора в систему
+   * Генерация токена авторизации для пользователя
    */
-  static async login(email: string, password: string) {
-    // Находим администратора по email
-    const admin = await prisma.admin.findUnique({
-      where: { email: email.toLowerCase() }
-    })
+  static generateAuthToken(userId: number, telegramId: string): string {
+    const token = jwt.sign(
+      { userId, telegramId, type: 'client' },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '30d' } // Токен действителен 30 дней
+    )
+    return token
+  }
 
-    if (!admin) {
-      throw new Error('Invalid email or password')
-    }
+  /**
+   * Генерация токена авторизации для водителя
+   */
+  static generateDriverAuthToken(driverId: number, telegramId: string): string {
+    const token = jwt.sign(
+      { driverId, telegramId, type: 'driver' },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '30d' } // Токен действителен 30 дней
+    )
+    return token
+  }
 
-    if (!admin.is_active) {
-      throw new Error('Admin account is deactivated')
-    }
+  /**
+   * Верификация и проверка данных из Telegram Web App
+   */
+  static verifyTelegramWebAppData(initData: string): any {
+    try {
+      const urlParams = new URLSearchParams(initData)
+      const hash = urlParams.get('hash')
+      urlParams.delete('hash')
 
-    // Проверяем пароль
-    const isValidPassword = verifyPassword(password, admin.password)
+      // Создаем строку для проверки
+      const dataCheckString = Array.from(urlParams.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, value]) => `${key}=${value}`)
+        .join('\n')
 
-    if (!isValidPassword) {
-      throw new Error('Invalid email or password')
-    }
+      // Создаем секретный ключ
+      const secretKey = crypto
+        .createHmac('sha256', 'WebAppData')
+        .update(process.env.TELEGRAM_BOT_TOKEN || '')
+        .digest()
 
-    // Обновляем время последнего входа
-    await prisma.admin.update({
-      where: { id: admin.id },
-      data: { last_login: new Date() }
-    })
+      // Вычисляем хеш
+      const calculatedHash = crypto
+        .createHmac('sha256', secretKey)
+        .update(dataCheckString)
+        .digest('hex')
 
-    // Генерируем токен
-    const token = generateToken({
-      id: admin.id,
-      email: admin.email,
-      role: admin.role
-    })
-
-    return {
-      token,
-      admin: {
-        id: admin.id,
-        email: admin.email,
-        firstName: admin.first_name,
-        lastName: admin.last_name,
-        role: admin.role,
-        lastLogin: admin.last_login
+      // Проверяем совпадение хеша
+      if (calculatedHash !== hash) {
+        throw new Error('Invalid hash')
       }
+
+      // Парсим данные пользователя
+      const userJson = urlParams.get('user')
+      if (!userJson) {
+        throw new Error('User data not found')
+      }
+
+      const userData = JSON.parse(userJson)
+      return userData
+    } catch (error) {
+      console.error('❌ Error verifying Telegram Web App data:', error)
+      throw new Error('Invalid Telegram Web App data')
     }
   }
 
   /**
-   * Создание нового администратора
-   * (только SUPER_ADMIN может создавать других администраторов)
+   * Авторизация пользователя через Telegram
    */
-  static async createAdmin(data: {
-    email: string
-    password: string
-    firstName: string
-    lastName: string
-    role: AdminRole
+  static async authenticateUser(telegramData: {
+    id: number
+    first_name?: string
+    last_name?: string
+    username?: string
+    language_code?: string
+    phone_number?: string
+    photo_url?: string
   }) {
-    // Проверяем, существует ли уже администратор с таким email
-    const existingAdmin = await prisma.admin.findUnique({
-      where: { email: data.email.toLowerCase() }
-    })
+    try {
+      const telegramId = telegramData.id.toString()
 
-    if (existingAdmin) {
-      throw new Error('Admin with this email already exists')
-    }
-
-    // Хешируем пароль
-    const hashedPassword = hashPassword(data.password)
-
-    // Создаем администратора
-    const admin = await prisma.admin.create({
-      data: {
-        email: data.email.toLowerCase(),
-        password: hashedPassword,
-        first_name: data.firstName,
-        last_name: data.lastName,
-        role: data.role,
-        is_active: true
-      }
-    })
-
-    return {
-      id: admin.id,
-      email: admin.email,
-      firstName: admin.first_name,
-      lastName: admin.last_name,
-      role: admin.role,
-      isActive: admin.is_active,
-      createdAt: admin.created_at
-    }
-  }
-
-  /**
-   * Получение всех администраторов
-   */
-  static async getAllAdmins() {
-    const admins = await prisma.admin.findMany({
-      orderBy: { created_at: 'desc' }
-    })
-
-    return admins.map(admin => ({
-      id: admin.id,
-      email: admin.email,
-      firstName: admin.first_name,
-      lastName: admin.last_name,
-      role: admin.role,
-      isActive: admin.is_active,
-      lastLogin: admin.last_login,
-      createdAt: admin.created_at
-    }))
-  }
-
-  /**
-   * Обновление данных администратора
-   */
-  static async updateAdmin(
-    id: number,
-    data: {
-      email?: string
-      firstName?: string
-      lastName?: string
-      role?: AdminRole
-      isActive?: boolean
-      password?: string
-    }
-  ) {
-    const updateData: any = {}
-
-    if (data.email) {
-      // Проверяем, не занят ли новый email
-      const existingAdmin = await prisma.admin.findUnique({
-        where: { email: data.email.toLowerCase() }
+      // Ищем или создаем пользователя
+      let user = await prisma.user.findUnique({
+        where: { telegram_id: telegramId },
       })
 
-      if (existingAdmin && existingAdmin.id !== id) {
-        throw new Error('Admin with this email already exists')
+      if (!user) {
+        // Создаем нового пользователя
+        user = await prisma.user.create({
+          data: {
+            telegram_id: telegramId,
+            first_name: telegramData.first_name || null,
+            last_name: telegramData.last_name || null,
+            username: telegramData.username || null,
+            language_code: telegramData.language_code || 'ru',
+            phone: telegramData.phone_number || null,
+            photo_url: telegramData.photo_url || null,
+            is_phone_verified: !!telegramData.phone_number,
+          },
+        })
+      } else {
+        // Обновляем данные пользователя, если что-то изменилось
+        const updates: any = {}
+        
+        if (telegramData.phone_number && !user.phone) {
+          updates.phone = telegramData.phone_number
+          updates.is_phone_verified = true
+        }
+        
+        if (telegramData.photo_url && user.photo_url !== telegramData.photo_url) {
+          updates.photo_url = telegramData.photo_url
+        }
+        
+        if (Object.keys(updates).length > 0) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: updates,
+          })
+        }
       }
 
-      updateData.email = data.email.toLowerCase()
-    }
+      // Генерируем токен авторизации
+      const authToken = this.generateAuthToken(user.id, telegramId)
 
-    if (data.firstName) updateData.first_name = data.firstName
-    if (data.lastName) updateData.last_name = data.lastName
-    if (data.role) updateData.role = data.role
-    if (data.isActive !== undefined) updateData.is_active = data.isActive
-
-    if (data.password) {
-      updateData.password = hashPassword(data.password)
-    }
-
-    updateData.updated_at = new Date()
-
-    const admin = await prisma.admin.update({
-      where: { id },
-      data: updateData
-    })
-
-    return {
-      id: admin.id,
-      email: admin.email,
-      firstName: admin.first_name,
-      lastName: admin.last_name,
-      role: admin.role,
-      isActive: admin.is_active,
-      updatedAt: admin.updated_at
-    }
-  }
-
-  /**
-   * Удаление администратора
-   */
-  static async deleteAdmin(id: number) {
-    // Проверяем, что удаляем не последнего SUPER_ADMIN
-    const admin = await prisma.admin.findUnique({
-      where: { id }
-    })
-
-    if (!admin) {
-      throw new Error('Admin not found')
-    }
-
-    if (admin.role === AdminRole.SUPER_ADMIN) {
-      const superAdminCount = await prisma.admin.count({
-        where: { role: AdminRole.SUPER_ADMIN }
+      // Сохраняем токен в базе данных
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { auth_token: authToken },
       })
 
-      if (superAdminCount <= 1) {
-        throw new Error('Cannot delete the last super admin')
+      return {
+        user: {
+          id: user.id,
+          telegramId: user.telegram_id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          username: user.username,
+          phone: user.phone,
+          photoUrl: user.photo_url,
+          languageCode: user.language_code,
+          isPhoneVerified: user.is_phone_verified,
+        },
+        authToken,
       }
-    }
-
-    await prisma.admin.delete({
-      where: { id }
-    })
-
-    return { success: true }
-  }
-
-  /**
-   * Получение профиля текущего администратора
-   */
-  static async getProfile(adminId: number) {
-    const admin = await prisma.admin.findUnique({
-      where: { id: adminId }
-    })
-
-    if (!admin) {
-      throw new Error('Admin not found')
-    }
-
-    return {
-      id: admin.id,
-      email: admin.email,
-      firstName: admin.first_name,
-      lastName: admin.last_name,
-      role: admin.role,
-      isActive: admin.is_active,
-      lastLogin: admin.last_login,
-      createdAt: admin.created_at
+    } catch (error) {
+      console.error('❌ Error authenticating user:', error)
+      throw error
     }
   }
 
   /**
-   * Изменение пароля
+   * Обновление номера телефона пользователя
    */
-  static async changePassword(adminId: number, oldPassword: string, newPassword: string) {
-    const admin = await prisma.admin.findUnique({
-      where: { id: adminId }
-    })
+  static async updateUserPhone(userId: number, phone: string) {
+    try {
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          phone,
+          is_phone_verified: true,
+        },
+      })
 
-    if (!admin) {
-      throw new Error('Admin not found')
-    }
-
-    // Проверяем старый пароль
-    const isValidPassword = verifyPassword(oldPassword, admin.password)
-
-    if (!isValidPassword) {
-      throw new Error('Invalid old password')
-    }
-
-    // Хешируем новый пароль
-    const hashedPassword = hashPassword(newPassword)
-
-    await prisma.admin.update({
-      where: { id: adminId },
-      data: {
-        password: hashedPassword,
-        updated_at: new Date()
+      return {
+        id: user.id,
+        phone: user.phone,
+        isPhoneVerified: user.is_phone_verified,
       }
-    })
+    } catch (error) {
+      console.error('❌ Error updating user phone:', error)
+      throw error
+    }
+  }
 
-    return { success: true }
+  /**
+   * Получение пользователя по токену
+   */
+  static async getUserByToken(token: string) {
+    try {
+      // Проверяем JWT токен
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || 'your-secret-key'
+      ) as any
+
+      // Ищем пользователя по токену
+      const user = await prisma.user.findUnique({
+        where: { auth_token: token },
+      })
+
+      if (!user || user.id !== decoded.userId) {
+        throw new Error('Invalid token')
+      }
+
+      return {
+        id: user.id,
+        telegramId: user.telegram_id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        username: user.username,
+        phone: user.phone,
+        languageCode: user.language_code,
+        isPhoneVerified: user.is_phone_verified,
+      }
+    } catch (error) {
+      console.error('❌ Error getting user by token:', error)
+      throw new Error('Invalid or expired token')
+    }
+  }
+
+  /**
+   * Выход пользователя (удаление токена)
+   */
+  static async logout(userId: number) {
+    try {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { auth_token: null },
+      })
+      return { success: true }
+    } catch (error) {
+      console.error('❌ Error logging out user:', error)
+      throw error
+    }
+  }
+
+  // ============ МЕТОДЫ ДЛЯ ВОДИТЕЛЕЙ ============
+
+  /**
+   * Верификация и проверка данных водителя из Telegram Web App
+   */
+  static verifyDriverTelegramWebAppData(initData: string): any {
+    try {
+      const urlParams = new URLSearchParams(initData)
+      const hash = urlParams.get('hash')
+      urlParams.delete('hash')
+
+      // Создаем строку для проверки
+      const dataCheckString = Array.from(urlParams.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, value]) => `${key}=${value}`)
+        .join('\n')
+
+      // Создаем секретный ключ для водительского бота
+      const secretKey = crypto
+        .createHmac('sha256', 'WebAppData')
+        .update(process.env.TELEGRAM_DRIVER_BOT_TOKEN || '')
+        .digest()
+
+      // Вычисляем хеш
+      const calculatedHash = crypto
+        .createHmac('sha256', secretKey)
+        .update(dataCheckString)
+        .digest('hex')
+
+      // Проверяем совпадение хеша
+      if (calculatedHash !== hash) {
+        throw new Error('Invalid hash')
+      }
+
+      // Парсим данные пользователя
+      const userJson = urlParams.get('user')
+      if (!userJson) {
+        throw new Error('User data not found')
+      }
+
+      const userData = JSON.parse(userJson)
+      return userData
+    } catch (error) {
+      console.error('❌ Error verifying driver Telegram Web App data:', error)
+      throw new Error('Invalid Telegram Web App data')
+    }
+  }
+
+  /**
+   * Авторизация водителя через Telegram
+   */
+  static async authenticateDriver(telegramData: {
+    id: number
+    first_name?: string
+    last_name?: string
+    username?: string
+    language_code?: string
+    phone_number?: string
+    photo_url?: string
+  }) {
+    try {
+      const telegramId = telegramData.id.toString()
+
+      // Ищем водителя по telegram_id
+      let driver = await prisma.driver.findFirst({
+        where: { telegram_id: telegramId },
+        include: {
+          vehicle: true,
+          bookings: {
+            where: {
+              status: {
+                in: ['VEHICLE_ASSIGNED', 'CONFIRMED', 'IN_PROGRESS']
+              }
+            },
+            include: {
+              user: true
+            },
+            orderBy: {
+              created_at: 'desc'
+            }
+          }
+        }
+      })
+
+      if (!driver) {
+        throw new Error('Driver not found. Please share your phone number with the bot first.')
+      }
+
+      // Обновляем данные водителя, если что-то изменилось
+      const updates: any = {}
+      
+      if (telegramData.first_name && !driver.name) {
+        const fullName = `${telegramData.first_name} ${telegramData.last_name || ''}`.trim()
+        updates.name = fullName
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        driver = await prisma.driver.update({
+          where: { id: driver.id },
+          data: updates,
+          include: {
+            vehicle: true,
+            bookings: {
+              where: {
+                status: {
+                  in: ['VEHICLE_ASSIGNED', 'CONFIRMED', 'IN_PROGRESS']
+                }
+              },
+              include: {
+                user: true
+              },
+              orderBy: {
+                created_at: 'desc'
+              }
+            }
+          }
+        })
+      }
+
+      // Генерируем токен авторизации
+      const authToken = this.generateDriverAuthToken(driver.id, telegramId)
+
+      return {
+        driver: {
+          id: driver.id,
+          name: driver.name,
+          phone: driver.phone,
+          telegramId: driver.telegram_id,
+          license: driver.license,
+          status: driver.status,
+          vehicle: driver.vehicle ? {
+            id: driver.vehicle.id,
+            brand: driver.vehicle.brand,
+            model: driver.vehicle.model,
+            licensePlate: driver.vehicle.license_plate,
+            type: driver.vehicle.type
+          } : null,
+          activeBookings: driver.bookings.map((booking: any) => ({
+            id: booking.id,
+            bookingNumber: booking.booking_number,
+            fromLocation: booking.from_location,
+            toLocation: booking.to_location,
+            pickupLocation: booking.pickup_location,
+            dropoffLocation: booking.dropoff_location,
+            pickupTime: booking.pickup_time,
+            passengerCount: booking.passenger_count,
+            price: booking.price,
+            status: booking.status,
+            user: {
+              name: booking.user.first_name ? 
+                `${booking.user.first_name} ${booking.user.last_name || ''}`.trim() : 
+                booking.user.username || 'Клиент',
+              phone: booking.user.phone,
+              photoUrl: booking.user.photo_url,
+              username: booking.user.username,
+              telegramId: booking.user.telegram_id
+            },
+            notes: booking.notes,
+            distanceKm: booking.distance_km,
+            createdAt: booking.created_at
+          }))
+        },
+        authToken
+      }
+    } catch (error) {
+      console.error('❌ Error authenticating driver:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Получение водителя по токену
+   */
+  static async getDriverByToken(token: string) {
+    try {
+      // Проверяем JWT токен
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || 'your-secret-key'
+      ) as any
+
+      if (decoded.type !== 'driver') {
+        throw new Error('Invalid token type')
+      }
+
+      // Ищем водителя по id
+      const driver = await prisma.driver.findUnique({
+        where: { id: decoded.driverId },
+        include: {
+          vehicle: true,
+          bookings: {
+            where: {
+              status: {
+                in: ['VEHICLE_ASSIGNED', 'CONFIRMED', 'IN_PROGRESS']
+              }
+            },
+            include: {
+              user: true
+            },
+            orderBy: {
+              created_at: 'desc'
+            }
+          }
+        }
+      })
+
+      if (!driver || driver.telegram_id !== decoded.telegramId) {
+        throw new Error('Invalid token')
+      }
+
+      return {
+        id: driver.id,
+        name: driver.name,
+        phone: driver.phone,
+        telegramId: driver.telegram_id,
+        license: driver.license,
+        status: driver.status,
+        vehicle: driver.vehicle,
+        activeBookings: driver.bookings
+      }
+    } catch (error) {
+      console.error('❌ Error getting driver by token:', error)
+      throw new Error('Invalid or expired token')
+    }
+  }
+
+  /**
+   * Выход водителя (просто удаляем токен на клиенте)
+   */
+  static async logoutDriver(driverId: number) {
+    try {
+      // У водителей мы не храним токен в базе, 
+      // поэтому просто возвращаем success
+      return { success: true }
+    } catch (error) {
+      console.error('❌ Error logging out driver:', error)
+      throw error
+    }
   }
 }
-
-// Экспортируем функции хеширования для использования в других местах
-export { hashPassword, verifyPassword }
-

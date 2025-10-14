@@ -1,4 +1,5 @@
-import axios from 'axios'
+import axios, { AxiosInstance } from 'axios'
+import https from 'https'
 
 interface WialonConfig {
   baseUrl: string
@@ -21,6 +22,7 @@ interface WialonUnit {
 export class WialonService {
   private config: WialonConfig
   private sessionId: string | null = null
+  private axiosInstance: AxiosInstance
 
   constructor() {
     // Загружаем конфигурацию из переменных окружения
@@ -28,6 +30,14 @@ export class WialonService {
       baseUrl: process.env.WIALON_BASE_URL || 'https://gps.ent-en.com/wialon',
       token: process.env.WIALON_TOKEN || '85991e5f06896e98fe3c0bd49d2fe6d825770468546E156C3088DF44EB44163B2A478841'
     }
+
+    // Создаем axios instance с отключенной проверкой SSL для self-signed сертификатов
+    this.axiosInstance = axios.create({
+      httpsAgent: new https.Agent({
+        rejectUnauthorized: false // Игнорируем ошибки SSL для самоподписанных сертификатов
+      }),
+      timeout: 10000 // 10 секунд таймаут
+    })
   }
 
   /**
@@ -35,7 +45,7 @@ export class WialonService {
    */
   async login(): Promise<string> {
     try {
-      const response = await axios.get(`${this.config.baseUrl}/ajax.html`, {
+      const response = await this.axiosInstance.get(`${this.config.baseUrl}/ajax.html`, {
         params: {
           svc: 'token/login',
           params: JSON.stringify({ token: this.config.token })
@@ -74,7 +84,7 @@ export class WialonService {
 
       console.log(`📡 Making request to ${this.config.baseUrl}/ajax.html`)
       
-      const response = await axios.get(`${this.config.baseUrl}/ajax.html`, {
+      const response = await this.axiosInstance.get(`${this.config.baseUrl}/ajax.html`, {
         params: {
           svc: 'core/search_items',
           params: JSON.stringify({
@@ -90,8 +100,7 @@ export class WialonService {
             to: 0
           }),
           sid: this.sessionId
-        },
-        timeout: 10000 // 10 секунд таймаут
+        }
       })
 
       console.log(`📦 Received response:`, response.data)
@@ -192,7 +201,7 @@ export class WialonService {
     if (!this.sessionId) return
 
     try {
-      await axios.get(`${this.config.baseUrl}/ajax.html`, {
+      await this.axiosInstance.get(`${this.config.baseUrl}/ajax.html`, {
         params: {
           svc: 'core/logout',
           sid: this.sessionId

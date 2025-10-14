@@ -8,17 +8,20 @@ datasource db {
 }
 
 model User {
-  id            Int       @id @default(autoincrement())
-  telegram_id   String    @unique
-  first_name    String?
-  last_name     String?
-  username      String?
-  language_code String    @default("ru")
-  phone         String?
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @default(now())
-  name          String?
-  bookings      Booking[]
+  id                Int       @id @default(autoincrement())
+  telegram_id       String    @unique
+  first_name        String?
+  last_name         String?
+  username          String?
+  language_code     String    @default("ru")
+  phone             String?
+  photo_url         String? // URL фото профиля из Telegram
+  auth_token        String?   @unique // Токен авторизации для доступа к API
+  is_phone_verified Boolean   @default(false) // Подтвержден ли номер телефона
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @default(now())
+  name              String?
+  bookings          Booking[]
 
   @@map("User")
 }

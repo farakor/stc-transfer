@@ -309,6 +309,58 @@ export class TariffService {
     }
   }
 
+  // Обновить локацию
+  static async updateLocation(id: number, data: {
+    name?: string
+    type?: string
+    coordinates?: any
+    is_active?: boolean
+  }): Promise<LocationData> {
+    try {
+      return await prisma.location.update({
+        where: { id },
+        data: {
+          name: data.name,
+          type: data.type,
+          coordinates: data.coordinates,
+          is_active: data.is_active
+        }
+      })
+    } catch (error) {
+      console.error('Error updating location:', error)
+      throw new Error('Failed to update location')
+    }
+  }
+
+  // Удалить локацию
+  static async deleteLocation(id: number): Promise<void> {
+    try {
+      // Проверяем, есть ли маршруты, использующие эту локацию
+      const routesFrom = await prisma.tariffRoute.count({
+        where: { from_location_id: id }
+      })
+      
+      const routesTo = await prisma.tariffRoute.count({
+        where: { to_location_id: id }
+      })
+
+      if (routesFrom > 0 || routesTo > 0) {
+        throw new Error(`Cannot delete location: ${routesFrom + routesTo} route(s) are using this location`)
+      }
+
+      // Удаляем локацию
+      await prisma.location.delete({
+        where: { id }
+      })
+    } catch (error) {
+      console.error('Error deleting location:', error)
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error('Failed to delete location')
+    }
+  }
+
   // Создать новый маршрут
   static async createRoute(data: {
     from_location_id: number
@@ -341,6 +393,62 @@ export class TariffService {
     } catch (error) {
       console.error('Error creating route:', error)
       throw new Error('Failed to create route')
+    }
+  }
+
+  // Обновить маршрут
+  static async updateRoute(id: number, data: {
+    from_location_id?: number
+    to_location_id?: number
+    distance_km?: number
+    estimated_duration_minutes?: number
+    is_active?: boolean
+  }): Promise<RouteData> {
+    try {
+      const route = await prisma.tariffRoute.update({
+        where: { id },
+        data: {
+          from_location_id: data.from_location_id,
+          to_location_id: data.to_location_id,
+          distance_km: data.distance_km,
+          estimated_duration_minutes: data.estimated_duration_minutes,
+          is_active: data.is_active
+        },
+        include: {
+          from_location: true,
+          to_location: true
+        }
+      })
+
+      return {
+        id: route.id,
+        from_location: route.from_location,
+        to_location: route.to_location,
+        distance_km: route.distance_km ? Number(route.distance_km) : null,
+        estimated_duration_minutes: route.estimated_duration_minutes,
+        is_active: route.is_active
+      }
+    } catch (error) {
+      console.error('Error updating route:', error)
+      throw new Error('Failed to update route')
+    }
+  }
+
+  // Удалить маршрут
+  static async deleteRoute(id: number): Promise<void> {
+    try {
+      // Сначала удаляем все связанные тарифы
+      await prisma.tariff.deleteMany({
+        where: { route_id: id }
+      })
+
+      // Затем удаляем сам маршрут
+      await prisma.tariffRoute.delete({
+        where: { id }
+      })
+    } catch (error) {
+      console.error('Error deleting route:', error)
+      throw new Error('Failed to delete route')
     }
   }
 

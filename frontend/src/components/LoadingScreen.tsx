@@ -1,8 +1,11 @@
 import { motion } from 'framer-motion'
+import { useTranslation } from '@/hooks/useTranslation'
 import Logo from '@/assets/STC-transfer.svg'
 import FarukBadge from '@/assets/faruk-badge.svg'
 
 export function LoadingScreen() {
+  const { t } = useTranslation()
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-accent-50">
       <motion.div
@@ -77,7 +80,7 @@ export function LoadingScreen() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
         >
-          Загрузка приложения...
+          {t.common.loading}
         </motion.p>
 
         {/* Footer */}
@@ -88,7 +91,7 @@ export function LoadingScreen() {
           transition={{ delay: 0.8 }}
         >
           <div className="flex flex-col items-center">
-            <p className="text-xs text-gray-400 mb-2">Developed by</p>
+            <p className="text-xs text-gray-400 mb-2">{t.footer.developedBy}</p>
             <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
           </div>
         </motion.div>

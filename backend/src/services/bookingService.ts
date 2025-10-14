@@ -27,6 +27,9 @@ export interface BookingDetails {
   user: {
     name?: string
     phone?: string
+    photoUrl?: string
+    username?: string
+    telegramId?: string
   }
   vehicle?: {
     id: number
@@ -146,6 +149,7 @@ export class BookingService {
 
         // Уведомление клиенту
         await telegramBot.sendBookingNotification(Number(data.telegramId), {
+          userId: updatedBooking.user_id,
           fromLocation: updatedBooking.from_location,
           toLocation: updatedBooking.to_location,
           vehicleType: data.vehicleType,
@@ -509,7 +513,10 @@ export class BookingService {
       vehicleType: booking.vehicle_type,
       user: {
         name: booking.user?.name || booking.user?.first_name,
-        phone: booking.user?.phone
+        phone: booking.user?.phone,
+        photoUrl: booking.user?.photo_url,
+        username: booking.user?.username,
+        telegramId: booking.user?.telegram_id
       },
       vehicle: booking.vehicle ? {
         id: booking.vehicle.id,

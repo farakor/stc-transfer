@@ -381,6 +381,9 @@ export class AdminService {
     let startDate: Date
 
     switch (period) {
+      case 'day':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        break
       case 'week':
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
         break
@@ -391,10 +394,28 @@ export class AdminService {
         startDate = new Date(now.getFullYear(), 0, 1)
         break
       default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) // По умолчанию неделя
     }
 
+    console.log(`📊 Аналитика выручки: период=${period}, startDate=${startDate}`)
+
+    // Получить общую выручку (все статусы, не только COMPLETED)
     const revenue = await prisma.booking.aggregate({
+      where: {
+        created_at: {
+          gte: startDate
+        }
+      },
+      _sum: {
+        total_price: true
+      },
+      _count: {
+        id: true
+      }
+    })
+
+    // Также получаем выручку только по завершенным заказам
+    const completedRevenue = await prisma.booking.aggregate({
       where: {
         status: BookingStatus.COMPLETED,
         created_at: {
@@ -409,22 +430,28 @@ export class AdminService {
       }
     })
 
-    // Получить данные по дням для графика
+    console.log(`📊 Найдено заказов: всего=${revenue._count.id}, завершено=${completedRevenue._count.id}`)
+    console.log(`📊 Выручка: всего=${revenue._sum.total_price}, завершено=${completedRevenue._sum.total_price}`)
+
+    // Получить данные по дням для графика (все заказы)
     const dailyRevenue = await prisma.$queryRaw`
       SELECT 
         DATE(created_at) as date,
         SUM(total_price) as revenue,
         COUNT(*) as bookings
       FROM "Booking"
-      WHERE status = 'COMPLETED' 
-        AND created_at >= ${startDate}
+      WHERE created_at >= ${startDate}
       GROUP BY DATE(created_at)
       ORDER BY date;
     `
 
+    console.log(`📊 Ежедневные данные:`, dailyRevenue)
+
     return {
       totalRevenue: Number(revenue._sum.total_price || 0),
+      completedRevenue: Number(completedRevenue._sum.total_price || 0),
       totalBookings: revenue._count.id,
+      completedBookings: completedRevenue._count.id,
       period,
       dailyData: dailyRevenue
     }
@@ -432,6 +459,8 @@ export class AdminService {
 
   // Популярные маршруты
   static async getPopularRoutes() {
+    console.log('📊 Запрос популярных маршрутов...')
+
     const routes = await prisma.booking.groupBy({
       by: ['from_location', 'to_location'],
       _count: {
@@ -448,16 +477,25 @@ export class AdminService {
       take: 10
     })
 
-    return routes.map(route => ({
-      fromLocation: route.from_location,
-      toLocation: route.to_location,
-      bookingsCount: route._count.id,
-      totalRevenue: Number(route._sum.total_price || 0)
-    }))
+    console.log(`📊 Найдено маршрутов: ${routes.length}`)
+
+    const result = routes
+      .filter(route => route.from_location && route.to_location) // Фильтруем пустые значения
+      .map(route => ({
+        fromLocation: route.from_location,
+        toLocation: route.to_location,
+        bookingsCount: route._count.id,
+        totalRevenue: Number(route._sum.total_price || 0)
+      }))
+
+    console.log('📊 Популярные маршруты:', result)
+    return result
   }
 
   // Производительность водителей
   static async getDriverPerformance() {
+    console.log('📊 Запрос производительности водителей...')
+
     const performance = await prisma.driver.findMany({
       include: {
         bookings: {
@@ -480,21 +518,163 @@ export class AdminService {
       }
     })
 
-    return performance.map(driver => {
+    console.log(`📊 Найдено водителей: ${performance.length}`)
+
+    const result = performance.map(driver => {
       const totalRevenue = driver.bookings.reduce((sum, booking) =>
         sum + Number(booking.total_price), 0
       )
 
       return {
-        id: driver.id.toString(),
+        driverId: driver.id.toString(),
         name: driver.name,
         phone: driver.phone,
         status: driver.status,
-        completedBookings: driver._count.bookings,
+        completedOrders: driver._count.bookings,
         totalRevenue,
-        averageRevenue: driver._count.bookings > 0 ? totalRevenue / driver._count.bookings : 0
+        avgRating: 4.5, // TODO: Добавить систему рейтингов
+        avgResponseTime: 5, // TODO: Добавить трекинг времени ответа
+        efficiency: driver._count.bookings > 0 ? Math.min(95, 70 + driver._count.bookings / 2) : 0
       }
     }).sort((a, b) => b.totalRevenue - a.totalRevenue)
+
+    console.log(`📊 Водители с данными:`, result)
+    return result
+  }
+
+  // Метрики в реальном времени
+  static async getRealTimeMetrics() {
+    console.log('📊 Запрос метрик в реальном времени...')
+    const today = new Date(new Date().setHours(0, 0, 0, 0))
+
+    const [activeOrders, drivers, pendingOrders, todayStats, allBookings] = await Promise.all([
+      // Активные заказы
+      prisma.booking.count({
+        where: {
+          status: {
+            in: [BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS]
+          }
+        }
+      }),
+
+      // Водители
+      prisma.driver.findMany({
+        select: {
+          status: true
+        }
+      }),
+
+      // Ожидающие заказы
+      prisma.booking.count({
+        where: {
+          status: BookingStatus.PENDING
+        }
+      }),
+
+      // Статистика за сегодня
+      prisma.booking.aggregate({
+        where: {
+          created_at: {
+            gte: today
+          }
+        },
+        _sum: {
+          total_price: true
+        },
+        _count: {
+          id: true
+        }
+      }),
+
+      // Все заказы для проверки
+      prisma.booking.count()
+    ])
+
+    console.log(`📊 Всего заказов в БД: ${allBookings}`)
+    console.log(`📊 Заказов за сегодня: ${todayStats._count.id}`)
+    console.log(`📊 Активных заказов: ${activeOrders}`)
+    console.log(`📊 Ожидающих заказов: ${pendingOrders}`)
+    console.log(`📊 Водителей: ${drivers.length}`)
+
+    const availableDrivers = drivers.filter(d => d.status === 'AVAILABLE').length
+    const busyDrivers = drivers.filter(d => d.status === 'BUSY').length
+
+    // Подсчет завершенных заказов за сегодня
+    const completedToday = await prisma.booking.count({
+      where: {
+        status: BookingStatus.COMPLETED,
+        created_at: {
+          gte: today
+        }
+      }
+    })
+
+    const completionRate = todayStats._count.id > 0 
+      ? (completedToday / todayStats._count.id) * 100 
+      : 0
+
+    const currentHour = new Date().getHours() || 1 // Избегаем деления на 0
+
+    const result = {
+      activeOrders,
+      availableDrivers,
+      busyDrivers,
+      avgResponseTime: 4, // TODO: Добавить реальный расчет
+      pendingOrders,
+      completionRate: Math.round(completionRate * 10) / 10,
+      currentRevenue: Number(todayStats._sum.total_price || 0),
+      ordersPerHour: Math.round(todayStats._count.id / currentHour),
+      totalBookingsInDb: allBookings // Для отладки
+    }
+
+    console.log('📊 Результат метрик:', result)
+    return result
+  }
+
+  // Статистика по статусам заказов
+  static async getOrdersStatusData(period?: 'day' | 'week' | 'month') {
+    const now = new Date()
+    let startDate: Date
+
+    switch (period) {
+      case 'day':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        break
+      case 'week':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        break
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        break
+      default:
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) // По умолчанию 30 дней
+    }
+
+    console.log(`📊 Статистика статусов: период=${period}, startDate=${startDate}`)
+
+    const statusStats = await prisma.booking.groupBy({
+      by: ['status'],
+      where: {
+        created_at: { gte: startDate }
+      },
+      _count: {
+        status: true
+      }
+    })
+
+    console.log(`📊 Статусы заказов:`, statusStats)
+
+    const total = statusStats.reduce((sum, stat) => sum + stat._count.status, 0)
+
+    const result = statusStats.map(stat => ({
+      status: stat.status,
+      count: stat._count.status,
+      percentage: total > 0 ? Math.round((stat._count.status / total) * 1000) / 10 : 0
+    }))
+
+    console.log(`📊 Результат статусов (всего=${total}):`, result)
+
+    return result
   }
 
   // Массовые операции с заказами
@@ -678,6 +858,8 @@ export class AdminService {
         id: booking.user?.id?.toString(),
         name: booking.user?.name || booking.user?.first_name,
         phone: booking.user?.phone,
+        photoUrl: booking.user?.photo_url,
+        username: booking.user?.username,
         telegram_id: booking.user?.telegram_id
       },
       vehicle: booking.vehicle ? {

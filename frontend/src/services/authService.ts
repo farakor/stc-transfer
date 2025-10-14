@@ -95,7 +95,7 @@ export class AuthService {
    */
   static async login(data: LoginRequest): Promise<LoginResponse> {
     try {
-      const response = await axios.post(`${API_URL}/auth/login`, data)
+      const response = await axios.post(`${API_URL}/admin/auth/login`, data)
       
       if (response.data.success) {
         this.setToken(response.data.data.token)
@@ -127,7 +127,7 @@ export class AuthService {
    */
   static async getProfile(): Promise<Admin> {
     try {
-      const response = await axios.get(`${API_URL}/auth/profile`, this.getAuthHeaders())
+      const response = await axios.get(`${API_URL}/admin/auth/profile`, this.getAuthHeaders())
       
       if (response.data.success) {
         return response.data.data
@@ -145,7 +145,7 @@ export class AuthService {
   static async changePassword(data: ChangePasswordRequest): Promise<void> {
     try {
       const response = await axios.post(
-        `${API_URL}/auth/change-password`,
+        `${API_URL}/admin/auth/change-password`,
         data,
         this.getAuthHeaders()
       )
@@ -163,7 +163,7 @@ export class AuthService {
    */
   static async getAllAdmins(): Promise<Admin[]> {
     try {
-      const response = await axios.get(`${API_URL}/auth/admins`, this.getAuthHeaders())
+      const response = await axios.get(`${API_URL}/admin/auth/admins`, this.getAuthHeaders())
       
       if (response.data.success) {
         return response.data.data
@@ -181,7 +181,7 @@ export class AuthService {
   static async createAdmin(data: CreateAdminRequest): Promise<Admin> {
     try {
       const response = await axios.post(
-        `${API_URL}/auth/admins`,
+        `${API_URL}/admin/auth/admins`,
         data,
         this.getAuthHeaders()
       )
@@ -202,7 +202,7 @@ export class AuthService {
   static async updateAdmin(id: number, data: UpdateAdminRequest): Promise<Admin> {
     try {
       const response = await axios.put(
-        `${API_URL}/auth/admins/${id}`,
+        `${API_URL}/admin/auth/admins/${id}`,
         data,
         this.getAuthHeaders()
       )
@@ -223,7 +223,7 @@ export class AuthService {
   static async deleteAdmin(id: number): Promise<void> {
     try {
       const response = await axios.delete(
-        `${API_URL}/auth/admins/${id}`,
+        `${API_URL}/admin/auth/admins/${id}`,
         this.getAuthHeaders()
       )
       

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAppStore } from '@/services/store'
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
+import { useTranslation } from '@/hooks/useTranslation'
 import { ProgressBar } from '@/components/ProgressBar'
 import { NotificationToast } from '@/components/NotificationToast'
 import {
@@ -15,38 +16,46 @@ import { useVehicleTypes } from '@/hooks/useVehicles'
 import { VehicleIcon } from '@/components/VehicleIcon'
 import FarukBadge from '@/assets/faruk-badge.svg'
 
-const BOOKING_STEPS = ['Язык', 'Транспорт', 'Маршрут', 'Данные', 'Подтверждение']
-
 export function BookingConfirmation() {
   const navigate = useNavigate()
   const { webApp } = useTelegramWebApp()
+  const { t } = useTranslation()
   const {
     currentBooking,
     selectedVehicleType,
-    resetBookingFlow
+    resetBookingFlow,
+    hasHydrated
   } = useAppStore()
+  
+  const BOOKING_STEPS = [
+    t.bookingSteps.language,
+    t.bookingSteps.vehicle,
+    t.bookingSteps.route,
+    t.bookingSteps.details,
+    t.bookingSteps.confirmation
+  ]
   
   // Получаем типы машин из API
   const { data: vehicleTypes } = useVehicleTypes()
   
   // Находим выбранную машину
-  const selectedVehicle = vehicleTypes?.find(v => v.type === selectedVehicleType)
+  const selectedVehicle = Array.isArray(vehicleTypes) ? vehicleTypes.find((v: any) => v.type === selectedVehicleType) : undefined
 
   const [showNotification, setShowNotification] = useState(false)
   const [isOrderConfirmed, setIsOrderConfirmed] = useState(false)
 
-  // Проверяем наличие заказа при загрузке
+  // Проверяем наличие заказа при загрузке (только после загрузки состояния из localStorage)
   useEffect(() => {
-    if (!currentBooking) {
+    if (hasHydrated && !currentBooking) {
       // Если нет текущего заказа, перенаправляем на начало
       navigate('/vehicles')
-    } else {
+    } else if (currentBooking) {
       setIsOrderConfirmed(true)
       setShowNotification(true)
 
       // Устанавливаем кнопки в Telegram Web App
       if (webApp) {
-        webApp.MainButton.setText('Посмотреть статус')
+        webApp.MainButton.setText(t.confirmation.trackOrder)
         webApp.MainButton.show()
         webApp.MainButton.onClick(handleViewStatus)
 
@@ -65,7 +74,7 @@ export function BookingConfirmation() {
         webApp.BackButton.hide()
       }
     }
-  }, [currentBooking, webApp, navigate])
+  }, [hasHydrated, currentBooking, webApp, navigate])
 
   const handleViewStatus = () => {
     if (currentBooking) {
@@ -75,7 +84,7 @@ export function BookingConfirmation() {
 
   const handleNewOrder = () => {
     resetBookingFlow()
-    navigate('/language')
+    navigate('/vehicles')
   }
 
   const handleContactSupport = () => {
@@ -121,7 +130,7 @@ export function BookingConfirmation() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            Заказ подтвержден!
+            {t.confirmation.title}
           </motion.h1>
 
           <motion.p
@@ -130,7 +139,7 @@ export function BookingConfirmation() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            Ваш заказ #{currentBooking.id.slice(0, 8)} успешно создан
+            {t.confirmation.subtitle} {t.confirmation.orderNumber}{currentBooking.bookingNumber}
           </motion.p>
         </motion.div>
 
@@ -142,14 +151,14 @@ export function BookingConfirmation() {
           transition={{ delay: 0.5 }}
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Детали заказа
+            {t.confirmation.orderDetails}
           </h3>
 
           {/* Status */}
           <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm font-medium text-gray-700">Статус:</span>
+            <span className="text-sm font-medium text-gray-700">{t.confirmation.status}:</span>
             <span className={`px-3 py-1 rounded-full text-xs font-medium ${getBookingStatusColor(currentBooking.status)}`}>
-              {getBookingStatusName(currentBooking.status)}
+              {t.bookingStatus[currentBooking.status as keyof typeof t.bookingStatus] || currentBooking.status}
             </span>
           </div>
 
@@ -165,13 +174,13 @@ export function BookingConfirmation() {
               <div className="font-medium text-gray-900">
                 {currentBooking.vehicle ?
                   `${currentBooking.vehicle.brand} ${currentBooking.vehicle.model}` :
-                  (selectedVehicle?.name || 'Загрузка...')
+                  (selectedVehicle?.name || t.common.loading)
                 }
               </div>
               <div className="text-sm text-gray-600">
                 {currentBooking.vehicle ?
-                  'Назначен автомобиль' :
-                  'Автомобиль будет назначен'
+                  t.confirmation.assignedVehicle :
+                  t.confirmation.vehicleWillBeAssigned
                 }
               </div>
             </div>
@@ -192,7 +201,7 @@ export function BookingConfirmation() {
             </div>
             {currentBooking.distanceKm && (
               <div className="text-xs text-gray-500 text-center mt-1">
-                Расстояние: {currentBooking.distanceKm} км
+                {t.confirmation.distance}: {currentBooking.distanceKm} {t.confirmation.km}
               </div>
             )}
           </div>
@@ -200,7 +209,7 @@ export function BookingConfirmation() {
           {/* Pickup Time */}
           {currentBooking.pickupTime && (
             <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm font-medium text-gray-700">Время подачи:</span>
+              <span className="text-sm font-medium text-gray-700">{t.confirmation.pickupTime}:</span>
               <span className="text-sm text-gray-900">
                 {formatDateTime(currentBooking.pickupTime)}
               </span>
@@ -210,7 +219,7 @@ export function BookingConfirmation() {
           {/* Notes */}
           {currentBooking.notes && (
             <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-              <div className="text-sm font-medium text-gray-700 mb-1">Комментарии:</div>
+              <div className="text-sm font-medium text-gray-700 mb-1">{t.confirmation.comments}:</div>
               <div className="text-sm text-gray-900">{currentBooking.notes}</div>
             </div>
           )}
@@ -218,7 +227,7 @@ export function BookingConfirmation() {
           {/* Driver Info */}
           {currentBooking.driver && (
             <div className="mb-4 p-3 bg-primary-50 rounded-lg">
-              <div className="text-sm font-medium text-primary-700 mb-2">Информация о водителе:</div>
+              <div className="text-sm font-medium text-primary-700 mb-2">{t.confirmation.driverInfo}:</div>
               <div className="text-sm text-primary-900">
                 <div>{currentBooking.driver.name}</div>
                 <div>{currentBooking.driver.phone}</div>
@@ -229,14 +238,14 @@ export function BookingConfirmation() {
           {/* Price */}
           <div className="border-t pt-4">
             <div className="flex justify-between text-lg font-bold text-primary-600">
-              <span>Стоимость поездки:</span>
+              <span>{t.confirmation.tripCost}:</span>
               <span>{formatTripPrice(currentBooking.price, currentBooking.toLocation)}</span>
             </div>
           </div>
 
           {/* Creation Time */}
           <div className="text-xs text-gray-500 text-center mt-4">
-            Заказ создан: {formatDateTime(currentBooking.createdAt)}
+            {t.confirmation.orderCreated}: {formatDateTime(currentBooking.createdAt)}
           </div>
         </motion.div>
 
@@ -254,7 +263,7 @@ export function BookingConfirmation() {
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-            Отследить заказ
+            {t.confirmation.trackOrder}
           </button>
 
           <button
@@ -264,7 +273,7 @@ export function BookingConfirmation() {
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            Связаться с поддержкой
+            {t.confirmation.contactSupport}
           </button>
         </motion.div>
 
@@ -280,12 +289,11 @@ export function BookingConfirmation() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div className="text-sm text-blue-800">
-              <div className="font-medium mb-1">Что дальше?</div>
+              <div className="font-medium mb-1">{t.confirmation.whatsNext}</div>
               <ul className="space-y-1 text-blue-700">
-                <li>• Мы найдем ближайшего водителя</li>
-                <li>• Вы получите уведомление с деталями</li>
-                <li>• Водитель свяжется с вами</li>
-                <li>• Отслеживайте статус в реальном времени</li>
+                {t.confirmation.whatsNextSteps.map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))}
               </ul>
             </div>
           </div>
@@ -302,7 +310,7 @@ export function BookingConfirmation() {
             onClick={handleNewOrder}
             className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
           >
-            ← Создать новый заказ
+            {t.confirmation.newOrder}
           </button>
         </motion.div>
 
@@ -314,7 +322,7 @@ export function BookingConfirmation() {
           transition={{ delay: 1.2 }}
         >
           <div className="flex flex-col items-center">
-            <p className="text-xs text-gray-400 mb-2">Developed by</p>
+            <p className="text-xs text-gray-400 mb-2">{t.footer.developedBy}</p>
             <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
           </div>
         </motion.div>
@@ -322,7 +330,7 @@ export function BookingConfirmation() {
 
       {/* Success Notification */}
       <NotificationToast
-        message="Заказ успешно создан! Скоро с вами свяжется водитель."
+        message={t.confirmation.orderCreatedNotification}
         type="success"
         isVisible={showNotification && isOrderConfirmed}
         onClose={() => setShowNotification(false)}

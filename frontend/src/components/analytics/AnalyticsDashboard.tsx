@@ -29,64 +29,169 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ className = '' 
   const [activeTab, setActiveTab] = useState<'overview' | 'revenue' | 'orders' | 'routes' | 'drivers'>('overview');
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // Моковые данные для демонстрации
-  const [revenueData] = useState([
-    { date: '2024-01-01', revenue: 1250000, orders: 45 },
-    { date: '2024-01-02', revenue: 1580000, orders: 52 },
-    { date: '2024-01-03', revenue: 1320000, orders: 48 },
-    { date: '2024-01-04', revenue: 1750000, orders: 61 },
-    { date: '2024-01-05', revenue: 1420000, orders: 49 },
-    { date: '2024-01-06', revenue: 1680000, orders: 58 },
-    { date: '2024-01-07', revenue: 1890000, orders: 67 }
-  ]);
-
-  const [statusData] = useState([
-    { status: 'COMPLETED' as const, count: 234, percentage: 65.2 },
-    { status: 'PENDING' as const, count: 45, percentage: 12.5 },
-    { status: 'IN_PROGRESS' as const, count: 38, percentage: 10.6 },
-    { status: 'CONFIRMED' as const, count: 32, percentage: 8.9 },
-    { status: 'CANCELLED' as const, count: 10, percentage: 2.8 }
-  ]);
-
-  const [routesData] = useState([
-    { route: 'tashkent-samarkand', from: 'Ташкент', to: 'Самарканд', count: 156, revenue: 4680000, avgPrice: 30000 },
-    { route: 'tashkent-bukhara', from: 'Ташкент', to: 'Бухара', count: 134, revenue: 4020000, avgPrice: 30000 },
-    { route: 'samarkand-bukhara', from: 'Самарканд', to: 'Бухара', count: 98, revenue: 2450000, avgPrice: 25000 },
-    { route: 'tashkent-fergana', from: 'Ташкент', to: 'Фергана', count: 87, revenue: 2610000, avgPrice: 30000 },
-    { route: 'tashkent-namangan', from: 'Ташкент', to: 'Наманган', count: 76, revenue: 2280000, avgPrice: 30000 },
-    { route: 'bukhara-khiva', from: 'Бухара', to: 'Хива', count: 65, revenue: 1625000, avgPrice: 25000 },
-    { route: 'tashkent-andijan', from: 'Ташкент', to: 'Андижан', count: 54, revenue: 1620000, avgPrice: 30000 },
-    { route: 'samarkand-tashkent', from: 'Самарканд', to: 'Ташкент', count: 52, revenue: 1560000, avgPrice: 30000 }
-  ]);
-
-  const [driversData] = useState([
-    { driverId: '1', name: 'Ибрагим Азизов', completedOrders: 89, totalRevenue: 2670000, avgRating: 4.8, avgResponseTime: 3, efficiency: 94.7 },
-    { driverId: '2', name: 'Азиз Рахимов', completedOrders: 76, totalRevenue: 2280000, avgRating: 4.6, avgResponseTime: 4, efficiency: 91.6 },
-    { driverId: '3', name: 'Шерзод Каримов', completedOrders: 68, totalRevenue: 2040000, avgRating: 4.7, avgResponseTime: 5, efficiency: 89.5 },
-    { driverId: '4', name: 'Фарход Усманов', completedOrders: 62, totalRevenue: 1860000, avgRating: 4.5, avgResponseTime: 6, efficiency: 87.3 },
-    { driverId: '5', name: 'Бахтиёр Юсупов', completedOrders: 58, totalRevenue: 1740000, avgRating: 4.4, avgResponseTime: 7, efficiency: 85.2 }
-  ]);
-
-  const [realTimeData] = useState({
-    activeOrders: 23,
-    availableDrivers: 12,
-    busyDrivers: 8,
-    avgResponseTime: 4,
-    pendingOrders: 5,
-    completionRate: 92.5,
-    currentRevenue: 3450000,
-    ordersPerHour: 8
+  // Реальные данные из API
+  const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [statusData, setStatusData] = useState<any[]>([]);
+  const [routesData, setRoutesData] = useState<any[]>([]);
+  const [driversData, setDriversData] = useState<any[]>([]);
+  const [realTimeData, setRealTimeData] = useState<any>({
+    activeOrders: 0,
+    availableDrivers: 0,
+    busyDrivers: 0,
+    avgResponseTime: 0,
+    pendingOrders: 0,
+    completionRate: 0,
+    currentRevenue: 0,
+    ordersPerHour: 0
   });
 
+  // Загрузка данных
   useEffect(() => {
-    // Имитация загрузки данных
-    setLoading(true);
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    fetchAllData();
   }, [period]);
+
+  // Автообновление данных
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      fetchRealTimeData();
+    }, 30000); // Обновление каждые 30 секунд
+
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        fetchRevenueData(),
+        fetchStatusData(),
+        fetchRoutesData(),
+        fetchDriversData(),
+        fetchRealTimeData()
+      ]);
+    } catch (error) {
+      console.error('Ошибка загрузки данных:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRevenueData = async () => {
+    try {
+      console.log('📊 Запрос данных о выручке, период:', period);
+      const response = await adminService.getRevenueAnalytics(period);
+      console.log('📊 Ответ выручки:', response);
+      console.log('📊 response.data:', response.data);
+      
+      // Axios возвращает {data: {...}}, внутри которого наш {success, data}
+      const apiResponse = response.data;
+      if (apiResponse && apiResponse.success && apiResponse.data) {
+        console.log('📊 Данные выручки:', apiResponse.data);
+        // Форматируем данные для графика
+        const dailyData = apiResponse.data.dailyData || [];
+        console.log('📊 Daily data:', dailyData);
+        const formattedData = dailyData.map((item: any) => ({
+          date: item.date,
+          revenue: Number(item.revenue || 0),
+          orders: Number(item.bookings || 0)
+        }));
+        console.log('📊 Форматированные данные выручки:', formattedData);
+        setRevenueData(formattedData);
+      } else {
+        console.warn('📊 Неверный формат ответа выручки:', apiResponse);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки данных о выручке:', error);
+      setRevenueData([]);
+    }
+  };
+
+  const fetchStatusData = async () => {
+    try {
+      console.log('📊 Запрос данных о статусах, период:', period);
+      const response = await adminService.getOrdersStatusData(period);
+      console.log('📊 Ответ статусов:', response);
+      
+      const apiResponse = response.data;
+      if (apiResponse && apiResponse.success && apiResponse.data) {
+        console.log('📊 Данные статусов:', apiResponse.data);
+        setStatusData(apiResponse.data);
+      } else {
+        console.warn('📊 Неверный формат ответа статусов:', apiResponse);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки данных о статусах:', error);
+      setStatusData([]);
+    }
+  };
+
+  const fetchRoutesData = async () => {
+    try {
+      console.log('📊 Запрос популярных маршрутов...');
+      const response = await adminService.getPopularRoutes();
+      console.log('📊 Ответ маршрутов:', response);
+      
+      const apiResponse = response.data;
+      if (apiResponse && apiResponse.success && apiResponse.data) {
+        console.log('📊 Данные маршрутов:', apiResponse.data);
+        // Форматируем данные для графика
+        const formattedData = apiResponse.data.map((item: any) => ({
+          route: `${item.fromLocation}-${item.toLocation}`,
+          from: item.fromLocation,
+          to: item.toLocation,
+          count: item.bookingsCount,
+          revenue: Number(item.totalRevenue || 0),
+          avgPrice: item.bookingsCount > 0 ? Math.round(Number(item.totalRevenue || 0) / item.bookingsCount) : 0
+        }));
+        console.log('📊 Форматированные данные маршрутов:', formattedData);
+        setRoutesData(formattedData);
+      } else {
+        console.warn('📊 Неверный формат ответа маршрутов:', apiResponse);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки данных о маршрутах:', error);
+      setRoutesData([]);
+    }
+  };
+
+  const fetchDriversData = async () => {
+    try {
+      console.log('📊 Запрос производительности водителей...');
+      const response = await adminService.getDriverPerformance();
+      console.log('📊 Ответ водителей:', response);
+      
+      const apiResponse = response.data;
+      if (apiResponse && apiResponse.success && apiResponse.data) {
+        console.log('📊 Данные водителей:', apiResponse.data);
+        setDriversData(apiResponse.data);
+      } else {
+        console.warn('📊 Неверный формат ответа водителей:', apiResponse);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки данных о водителях:', error);
+      setDriversData([]);
+    }
+  };
+
+  const fetchRealTimeData = async () => {
+    try {
+      console.log('📊 Запрос метрик в реальном времени...');
+      const response = await adminService.getRealTimeMetrics();
+      console.log('📊 Ответ метрик:', response);
+      
+      const apiResponse = response.data;
+      if (apiResponse && apiResponse.success && apiResponse.data) {
+        console.log('📊 Метрики в реальном времени:', apiResponse.data);
+        setRealTimeData(apiResponse.data);
+      } else {
+        console.warn('📊 Неверный формат ответа метрик:', apiResponse);
+      }
+    } catch (error) {
+      console.error('❌ Ошибка загрузки метрик в реальном времени:', error);
+    }
+  };
 
   const tabs = [
     { id: 'overview', name: 'Обзор', icon: Activity },
@@ -97,14 +202,32 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ className = '' 
   ];
 
   const handleExportData = () => {
-    // Логика экспорта данных
-    console.log('Экспорт данных за период:', period);
+    // Подготовка данных для экспорта
+    const exportData = {
+      period,
+      revenue: revenueData,
+      status: statusData,
+      routes: routesData,
+      drivers: driversData,
+      realtime: realTimeData,
+      exportDate: new Date().toISOString()
+    };
+
+    // Создание и скачивание JSON файла
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `analytics-${period}-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleRefresh = () => {
-    setLoading(true);
-    // Логика обновления данных
-    setTimeout(() => setLoading(false), 1000);
+    fetchAllData();
   };
 
   return (

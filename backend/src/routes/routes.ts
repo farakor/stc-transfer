@@ -9,6 +9,12 @@ router.get('/', RouteController.getActiveRoutes)
 // GET /api/routes/popular - Получить популярные направления
 router.get('/popular', RouteController.getPopularDestinations)
 
+// GET /api/routes/locations - Получить все локации
+router.get('/locations', RouteController.getLocations)
+
+// GET /api/routes/all-routes - Получить все маршруты
+router.get('/all-routes', RouteController.getAllRoutes)
+
 // GET /api/routes/search - Поиск маршрутов
 router.get('/search', RouteController.searchRoutes)
 

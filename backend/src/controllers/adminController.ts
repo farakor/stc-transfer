@@ -380,6 +380,49 @@ export class AdminController {
     }
   }
 
+  // GET /api/admin/analytics/realtime - Метрики в реальном времени
+  static async getRealTimeMetrics(req: Request, res: Response): Promise<void> {
+    try {
+      const metrics = await AdminService.getRealTimeMetrics()
+
+      res.json({
+        success: true,
+        data: metrics
+      })
+    } catch (error) {
+      console.error('❌ Error fetching realtime metrics:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch realtime metrics'
+      })
+    }
+  }
+
+  // GET /api/admin/analytics/orders-status - Статистика по статусам заказов
+  static async getOrdersStatusData(req: Request, res: Response): Promise<void> {
+    try {
+      const { period } = req.query
+      
+      const validPeriods = ['day', 'week', 'month']
+      const selectedPeriod = period && validPeriods.includes(period as string)
+        ? period as 'day' | 'week' | 'month'
+        : undefined
+
+      const statusData = await AdminService.getOrdersStatusData(selectedPeriod)
+
+      res.json({
+        success: true,
+        data: statusData
+      })
+    } catch (error) {
+      console.error('❌ Error fetching orders status data:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch orders status data'
+      })
+    }
+  }
+
   // POST /api/admin/bookings/bulk-update - Массовые операции с заказами
   static async bulkUpdateBookings(req: Request, res: Response): Promise<void> {
     try {

@@ -192,7 +192,7 @@ export function BookingStatus() {
               Заказ не найден
             </p>
             <button
-              onClick={() => navigate('/language')}
+              onClick={() => navigate('/vehicles')}
               className="btn-secondary w-full mt-4"
             >
               На главную

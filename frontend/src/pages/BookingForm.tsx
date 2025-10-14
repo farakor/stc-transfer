@@ -5,15 +5,15 @@ import { useForm } from 'react-hook-form'
 import { useAppStore } from '@/services/store'
 import { useCreateBooking } from '@/hooks/useBookings'
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
+import { useTranslation } from '@/hooks/useTranslation'
 import { ProgressBar } from '@/components/ProgressBar'
 import { NotificationToast } from '@/components/NotificationToast'
+import { CustomDateTimePicker } from '@/components/CustomDateTimePicker'
 import { formatPrice, isSamarkandTrip } from '@/utils/formatting'
 import { useSamarkandTariffs } from '@/hooks/useTariffs'
 import { useVehicleTypes } from '@/hooks/useVehicles'
 import { VehicleIcon } from '@/components/VehicleIcon'
 import FarukBadge from '@/assets/faruk-badge.svg'
-
-const BOOKING_STEPS = ['Язык', 'Транспорт', 'Маршрут', 'Данные', 'Подтверждение']
 
 interface BookingFormData {
   pickupTime: string
@@ -23,23 +23,35 @@ interface BookingFormData {
 export function BookingForm() {
   const navigate = useNavigate()
   const { webApp, user } = useTelegramWebApp()
+  const { t } = useTranslation()
   const {
     selectedVehicleType,
     fromLocation,
     toLocation,
     priceCalculation,
+    pickupTime,
+    notes,
     setPickupTime,
     setNotes,
     currentStep,
-    setCurrentStep
+    setCurrentStep,
+    hasHydrated
   } = useAppStore()
+  
+  const BOOKING_STEPS = [
+    t.bookingSteps.language,
+    t.bookingSteps.vehicle,
+    t.bookingSteps.route,
+    t.bookingSteps.details,
+    t.bookingSteps.confirmation
+  ]
 
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
   const [notificationType, setNotificationType] = useState<'success' | 'error'>('error')
 
   const createBookingMutation = useCreateBooking()
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<BookingFormData>()
+  const { handleSubmit } = useForm<BookingFormData>()
   
   // Получаем тарифы для поездок по Самарканду из API
   const { data: samarkandTariffs } = useSamarkandTariffs(selectedVehicleType || '')
@@ -48,14 +60,21 @@ export function BookingForm() {
   const { data: vehicleTypes } = useVehicleTypes()
   
   // Находим выбранную машину
-  const selectedVehicle = vehicleTypes?.find(v => v.type === selectedVehicleType)
+  const selectedVehicle = Array.isArray(vehicleTypes) ? vehicleTypes.find((v: any) => v.type === selectedVehicleType) : undefined
+  
+  // Отладка
+  console.log('🚗 Selected Vehicle Type from store:', selectedVehicleType)
+  console.log('🚗 Vehicle Types:', vehicleTypes)
+  console.log('🚗 Selected Vehicle:', selectedVehicle)
+  console.log('🚗 Brand:', selectedVehicle?.brand)
+  console.log('🚗 Model:', selectedVehicle?.model)
 
-  // Redirect if missing required data
+  // Redirect if missing required data (только после загрузки состояния из localStorage)
   useEffect(() => {
-    if (!selectedVehicleType || !fromLocation || !toLocation || !priceCalculation) {
+    if (hasHydrated && (!selectedVehicleType || !fromLocation || !toLocation || !priceCalculation)) {
       navigate('/vehicles')
     }
-  }, [selectedVehicleType, fromLocation, toLocation, priceCalculation, navigate])
+  }, [hasHydrated, selectedVehicleType, fromLocation, toLocation, priceCalculation, navigate])
 
   // Set pickup time to now + 1 hour by default
   useEffect(() => {
@@ -65,16 +84,18 @@ export function BookingForm() {
     setPickupTime(defaultTime)
   }, [setPickupTime])
 
-  const onSubmit = async (data: BookingFormData) => {
-    console.log('🔍 Form submission data:', data)
+  const onSubmit = async () => {
+    console.log('🔍 Form submission')
     console.log('🔍 User data:', user)
     console.log('🔍 Selected vehicle type:', selectedVehicleType)
     console.log('🔍 Price calculation:', priceCalculation)
     console.log('🔍 From/To locations:', { fromLocation, toLocation })
+    console.log('🔍 Pickup time:', pickupTime)
+    console.log('🔍 Notes:', notes)
 
     if (!selectedVehicleType || !priceCalculation || !fromLocation || !toLocation) {
       console.error('❌ Missing required data for booking')
-      setNotificationMessage('Недостаточно данных для создания заказа. Проверьте выбор транспорта и маршрута.')
+      setNotificationMessage(t.booking.insufficientData)
       setNotificationType('error')
       setShowNotification(true)
       return
@@ -89,17 +110,14 @@ export function BookingForm() {
         fromLocation,
         toLocation,
         vehicleType: selectedVehicleType,
-        pickupTime: data.pickupTime || undefined,
-        notes: data.notes || undefined,
+        pickupTime: pickupTime || undefined,
+        notes: notes || undefined,
         distanceKm: priceCalculation.distance
       })
 
-      // Save form data to store
-      setPickupTime(data.pickupTime)
-      setNotes(data.notes)
       setCurrentStep(4)
 
-      setNotificationMessage('Заказ успешно создан!')
+      setNotificationMessage(t.booking.orderCreated)
       setNotificationType('success')
       setShowNotification(true)
 
@@ -112,7 +130,7 @@ export function BookingForm() {
         webApp.HapticFeedback.notificationOccurred('success')
       }
     } catch (error) {
-      setNotificationMessage('Ошибка создания заказа. Попробуйте снова.')
+      setNotificationMessage(t.booking.orderError)
       setNotificationType('error')
       setShowNotification(true)
 
@@ -149,7 +167,7 @@ export function BookingForm() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            Оформление заказа
+            {t.booking.title}
           </motion.h1>
           <motion.p
             className="text-gray-600"
@@ -157,7 +175,7 @@ export function BookingForm() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            Проверьте детали и заполните дополнительную информацию
+            {t.booking.subtitle}
           </motion.p>
         </div>
 
@@ -169,23 +187,23 @@ export function BookingForm() {
           transition={{ delay: 0.4 }}
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Детали заказа
+            {t.booking.orderDetails}
           </h3>
 
           {/* Vehicle Type */}
           <div className="flex items-center space-x-3 mb-4 p-3 bg-gray-50 rounded-lg">
             <VehicleIcon
               type={selectedVehicleType!}
-              brand={selectedVehicle?.name?.split(' ')[0] || ''}
-              model={selectedVehicle?.name?.split(' ').slice(1).join(' ') || ''}
+              brand={selectedVehicle?.brand || ''}
+              model={selectedVehicle?.model || ''}
               size="lg"
             />
             <div>
               <div className="font-medium text-gray-900">
-                {selectedVehicle?.name || 'Загрузка...'}
+                {selectedVehicle?.name || t.common.loading}
               </div>
               <div className="text-sm text-gray-600">
-                Выбранный транспорт
+                {t.booking.selectedVehicle}
               </div>
             </div>
           </div>
@@ -210,29 +228,39 @@ export function BookingForm() {
             {isSamarkandTrip(toLocation) ? (
               <div className="text-center py-4">
                 <div className="text-lg font-medium text-amber-600 mb-2">
-                  ⏱️ Почасовая оплата
+                  {t.booking.hourlyPayment}
                 </div>
                 <div className="text-primary-600 font-semibold">
-                  Сумма вычисляется после окончания поездки
+                  {t.booking.calculatedAfterTrip}
                 </div>
                 <div className="text-sm text-gray-500 mt-2">
                   {samarkandTariffs ? (
-                    `Тариф: ${formatPrice(samarkandTariffs.perKm)} за 1 км | ${formatPrice(samarkandTariffs.hourly)} за 1 час ожидания`
+                    `${t.booking.tariff}: ${formatPrice((samarkandTariffs as any).perKm)} ${t.booking.perKm} | ${formatPrice((samarkandTariffs as any).hourly)} ${t.booking.perHour}`
                   ) : (
-                    'Загрузка тарифов...'
+                    t.booking.loadingTariffs
                   )}
                 </div>
               </div>
             ) : (
               <>
-                {priceCalculation.breakdown.map((item, index) => (
-                  <div key={index} className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-600">{item.label}:</span>
-                    <span className="font-medium">{formatPrice(item.amount)}</span>
-                  </div>
-                ))}
+                {priceCalculation.breakdown.map((item: any, index: number) => {
+                  // Переводим ключ, если это ключ локализации
+                  let label = item.label
+                  if (item.label === 'pricing.baseRouteCost') {
+                    label = t.pricing.baseRouteCost
+                  } else if (item.label === 'pricing.transportDistance') {
+                    label = `${t.pricing.transportDistance} (${item.distance} ${t.confirmation.km})`
+                  }
+                  
+                  return (
+                    <div key={index} className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-600">{label}:</span>
+                      <span className="font-medium">{formatPrice(item.amount)}</span>
+                    </div>
+                  )
+                })}
                 <div className="flex justify-between text-lg font-bold text-primary-600 border-t pt-2 mt-2">
-                  <span>Итого:</span>
+                  <span>{t.booking.total}:</span>
                   <span>{formatPrice(priceCalculation.totalPrice)}</span>
                 </div>
               </>
@@ -242,61 +270,44 @@ export function BookingForm() {
 
         {/* Booking Form */}
         <motion.form
+          id="booking-form"
           onSubmit={handleSubmit(onSubmit)}
-          className="bg-white rounded-2xl shadow-card p-6 mb-6"
+          className="bg-white rounded-2xl shadow-card p-6 mb-6 pb-8"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.6 }}
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Дополнительная информация
+            {t.booking.additionalInfo}
           </h3>
 
           {/* Pickup Time */}
-          <div className="mb-4">
-            <label className="label">Время подачи (опционально)</label>
-            <input
-              type="datetime-local"
-              {...register('pickupTime')}
-              className="input"
-              min={new Date().toISOString().slice(0, 16)}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Если не указано, мы свяжемся с вами для уточнения времени
-            </p>
-          </div>
+          <CustomDateTimePicker
+            value={pickupTime}
+            onChange={setPickupTime}
+            label={`${t.booking.pickupTime} (${t.common.optional})`}
+            placeholder={t.booking.pickupTime}
+            hint={t.booking.pickupTimeHint}
+            min={new Date().toISOString().slice(0, 16)}
+            className="mb-4"
+          />
 
           {/* Notes */}
           <div className="mb-6">
-            <label className="label">Комментарии к заказу (опционально)</label>
+            <label className="label">{t.booking.notes} ({t.common.optional})</label>
             <textarea
-              {...register('notes')}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              placeholder="Особые пожелания, количество пассажиров, багаж..."
+              placeholder={t.booking.notesPlaceholder}
               className="input resize-none"
             />
           </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={createBookingMutation.isPending}
-            className="btn-primary w-full"
-          >
-            {createBookingMutation.isPending ? (
-              <div className="flex items-center justify-center space-x-2">
-                <div className="loading-spinner"></div>
-                <span>Создание заказа...</span>
-              </div>
-            ) : (
-              'Оформить заказ'
-            )}
-          </button>
         </motion.form>
 
         {/* Back Button */}
         <motion.div
-          className="text-center"
+          className="text-center mb-32"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
@@ -305,9 +316,30 @@ export function BookingForm() {
             onClick={() => navigate('/route')}
             className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
           >
-            ← Назад к выбору маршрута
+            {t.booking.backToRoute}
           </button>
         </motion.div>
+
+        {/* Fixed Submit Button */}
+        <div className="fixed bottom-8 left-0 right-0 px-4 z-10">
+          <div className="max-w-lg mx-auto">
+            <button
+              type="submit"
+              form="booking-form"
+              disabled={createBookingMutation.isPending}
+              className="btn-primary w-full py-4 text-base shadow-xl"
+            >
+              {createBookingMutation.isPending ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="loading-spinner"></div>
+                  <span>{t.booking.submitting}</span>
+                </div>
+              ) : (
+                t.booking.submitOrder
+              )}
+            </button>
+          </div>
+        </div>
 
         {/* Footer */}
         <motion.div
@@ -317,7 +349,7 @@ export function BookingForm() {
           transition={{ delay: 1.0 }}
         >
           <div className="flex flex-col items-center">
-            <p className="text-xs text-gray-400 mb-2">Developed by</p>
+            <p className="text-xs text-gray-400 mb-2">{t.footer.developedBy}</p>
             <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
           </div>
         </motion.div>

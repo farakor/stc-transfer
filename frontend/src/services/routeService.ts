@@ -84,10 +84,10 @@ export class RouteService {
     }
   }
 
-  // Получить все локации из API тарифов
+  // Получить все локации (публичный эндпоинт)
   static async getAllLocations(): Promise<LocationData[]> {
     try {
-      const response = await api.get<ApiResponse<LocationData[]>>('/admin/tariffs/locations')
+      const response = await api.get<ApiResponse<LocationData[]>>('/routes/locations')
       return response.data.data || []
     } catch (error) {
       console.error('Error fetching locations:', error)
@@ -95,10 +95,10 @@ export class RouteService {
     }
   }
 
-  // Получить все маршруты из API тарифов
+  // Получить все маршруты (публичный эндпоинт)
   static async getAllRoutes(): Promise<RouteData[]> {
     try {
-      const response = await api.get<ApiResponse<RouteData[]>>('/admin/tariffs/routes')
+      const response = await api.get<ApiResponse<RouteData[]>>('/routes/all-routes')
       return response.data.data || []
     } catch (error) {
       console.error('Error fetching routes:', error)

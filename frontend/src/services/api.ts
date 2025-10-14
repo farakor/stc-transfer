@@ -15,6 +15,20 @@ export const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
+    // Добавляем токен авторизации из localStorage
+    // Проверяем клиентский, водительский и админский токены
+    const authToken = localStorage.getItem('authToken')
+    const driverAuthToken = localStorage.getItem('driverAuthToken')
+    const adminToken = localStorage.getItem('adminToken')
+    
+    if (authToken) {
+      config.headers.Authorization = `Bearer ${authToken}`
+    } else if (driverAuthToken) {
+      config.headers.Authorization = `Bearer ${driverAuthToken}`
+    } else if (adminToken) {
+      config.headers.Authorization = `Bearer ${adminToken}`
+    }
+    
     console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url}`)
     return config
   },

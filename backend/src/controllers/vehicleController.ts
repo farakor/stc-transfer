@@ -293,6 +293,8 @@ export class VehicleController {
           vehicleNamesMap.set(nameKey, {
             type: vehicle.type,
             name: vehicle.name,
+            brand: vehicle.brand, // Добавляем brand
+            model: vehicle.model, // Добавляем model
             description: vehicle.description || `${vehicle.name}`,
             capacity: vehicle.capacity,
             baggageCapacity: vehicle.baggage_capacity,

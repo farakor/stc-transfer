@@ -43,7 +43,16 @@ const AdminDashboard: React.FC = () => {
     try {
       setLoading(true);
       const response = await adminService.getBookingStats(period);
-      setStats(response.data);
+      console.log('📊 Получена статистика:', response);
+      console.log('📊 response.data:', response.data);
+      
+      // Проверяем структуру ответа
+      if (response && response.data) {
+        setStats(response.data);
+      } else if (response) {
+        // Возможно данные приходят напрямую без обертки .data
+        setStats(response as any);
+      }
     } catch (error) {
       console.error('Ошибка при получении статистики:', error);
     } finally {
@@ -52,7 +61,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   const getStatCards = (): StatCard[] => {
-    if (!stats) return [];
+    if (!stats || !stats.statusStats || !Array.isArray(stats.statusStats)) return [];
 
     const totalBookings = stats.statusStats.reduce((sum, stat) => sum + stat._count.status, 0);
     const completedBookings = stats.statusStats.find(s => s.status === 'COMPLETED')?._count.status || 0;
@@ -191,6 +200,33 @@ const AdminDashboard: React.FC = () => {
             ))}
           </div>
 
+          {/* Уведомления */}
+          {stats && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Уведомления</h2>
+              <div className="space-y-3">
+                {stats.statusStats.find(s => s.status === 'PENDING')?._count.status > 0 && (
+                  <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 mr-3" />
+                    <div>
+                      <p className="text-yellow-800 font-medium">
+                        {stats.statusStats.find(s => s.status === 'PENDING')?._count.status} заказов ожидают обработки
+                      </p>
+                      <p className="text-yellow-700 text-sm">Требуется назначение водителей</p>
+                    </div>
+                  </div>
+                )}
+
+                {!stats.statusStats.length && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Clock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p>Нет активных уведомлений</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Карта мониторинга транспорта */}
           <div className="mt-6">
             <VehicleTrackingMapJsonp
@@ -200,14 +236,7 @@ const AdminDashboard: React.FC = () => {
               showControls={true}
             />
           </div>
-        </>
-      ) : (
-        <AnalyticsDashboard />
-      )}
 
-      {/* Быстрые действия и уведомления только в режиме обзора */}
-      {viewMode === 'overview' && (
-        <>
           {/* Быстрые действия */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Быстрые действия</h2>
@@ -237,34 +266,9 @@ const AdminDashboard: React.FC = () => {
               </button>
             </div>
           </div>
-
-          {/* Предупреждения */}
-          {stats && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Уведомления</h2>
-              <div className="space-y-3">
-                {stats.statusStats.find(s => s.status === 'PENDING')?._count.status > 0 && (
-                  <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <AlertTriangle className="w-5 h-5 text-yellow-600 mr-3" />
-                    <div>
-                      <p className="text-yellow-800 font-medium">
-                        {stats.statusStats.find(s => s.status === 'PENDING')?._count.status} заказов ожидают обработки
-                      </p>
-                      <p className="text-yellow-700 text-sm">Требуется назначение водителей</p>
-                    </div>
-                  </div>
-                )}
-
-                {!stats.statusStats.length && (
-                  <div className="text-center py-8 text-gray-500">
-                    <Clock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p>Нет активных уведомлений</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </>
+      ) : (
+        <AnalyticsDashboard />
       )}
     </div>
   );

@@ -2,23 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, 
-  Car, 
   MapPin, 
   Clock, 
   Phone, 
-  Users, 
-  CheckCircle, 
-  Play, 
-  Square, 
   LogOut,
   RefreshCw,
   AlertCircle,
   Navigation,
-  Bell,
-  BellRing
+  BellRing,
+  DollarSign
 } from 'lucide-react';
 import { useDriverNotifications } from '@/hooks/useDriverNotifications';
-import FarukBadge from '@/assets/faruk-badge.svg';
 
 interface Driver {
   id: number;
@@ -38,6 +32,7 @@ interface Driver {
 
 interface Booking {
   id: string;
+  bookingNumber?: string;
   fromLocation: string;
   toLocation: string;
   pickupLocation?: string;
@@ -49,8 +44,12 @@ interface Booking {
   user: {
     name: string;
     phone: string;
+    photoUrl?: string;
+    username?: string;
+    telegramId?: string;
   };
   notes?: string;
+  distanceKm?: number;
   createdAt: string;
 }
 
@@ -86,8 +85,12 @@ const DriverDashboard: React.FC = () => {
 
   useEffect(() => {
     const savedDriver = localStorage.getItem('driver');
-    if (!savedDriver) {
-      navigate('/driver/login');
+    const driverAuthToken = localStorage.getItem('driverAuthToken');
+    
+    // Проверяем наличие токена - если нет, перенаправляем на Telegram авторизацию
+    if (!savedDriver || !driverAuthToken) {
+      console.log('❌ Водитель не авторизован - перенаправление на авторизацию через Telegram');
+      navigate('/driver/auth');
       return;
     }
 
@@ -154,8 +157,12 @@ const DriverDashboard: React.FC = () => {
   };
 
   const handleLogout = () => {
+    // Удаляем данные водителя и токен
     localStorage.removeItem('driver');
-    navigate('/driver/login');
+    localStorage.removeItem('driverAuthToken');
+    
+    // Перенаправляем на страницу авторизации через Telegram
+    navigate('/driver/auth');
   };
 
   const formatTime = (dateString: string) => {
@@ -176,6 +183,15 @@ const DriverDashboard: React.FC = () => {
     }).format(price);
   };
 
+  const getTelegramLink = (user: Booking['user']) => {
+    if (user.username) {
+      return `https://t.me/${user.username}`;
+    } else if (user.telegramId) {
+      return `tg://user?id=${user.telegramId}`;
+    }
+    return null;
+  };
+
   const getActionButton = (booking: Booking) => {
     const isLoading = actionLoading === booking.id;
 
@@ -185,14 +201,9 @@ const DriverDashboard: React.FC = () => {
           <button
             onClick={() => handleBookingAction(booking.id, 'accept')}
             disabled={isLoading}
-            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+            className="w-full bg-gray-900 text-white py-3 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
           >
-            {isLoading ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <CheckCircle className="w-4 h-4" />
-            )}
-            <span>Принять заказ</span>
+            {isLoading ? 'Обработка...' : 'Принять заказ'}
           </button>
         );
       
@@ -201,14 +212,9 @@ const DriverDashboard: React.FC = () => {
           <button
             onClick={() => handleBookingAction(booking.id, 'start')}
             disabled={isLoading}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="w-full bg-gray-900 text-white py-3 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
           >
-            {isLoading ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Play className="w-4 h-4" />
-            )}
-            <span>Начать рейс</span>
+            {isLoading ? 'Обработка...' : 'Начать рейс'}
           </button>
         );
       
@@ -217,14 +223,9 @@ const DriverDashboard: React.FC = () => {
           <button
             onClick={() => handleBookingAction(booking.id, 'complete')}
             disabled={isLoading}
-            className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+            className="w-full bg-white border-2 border-gray-300 text-gray-900 py-3 rounded-lg font-medium hover:border-gray-400 disabled:opacity-50 transition-colors"
           >
-            {isLoading ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Square className="w-4 h-4" />
-            )}
-            <span>Завершить заказ</span>
+            {isLoading ? 'Обработка...' : 'Завершить поездку'}
           </button>
         );
       
@@ -237,8 +238,8 @@ const DriverDashboard: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Загрузка...</p>
+          <RefreshCw className="w-8 h-8 animate-spin text-gray-900 mx-auto mb-3" />
+          <p className="text-sm text-gray-600">Загрузка...</p>
         </div>
       </div>
     );
@@ -251,212 +252,228 @@ const DriverDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-white" />
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">{driver.name}</h1>
-                <p className="text-sm text-gray-500">Водитель</p>
+                <h1 className="text-base font-semibold text-gray-900">{driver.name}</h1>
+                {driver.vehicle && (
+                  <p className="text-xs text-gray-500">
+                    {driver.vehicle.brand} {driver.vehicle.model} • {driver.vehicle.licensePlate}
+                  </p>
+                )}
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              {/* Индикатор новых заказов */}
+            <div className="flex items-center space-x-2">
               {hasNewBookings && (
-                <div className="relative">
-                  <button
-                    onClick={clearNotifications}
-                    className="flex items-center space-x-2 bg-red-100 text-red-800 px-3 py-2 rounded-lg hover:bg-red-200 transition-colors"
-                  >
-                    <BellRing className="w-5 h-5" />
-                    <span className="text-sm font-medium">
-                      {newBookingsCount} новых заказов
-                    </span>
-                  </button>
-                </div>
+                <button
+                  onClick={clearNotifications}
+                  className="relative p-2"
+                >
+                  <BellRing className="w-5 h-5 text-red-600" />
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
+                    {newBookingsCount}
+                  </span>
+                </button>
               )}
               
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+                className="p-2 text-gray-600 hover:text-gray-900"
               >
                 <LogOut className="w-5 h-5" />
-                <span>Выйти</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Driver Info */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Информация о водителе</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-3">
-              <Phone className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-500">Телефон</p>
-                <p className="font-medium">{driver.phone}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <User className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-sm text-gray-500">Лицензия</p>
-                <p className="font-medium">{driver.license}</p>
-              </div>
-            </div>
-            {driver.vehicle && (
-              <div className="flex items-center space-x-3">
-                <Car className="w-5 h-5 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Автомобиль</p>
-                  <p className="font-medium">
-                    {driver.vehicle.brand} {driver.vehicle.model}
-                  </p>
-                  <p className="text-sm text-gray-500">{driver.vehicle.licensePlate}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
+      <div className="max-w-4xl mx-auto px-4 py-4">
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
             <div className="flex items-center space-x-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <span className="text-red-800">{error}</span>
+              <AlertCircle className="w-4 h-4 text-red-600" />
+              <span className="text-sm text-red-800">{error}</span>
             </div>
           </div>
         )}
 
-        {/* Active Bookings */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Активные заказы</h2>
-            <button
-              onClick={fetchActiveBookings}
-              className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Обновить</span>
-            </button>
-          </div>
-
-          {bookings.length === 0 ? (
-            <div className="text-center py-12">
-              <Navigation className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Нет активных заказов</h3>
-              <p className="text-gray-500">Ожидайте назначения новых заказов от диспетчера</p>
+        {bookings.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Navigation className="w-8 h-8 text-gray-400" />
             </div>
-          ) : (
-            <div className="space-y-4">
-              {bookings.map((booking) => (
-                <div key={booking.id} className="border border-gray-200 rounded-lg p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[booking.status as keyof typeof statusColors]}`}>
-                          {statusLabels[booking.status as keyof typeof statusLabels]}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {formatTime(booking.createdAt)}
-                        </span>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <MapPin className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-medium">Откуда:</span>
-                          </div>
-                          <p className="text-gray-900 ml-6">{booking.fromLocation}</p>
-                          {booking.pickupLocation && (
-                            <p className="text-sm text-gray-500 ml-6">{booking.pickupLocation}</p>
-                          )}
-                        </div>
-                        
-                        <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <MapPin className="w-4 h-4 text-red-600" />
-                            <span className="text-sm font-medium">Куда:</span>
-                          </div>
-                          <p className="text-gray-900 ml-6">{booking.toLocation}</p>
-                          {booking.dropoffLocation && (
-                            <p className="text-sm text-gray-500 ml-6">{booking.dropoffLocation}</p>
-                          )}
-                        </div>
-                      </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Нет активных заказов</h3>
+            <p className="text-sm text-gray-500">Ожидайте назначения новых заказов</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {bookings.map((booking) => (
+              <div key={booking.id} className="bg-white rounded-lg border border-gray-200 p-4">
+                {/* Заголовок */}
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900">
+                    {booking.status === 'IN_PROGRESS' ? 'Активная поездка' : 'Новый заказ'}
+                  </h3>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={fetchActiveBookings}
+                      className="p-1.5 text-gray-400 hover:text-gray-600"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div className="flex items-center space-x-2">
-                          <Users className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">
-                            Пассажиров: {booking.passengerCount}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium text-green-600">
-                            {formatPrice(booking.price)}
-                          </span>
-                        </div>
-
-                        {booking.pickupTime && (
-                          <div className="flex items-center space-x-2">
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm text-gray-600">
-                              {formatTime(booking.pickupTime)}
-                            </span>
+                {/* Информация о клиенте и действия */}
+                <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+                  <div className="flex items-center space-x-3">
+                    {getTelegramLink(booking.user) ? (
+                      <a 
+                        href={getTelegramLink(booking.user)!} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                      >
+                        {booking.user.photoUrl ? (
+                          <img 
+                            src={booking.user.photoUrl} 
+                            alt={booking.user.name}
+                            className="w-12 h-12 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-orange-400 rounded-lg flex items-center justify-center">
+                            <User className="w-6 h-6 text-white" />
                           </div>
                         )}
+                      </a>
+                    ) : (
+                      <>
+                        {booking.user.photoUrl ? (
+                          <img 
+                            src={booking.user.photoUrl} 
+                            alt={booking.user.name}
+                            className="w-12 h-12 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-orange-400 rounded-lg flex items-center justify-center">
+                            <User className="w-6 h-6 text-white" />
+                          </div>
+                        )}
+                      </>
+                    )}
+                    <div>
+                      <p className="font-medium text-gray-900">{booking.user.name}</p>
+                      <p className="text-xs text-gray-500">Клиент</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <a 
+                      href={`tel:${booking.user.phone}`}
+                      className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
+                    >
+                      <Phone className="w-5 h-5 text-white" />
+                    </a>
+                    {getTelegramLink(booking.user) ? (
+                      <a 
+                        href={getTelegramLink(booking.user)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-10 h-10 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center hover:border-gray-400 transition-colors"
+                      >
+                        <User className="w-5 h-5 text-gray-600" />
+                      </a>
+                    ) : (
+                      <div className="w-10 h-10 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center opacity-50">
+                        <User className="w-5 h-5 text-gray-600" />
                       </div>
+                    )}
+                  </div>
+                </div>
 
-                      <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                        <h4 className="text-sm font-medium text-gray-900 mb-2">Клиент:</h4>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-700">{booking.user.name}</span>
-                          <a 
-                            href={`tel:${booking.user.phone}`}
-                            className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
-                          >
-                            <Phone className="w-4 h-4" />
-                            <span>{booking.user.phone}</span>
-                          </a>
-                        </div>
-                      </div>
+                {/* Детали в одну строку */}
+                <div className="flex items-center justify-between mb-4 px-2">
+                  <div className="flex items-center space-x-1.5 text-sm text-gray-600">
+                    <MapPin className="w-4 h-4" />
+                    <span>{booking.distanceKm ? `${booking.distanceKm} км` : '—'}</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 text-sm text-gray-600">
+                    <Clock className="w-4 h-4" />
+                    <span>30 мин</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 text-sm font-semibold text-gray-900">
+                    <DollarSign className="w-4 h-4" />
+                    <span>{formatPrice(booking.price)}</span>
+                  </div>
+                </div>
 
-                      {booking.notes && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                          <h4 className="text-sm font-medium text-yellow-800 mb-1">Примечания:</h4>
-                          <p className="text-sm text-yellow-700">{booking.notes}</p>
-                        </div>
+                {/* Маршрут */}
+                <div className="relative mb-4">
+                  {/* Пунктирная линия между точками */}
+                  <div className="absolute left-[5px] top-[12px] bottom-[22px]" 
+                       style={{
+                         backgroundImage: 'repeating-linear-gradient(0deg, #3b82f6, #3b82f6 4px, transparent 4px, transparent 8px)',
+                         width: '2px'
+                       }}>
+                  </div>
+                  
+                  {/* Pickup */}
+                  <div className="flex items-start space-x-3 mb-6 relative">
+                    <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0 mt-1 z-10"></div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Откуда</p>
+                      <p className="text-sm font-medium text-gray-900">{booking.fromLocation}</p>
+                      {booking.pickupLocation && (
+                        <p className="text-xs text-gray-500 mt-0.5">{booking.pickupLocation}</p>
                       )}
                     </div>
                   </div>
-
-                  <div className="flex justify-end">
-                    {getActionButton(booking)}
+                  
+                  {/* Destination */}
+                  <div className="flex items-start space-x-3 relative">
+                    <div className="w-3 h-3 rounded-full bg-gray-900 flex-shrink-0 mt-1 z-10"></div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Куда</p>
+                      <p className="text-sm font-medium text-gray-900">{booking.toLocation}</p>
+                      {booking.dropoffLocation && (
+                        <p className="text-xs text-gray-500 mt-0.5">{booking.dropoffLocation}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="text-center mt-8 space-y-4">
-          <div className="flex flex-col items-center">
-            <p className="text-xs text-gray-400 mb-2">Developed by</p>
-            <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
+                {/* Примечания */}
+                {booking.notes && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                    <p className="text-xs text-yellow-800">{booking.notes}</p>
+                  </div>
+                )}
+
+                {/* Номер заказа и статус */}
+                {booking.bookingNumber && (
+                  <div className="flex items-center justify-between mb-3 text-xs text-gray-500">
+                    <span>Заказ #{booking.bookingNumber}</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[booking.status as keyof typeof statusColors]}`}>
+                      {statusLabels[booking.status as keyof typeof statusLabels]}
+                    </span>
+                  </div>
+                )}
+
+                {/* Кнопка действия */}
+                <div className="pt-3 border-t border-gray-100">
+                  {getActionButton(booking)}
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

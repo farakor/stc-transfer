@@ -239,6 +239,61 @@ export class TariffController {
     }
   }
 
+  // PUT /api/admin/tariffs/locations/:id - Обновить локацию
+  static async updateLocation(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+      console.log(`📍 Обновление локации ${id}...`, req.body)
+
+      const { name, type, coordinates, is_active } = req.body
+
+      const location = await TariffService.updateLocation(parseInt(id), {
+        name,
+        type,
+        coordinates,
+        is_active: is_active !== undefined ? Boolean(is_active) : undefined
+      })
+
+      console.log(`✅ Локация обновлена: ${location.name}`)
+
+      res.json({
+        success: true,
+        data: location
+      })
+    } catch (error) {
+      console.error('❌ Ошибка обновления локации:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update location'
+      })
+    }
+  }
+
+  // DELETE /api/admin/tariffs/locations/:id - Удалить локацию
+  static async deleteLocation(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+
+      console.log(`🗑️ Удаление локации ${id}...`)
+
+      await TariffService.deleteLocation(parseInt(id))
+
+      console.log(`✅ Локация ${id} удалена`)
+
+      res.json({
+        success: true,
+        message: 'Location deleted successfully'
+      })
+    } catch (error) {
+      console.error('❌ Ошибка удаления локации:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete location'
+      res.status(500).json({
+        success: false,
+        error: errorMessage
+      })
+    }
+  }
+
   // POST /api/admin/tariffs/routes - Создать новый маршрут
   static async createRoute(req: Request, res: Response): Promise<void> {
     try {
@@ -280,6 +335,69 @@ export class TariffController {
       res.status(500).json({
         success: false,
         error: 'Failed to create route'
+      })
+    }
+  }
+
+  // PUT /api/admin/tariffs/routes/:id - Обновить маршрут
+  static async updateRoute(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+      console.log(`🛣️ Обновление маршрута ${id}...`, req.body)
+
+      const { from_location_id, to_location_id, distance_km, estimated_duration_minutes, is_active } = req.body
+
+      if (from_location_id && to_location_id && from_location_id === to_location_id) {
+        res.status(400).json({
+          success: false,
+          error: 'From and to locations cannot be the same'
+        })
+        return
+      }
+
+      const route = await TariffService.updateRoute(parseInt(id), {
+        from_location_id: from_location_id ? parseInt(from_location_id) : undefined,
+        to_location_id: to_location_id ? parseInt(to_location_id) : undefined,
+        distance_km: distance_km !== undefined ? parseFloat(distance_km) : undefined,
+        estimated_duration_minutes: estimated_duration_minutes !== undefined ? parseInt(estimated_duration_minutes) : undefined,
+        is_active: is_active !== undefined ? Boolean(is_active) : undefined
+      })
+
+      console.log(`✅ Маршрут обновлен: ${route.from_location.name} → ${route.to_location.name}`)
+
+      res.json({
+        success: true,
+        data: route
+      })
+    } catch (error) {
+      console.error('❌ Ошибка обновления маршрута:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update route'
+      })
+    }
+  }
+
+  // DELETE /api/admin/tariffs/routes/:id - Удалить маршрут
+  static async deleteRoute(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+
+      console.log(`🗑️ Удаление маршрута ${id}...`)
+
+      await TariffService.deleteRoute(parseInt(id))
+
+      console.log(`✅ Маршрут ${id} удален`)
+
+      res.json({
+        success: true,
+        message: 'Route deleted successfully'
+      })
+    } catch (error) {
+      console.error('❌ Ошибка удаления маршрута:', error)
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete route'
       })
     }
   }
