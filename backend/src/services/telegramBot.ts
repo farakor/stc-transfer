@@ -537,6 +537,126 @@ ${booking.notes ? `📝 Примечания: ${booking.notes}` : ''}
     }
   }
 
+  // Уведомление клиенту о том, что водитель принял заказ
+  public async sendDriverAcceptedNotification(chatId: number, booking: any, driver: any) {
+    const userId = booking.user_id || booking.userId
+    if (!userId) {
+      console.error('❌ User ID not found in booking')
+      return
+    }
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    })
+    const language = (user?.language_code || 'ru') as Language
+    const messages = getBotMessage(language)
+
+    const formatPhone = (phone: string) => {
+      const cleaned = phone.replace(/\D/g, '')
+      if (cleaned.length === 12 && cleaned.startsWith('998')) {
+        return `+${cleaned.slice(0, 3)} ${cleaned.slice(3, 5)} ${cleaned.slice(5, 8)} ${cleaned.slice(8, 10)} ${cleaned.slice(10)}`
+      }
+      return phone
+    }
+
+    const message = `
+✅ <b>Водитель принял ваш заказ!</b>
+
+📍 <b>Маршрут:</b>
+   ➤ ${booking.fromLocation || booking.from_location} → ${booking.toLocation || booking.to_location}
+
+🚗 <b>Водитель:</b> ${driver.name}
+📞 <b>Телефон:</b> ${formatPhone(driver.phone)}
+🚙 <b>Автомобиль:</b> ${booking.vehicle?.brand} ${booking.vehicle?.model}
+🔢 <b>Номер:</b> ${booking.vehicle?.licensePlate || booking.vehicle?.license_plate}
+
+⏰ <b>Водитель скоро выедет к вам!</b>
+    `.trim()
+
+    try {
+      await this.bot.sendMessage(chatId, message, { parse_mode: 'HTML' })
+      console.log(`✅ Уведомление о принятии заказа отправлено клиенту ${chatId}`)
+    } catch (error) {
+      console.error('❌ Failed to send driver accepted notification:', error)
+    }
+  }
+
+  // Уведомление клиенту о том, что водитель начал рейс
+  public async sendTripStartedNotification(chatId: number, booking: any, driver: any) {
+    const userId = booking.user_id || booking.userId
+    if (!userId) {
+      console.error('❌ User ID not found in booking')
+      return
+    }
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    })
+    const language = (user?.language_code || 'ru') as Language
+    const messages = getBotMessage(language)
+
+    const message = `
+🚀 <b>Рейс начался!</b>
+
+📍 <b>Маршрут:</b>
+   ➤ ${booking.fromLocation || booking.from_location} → ${booking.toLocation || booking.to_location}
+
+🚗 <b>Водитель:</b> ${driver.name}
+🚙 <b>Автомобиль:</b> ${booking.vehicle?.brand} ${booking.vehicle?.model} (${booking.vehicle?.licensePlate || booking.vehicle?.license_plate})
+
+🎯 <b>Вы в пути!</b> Приятной поездки! 🛣️
+    `.trim()
+
+    try {
+      await this.bot.sendMessage(chatId, message, { parse_mode: 'HTML' })
+      console.log(`✅ Уведомление о начале рейса отправлено клиенту ${chatId}`)
+    } catch (error) {
+      console.error('❌ Failed to send trip started notification:', error)
+    }
+  }
+
+  // Уведомление клиенту о том, что поездка завершена
+  public async sendTripCompletedNotification(chatId: number, booking: any) {
+    const userId = booking.user_id || booking.userId
+    if (!userId) {
+      console.error('❌ User ID not found in booking')
+      return
+    }
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    })
+    const language = (user?.language_code || 'ru') as Language
+    const messages = getBotMessage(language)
+
+    const formatPrice = (price: number) => {
+      return new Intl.NumberFormat('ru-RU', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(price)
+    }
+
+    const message = `
+🏁 <b>Поездка завершена!</b>
+
+📍 <b>Маршрут:</b>
+   ➤ ${booking.fromLocation || booking.from_location} → ${booking.toLocation || booking.to_location}
+
+💰 <b>Стоимость:</b> ${formatPrice(Number(booking.price || booking.total_price))} сум
+
+✨ <b>Спасибо, что воспользовались нашим сервисом!</b>
+
+🌟 Будем рады видеть вас снова!
+    `.trim()
+
+    try {
+      await this.bot.sendMessage(chatId, message, { parse_mode: 'HTML' })
+      console.log(`✅ Уведомление о завершении поездки отправлено клиенту ${chatId}`)
+    } catch (error) {
+      console.error('❌ Failed to send trip completed notification:', error)
+    }
+  }
+
   // Отправить уведомление об отмене заказа
   public async sendCancellationNotification(chatId: number, bookingId: string, reason?: string) {
     const message = `

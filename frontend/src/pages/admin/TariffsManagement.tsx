@@ -21,6 +21,11 @@ import TariffService, {
   TariffData,
   TariffMatrix
 } from '../../services/tariffService';
+import SuvIcon from '../../assets/SUV.svg';
+import SedanIcon from '../../assets/sedan-2.svg';
+import MinivanIcon from '../../assets/minivan-4.svg';
+import MicrobusIcon from '../../assets/microbus.svg';
+import BusIcon from '../../assets/bus-2.svg';
 
 const TariffsManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -392,12 +397,12 @@ const TariffsManagement: React.FC = () => {
 
   const getVehicleTypeIcon = (type: string) => {
     switch (type) {
-      case 'SEDAN': return '🚗';
-      case 'PREMIUM': return '🚙';
-      case 'MINIVAN': return '🚐';
-      case 'MICROBUS': return '🚌';
-      case 'BUS': return '🚍';
-      default: return '🚗';
+      case 'SEDAN': return SedanIcon;
+      case 'PREMIUM': return SuvIcon;
+      case 'MINIVAN': return MinivanIcon;
+      case 'MICROBUS': return MicrobusIcon;
+      case 'BUS': return BusIcon;
+      default: return SedanIcon;
     }
   };
 
@@ -598,7 +603,7 @@ const TariffsManagement: React.FC = () => {
                           className="border border-gray-200 px-3 py-3 text-center text-sm font-medium text-gray-700 min-w-[120px]"
                         >
                           <div className="flex flex-col items-center">
-                            <span className="text-lg mb-1">{getVehicleTypeIcon(vehicle.type)}</span>
+                            <img src={getVehicleTypeIcon(vehicle.type)} alt={vehicle.type} className="w-8 h-8 mb-1" />
                             <span className="font-semibold">{vehicle.brand}</span>
                             <span className="text-xs text-gray-500">{vehicle.model}</span>
                             <span className="text-xs text-blue-600">({vehicle.count} авто)</span>

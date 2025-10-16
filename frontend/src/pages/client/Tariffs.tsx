@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ClientLayout } from './ClientLayout'
 import { useTranslation } from '@/hooks/useTranslation'
 import { VehicleType } from '@/types'
-import { Car, Bus, Lightbulb, Loader2, ArrowRight } from 'lucide-react'
+import { Lightbulb, Loader2, ArrowRight } from 'lucide-react'
 import { useTariffMatrix } from '@/hooks/useTariffs'
+import SuvIcon from '@/assets/SUV.svg'
+import SedanIcon from '@/assets/sedan-2.svg'
+import MinivanIcon from '@/assets/minivan-4.svg'
+import BusIcon from '@/assets/bus-2.svg'
 
 export function Tariffs() {
   const navigate = useNavigate()
@@ -17,7 +20,7 @@ export function Tariffs() {
       id: 'sedan',
       typeEnum: VehicleType.SEDAN,
       name: 'Седан',
-      icon: Car,
+      icon: SedanIcon,
       capacity: 4,
       description: 'Комфортный седан для небольших групп',
       features: [
@@ -27,10 +30,24 @@ export function Tariffs() {
       ]
     },
     {
+      id: 'premium',
+      typeEnum: VehicleType.PREMIUM,
+      name: 'Премиум',
+      icon: SuvIcon,
+      capacity: 5,
+      description: 'Премиальный внедорожник для комфортных поездок',
+      features: [
+        t.features.ac,
+        t.features.comfort,
+        t.features.luggage,
+        t.features.spacious
+      ]
+    },
+    {
       id: 'minivan',
       typeEnum: VehicleType.MINIVAN,
       name: 'Минивэн',
-      icon: Bus,
+      icon: MinivanIcon,
       capacity: 7,
       description: 'Просторный минивэн для семей',
       features: [
@@ -44,7 +61,7 @@ export function Tariffs() {
       id: 'bus',
       typeEnum: VehicleType.BUS,
       name: 'Автобус',
-      icon: Bus,
+      icon: BusIcon,
       capacity: 50,
       description: 'Автобус для больших групп',
       features: [
@@ -82,11 +99,6 @@ export function Tariffs() {
     return groups
   }, [vehicleModelsFromMatrix])
 
-  const getVehicleIcon = (type: string) => {
-    const vehicle = vehicleTypes.find(v => v.id === type)
-    return vehicle?.icon || Car
-  }
-
   const getTariffForRoute = (routeId: number, vehicleBrand: string, vehicleModel: string) => {
     if (!tariffMatrix?.tariffs) return null
     const routeTariffs = tariffMatrix.tariffs[routeId]
@@ -122,8 +134,7 @@ export function Tariffs() {
   }, [vehicleTypeGroups, selectedVehicle])
 
   return (
-    <ClientLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -138,7 +149,6 @@ export function Tariffs() {
           </h2>
           <div className="grid grid-cols-1 gap-3">
             {vehicleTypes.map((vehicle) => {
-              const VehicleIcon = vehicle.icon
               const models = vehicleTypeGroups[vehicle.id] || []
               const hasModels = models.length > 0
               
@@ -183,7 +193,7 @@ export function Tariffs() {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start space-x-3">
                       <div className="p-3 bg-blue-50 rounded-xl">
-                        <VehicleIcon className="w-8 h-8 text-blue-600" />
+                        <img src={vehicle.icon} alt={vehicle.name} className="w-8 h-8" />
                       </div>
                       <div>
                         <h3 className="font-semibold text-gray-900">{vehicle.name}</h3>
@@ -317,8 +327,7 @@ export function Tariffs() {
           <span>{t.tariffs.startBooking}</span>
           <ArrowRight className="w-5 h-5" />
         </button>
-      </div>
-    </ClientLayout>
+    </div>
   )
 }
 

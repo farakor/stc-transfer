@@ -78,7 +78,7 @@ const VehicleTrackingMapJsonp: React.FC<VehicleTrackingMapJsonpProps> = ({
     offline: 0,
   });
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const isFirstLoadRef = useRef<boolean>(true);
 
@@ -113,24 +113,82 @@ const VehicleTrackingMapJsonp: React.FC<VehicleTrackingMapJsonpProps> = ({
       setLoading(true);
       setError(null);
 
+      console.log('🔌 Инициализация подключения к Wialon...');
+      console.log('📍 Конфигурация:', {
+        baseUrl: wialonConfig.baseUrl,
+        hasToken: !!wialonConfig.token,
+        hasCredentials: !!(wialonConfig.username && wialonConfig.password)
+      });
+
       // Инициализируем JSONP сервис
       wialonJsonpService.initialize(wialonConfig);
 
       // Авторизуемся
       const session = await wialonJsonpService.login();
-      console.log('Wialon JSONP connected:', session);
+      console.log('✅ Wialon JSONP connected:', session);
 
       setIsConnected(true);
       
       // Загружаем начальные данные
       await fetchVehiclePositions();
     } catch (err: any) {
-      console.error('Wialon JSONP connection error:', err);
-      setError(`Ошибка подключения к Wialon: ${err.message}`);
+      console.error('❌ Wialon JSONP connection error:', err);
+      console.log('💡 Попытка использовать демо-данные...');
+      
+      // Показываем предупреждение, но не блокируем интерфейс
+      setError(
+        `Не удалось подключиться к Wialon. Причина: ${err.message}. ` +
+        'Это может быть из-за проблем с SSL сертификатом или доступностью сервера. ' +
+        'Используйте демо-режим или обратитесь к администратору.'
+      );
       setIsConnected(false);
+      
+      // Загружаем демо-данные чтобы показать как работает интерфейс
+      loadDemoData();
     } finally {
       setLoading(false);
     }
+  };
+
+  // Загрузка демо-данных для показа интерфейса
+  const loadDemoData = () => {
+    console.log('📊 Загрузка демо-данных...');
+    const demoVehicles: VehiclePosition[] = [
+      {
+        id: 'demo-1',
+        name: 'Демо Седан 01',
+        latitude: 41.2995,
+        longitude: 69.2401,
+        speed: 45,
+        course: 90,
+        timestamp: Math.floor(Date.now() / 1000),
+        status: 'moving'
+      },
+      {
+        id: 'demo-2',
+        name: 'Демо Минивэн 02',
+        latitude: 41.3111,
+        longitude: 69.2797,
+        speed: 0,
+        course: 0,
+        timestamp: Math.floor(Date.now() / 1000),
+        status: 'stopped'
+      },
+      {
+        id: 'demo-3',
+        name: 'Демо Автобус 03',
+        latitude: 41.3256,
+        longitude: 69.2289,
+        speed: 30,
+        course: 270,
+        timestamp: Math.floor(Date.now() / 1000),
+        status: 'moving'
+      }
+    ];
+    
+    setVehicles(demoVehicles);
+    setLastUpdate(new Date());
+    console.log('✅ Демо-данные загружены');
   };
 
   const fetchVehiclePositions = async () => {
@@ -383,7 +441,7 @@ const VehicleTrackingMapJsonp: React.FC<VehicleTrackingMapJsonpProps> = ({
     return date.toLocaleString();
   };
 
-  if (loading) {
+  if (loading && vehicles.length === 0) {
     return (
       <div className="flex items-center justify-center" style={{ height }}>
         <div className="text-center">
@@ -394,38 +452,41 @@ const VehicleTrackingMapJsonp: React.FC<VehicleTrackingMapJsonpProps> = ({
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center" style={{ height }}>
-        <div className="text-center">
-          <div className="text-red-500 mb-4">
-            <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <p className="text-red-600 font-medium">{error}</p>
-          <button
-            onClick={initializeWialon}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Попробовать снова
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full">
+      {/* Предупреждение об ошибке подключения */}
+      {error && !isConnected && (
+        <div className="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <p className="text-sm text-yellow-700">
+                <strong>Режим демонстрации:</strong> {error}
+              </p>
+              <button
+                onClick={initializeWialon}
+                className="mt-2 text-sm text-yellow-800 underline hover:text-yellow-900"
+              >
+                Попробовать подключиться снова
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Панель управления */}
       {showControls && (
         <div className="mb-4 p-4 bg-gray-50 rounded-lg">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className={`flex items-center gap-2 ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
-                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <div className={`flex items-center gap-2 ${isConnected ? 'text-green-600' : 'text-yellow-600'}`}>
+                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></div>
                 <span className="font-medium">
-                  {isConnected ? 'Подключено (JSONP)' : 'Не подключено'}
+                  {isConnected ? 'Подключено (JSONP)' : 'Демо-режим'}
                 </span>
               </div>
               

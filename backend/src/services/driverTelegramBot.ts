@@ -351,26 +351,83 @@ export class DriverTelegramBotService {
 
   // Отправить уведомление водителю о новом заказе
   public async sendNewOrderNotification(driverTelegramId: string, booking: any) {
-    if (!this.bot || !this.isEnabled) return
+    if (!this.bot || !this.isEnabled) {
+      console.warn('⚠️ Driver bot is disabled, skipping notification')
+      return
+    }
+
+    const formatPrice = (price: number) => {
+      return new Intl.NumberFormat('ru-RU', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(price)
+    }
+
+    const formatDate = (dateString: string) => {
+      return new Date(dateString).toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    const formatPhone = (phone: string) => {
+      // Убираем все нечисловые символы
+      const cleaned = phone.replace(/\D/g, '')
+      // Форматируем для отображения
+      if (cleaned.length === 12 && cleaned.startsWith('998')) {
+        return `+${cleaned.slice(0, 3)} ${cleaned.slice(3, 5)} ${cleaned.slice(5, 8)} ${cleaned.slice(8, 10)} ${cleaned.slice(10)}`
+      }
+      return phone
+    }
+
+    const clientPhone = booking.user?.phone || 'Не указан'
 
     const message = `
-🆕 Новый заказ!
+🆕 <b>НОВЫЙ ЗАКАЗ №${booking.booking_number || booking.id}</b>
 
-📍 Маршрут: ${booking.from_location} → ${booking.to_location}
-👤 Клиент: ${booking.user?.name || booking.user?.first_name || 'Не указано'}
-📞 Телефон: ${booking.user?.phone || 'Не указан'}
-💰 Стоимость: ${booking.price} сум
-📅 Время подачи: ${booking.pickup_time ? new Date(booking.pickup_time).toLocaleString('ru-RU') : 'Как можно скорее'}
-${booking.notes ? `📝 Примечания: ${booking.notes}` : ''}
+📍 <b>Маршрут:</b>
+   ➤ Откуда: ${booking.from_location}
+   ➤ Куда: ${booking.to_location}
+${booking.pickup_location ? `   📌 Точка подачи: ${booking.pickup_location}` : ''}
+${booking.dropoff_location ? `   📌 Точка высадки: ${booking.dropoff_location}` : ''}
 
-⏰ Откройте приложение для подтверждения заказа.
-    `
+👤 <b>Пассажир:</b> ${booking.user?.name || booking.user?.first_name || 'Не указано'}
+📞 <b>Телефон:</b> ${formatPhone(clientPhone)}
+${booking.passenger_count ? `👥 <b>Количество:</b> ${booking.passenger_count} чел.` : ''}
+
+💰 <b>Стоимость:</b> ${formatPrice(Number(booking.price))} сум
+${booking.distance_km ? `📏 <b>Расстояние:</b> ${booking.distance_km} км` : ''}
+🕐 <b>Время подачи:</b> ${booking.pickup_time ? formatDate(booking.pickup_time) : 'Как можно скорее'}
+
+${booking.notes ? `📝 <b>Примечания:</b>\n${booking.notes}\n` : ''}
+⏰ <b>Откройте приложение для принятия заказа!</b>
+    `.trim()
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: '🚗 Открыть приложение водителя',
+            web_app: { 
+              url: process.env.TELEGRAM_DRIVER_WEBAPP_URL || 
+                   process.env.TELEGRAM_DRIVER_WEBHOOK_URL + '/driver' || '' 
+            }
+          }
+        ]
+      ]
+    }
 
     try {
-      await this.sendMessage(Number(driverTelegramId), message)
+      await this.bot.sendMessage(Number(driverTelegramId), message, {
+        parse_mode: 'HTML',
+        reply_markup: keyboard
+      })
+      console.log(`✅ Уведомление о новом заказе отправлено водителю ${driverTelegramId}`)
     } catch (error) {
       console.error('❌ Failed to send new order notification to driver:', error)
-      throw error
+      // Не бросаем ошибку, чтобы не прерывать процесс назначения
     }
   }
 

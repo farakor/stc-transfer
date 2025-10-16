@@ -3,6 +3,7 @@ import { BookingStatus, VehicleType, RouteType, DriverStatus, VehicleStatus } fr
 import { VehicleService } from './vehicleService'
 import { RouteService } from './routeService'
 import { TelegramBotService } from './telegramBot'
+import { DriverTelegramBotService } from './driverTelegramBot'
 
 export interface CreateBookingData {
   telegramId: bigint
@@ -320,16 +321,24 @@ export class BookingService {
         },
         booking.driver
       )
+    } catch (error) {
+      console.error('Failed to send vehicle assignment notification to client:', error)
+    }
 
-      // Отправить уведомление водителю о новом заказе
+    // Отправить уведомление водителю о новом заказе
+    try {
       if (booking.driver?.telegram_id) {
-        await telegramBot.sendDriverNewOrderNotification(
+        const driverBot = DriverTelegramBotService.getInstance()
+        await driverBot.sendNewOrderNotification(
           booking.driver.telegram_id,
           booking
         )
+        console.log(`📱 Уведомление отправлено водителю ${booking.driver.name} (ID: ${booking.driver.telegram_id})`)
+      } else {
+        console.warn(`⚠️ У водителя ${booking.driver?.name} нет telegram_id, уведомление не отправлено`)
       }
     } catch (error) {
-      console.error('Failed to send vehicle assignment notification:', error)
+      console.error('Failed to send new order notification to driver:', error)
     }
 
     return this.formatBookingDetails(booking)
@@ -379,16 +388,24 @@ export class BookingService {
         },
         booking.driver
       )
+    } catch (error) {
+      console.error('Failed to send driver assignment notification to client:', error)
+    }
 
-      // Отправить уведомление водителю о новом заказе
+    // Отправить уведомление водителю о новом заказе
+    try {
       if (booking.driver?.telegram_id) {
-        await telegramBot.sendDriverNewOrderNotification(
+        const driverBot = DriverTelegramBotService.getInstance()
+        await driverBot.sendNewOrderNotification(
           booking.driver.telegram_id,
           booking
         )
+        console.log(`📱 Уведомление отправлено водителю ${booking.driver.name} (ID: ${booking.driver.telegram_id})`)
+      } else {
+        console.warn(`⚠️ У водителя ${booking.driver?.name} нет telegram_id, уведомление не отправлено`)
       }
     } catch (error) {
-      console.error('Failed to send driver assignment notification:', error)
+      console.error('Failed to send new order notification to driver:', error)
     }
 
     return this.formatBookingDetails(booking)

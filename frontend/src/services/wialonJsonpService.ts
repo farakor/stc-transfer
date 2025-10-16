@@ -35,12 +35,15 @@ class WialonJsonpService {
   private session: WialonSession | null = null;
   private baseApiUrl = '';
   private callbackCounter = 0;
+  private httpFallbackAttempted = false;
 
   /**
    * Инициализация сервиса с конфигурацией Wialon
    */
   initialize(config: WialonConfig) {
     this.config = config;
+    this.httpFallbackAttempted = false; // Сбрасываем флаг при каждой инициализации
+    
     // Для JSONP используем базовый URL без /ajax.html
     if (config.baseUrl.includes('/wialon/ajax.html')) {
       this.baseApiUrl = config.baseUrl;
@@ -63,9 +66,11 @@ class WialonJsonpService {
   private makeJsonpRequest(service: string, params: any, sid?: string): Promise<any> {
     return new Promise((resolve, reject) => {
       const callbackName = this.createCallbackName();
+      let timeoutId: NodeJS.Timeout;
       
       // Создаем глобальную callback функцию
       (window as any)[callbackName] = (data: any) => {
+        clearTimeout(timeoutId);
         try {
           if (data.error) {
             reject(new Error(`Wialon API Error: ${data.error}`));
@@ -92,32 +97,44 @@ class WialonJsonpService {
       url += `&params=${encodeURIComponent(JSON.stringify(params))}`;
       url += `&callback=${callbackName}`;
 
+      // Логируем URL для отладки
+      console.log('🌐 JSONP request URL:', url);
+
       // Создаем script тег для JSONP запроса
       const script = document.createElement('script');
       script.id = `jsonp-${callbackName}`;
       script.src = url;
+      script.async = true;
       
       // Обработка ошибок загрузки
-      script.onerror = () => {
+      script.onerror = (error) => {
+        clearTimeout(timeoutId);
         delete (window as any)[callbackName];
-        reject(new Error('JSONP request failed to load'));
+        console.error('❌ JSONP script load error:', error);
+        console.error('Failed URL:', url);
+        
+        // Пробуем HTTP если HTTPS не работает (только один раз)
+        if (url.startsWith('https://') && !this.httpFallbackAttempted) {
+          console.log('🔄 Trying HTTP fallback...');
+          this.httpFallbackAttempted = true;
+          this.baseApiUrl = this.baseApiUrl.replace('https://', 'http://');
+          
+          // Повторяем запрос с HTTP
+          this.makeJsonpRequest(service, params, sid).then(resolve).catch(reject);
+        } else {
+          reject(new Error('JSONP request failed to load. Server may be unreachable or blocked by CORS.'));
+        }
       };
 
       // Таймаут для JSONP запроса
-      const timeout = setTimeout(() => {
+      timeoutId = setTimeout(() => {
         if ((window as any)[callbackName]) {
           delete (window as any)[callbackName];
           if (script) script.remove();
+          console.error('⏱️ JSONP request timeout after 15s');
           reject(new Error('JSONP request timeout'));
         }
       }, 15000); // 15 секунд таймаут
-
-      // Очищаем таймаут при успешном выполнении
-      const originalCallback = (window as any)[callbackName];
-      (window as any)[callbackName] = (data: any) => {
-        clearTimeout(timeout);
-        originalCallback(data);
-      };
 
       document.head.appendChild(script);
     });

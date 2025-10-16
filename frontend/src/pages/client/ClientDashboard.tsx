@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ClientLayout } from './ClientLayout'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useAuth } from '@/hooks/useAuth'
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
@@ -78,8 +77,7 @@ export function ClientDashboard() {
   }
 
   return (
-    <ClientLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Welcome Section */}
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 shadow-sm">
           <h2 className="text-2xl font-bold text-blue-900 mb-2">
@@ -183,8 +181,7 @@ export function ClientDashboard() {
           )}
         </div>
 
-      </div>
-    </ClientLayout>
+    </div>
   )
 }
 

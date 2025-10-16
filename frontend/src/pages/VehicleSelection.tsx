@@ -6,8 +6,9 @@ import { VehicleType } from '@/types'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { VehicleIcon } from '@/components/VehicleIcon'
 import { useTranslation } from '@/hooks/useTranslation'
-import { ArrowLeft, Car } from 'lucide-react'
+import { ArrowLeft, Car, Users, Luggage } from 'lucide-react'
 import FarukBadge from '@/assets/faruk-badge.svg'
+import STCLogo from '@/assets/STC-transfer.png'
 
 export function VehicleSelection() {
   const navigate = useNavigate()
@@ -59,9 +60,8 @@ export function VehicleSelection() {
               <ArrowLeft className="w-6 h-6" />
               <span className="font-medium">{t.common.back}</span>
             </button>
-            <div className="flex items-center space-x-2">
-              <Car className="w-6 h-6 text-blue-600" />
-              <h1 className="text-xl font-bold text-gray-900">STC Transfer</h1>
+            <div className="flex items-center">
+              <img src={STCLogo} alt="STC Transfer" className="h-8 w-auto" />
             </div>
             <div className="w-20"></div> {/* Spacer for centering */}
           </div>
@@ -158,15 +158,15 @@ export function VehicleSelection() {
 
                   {/* Features */}
                   <div className="flex flex-wrap gap-1 mb-3">
-                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">
-                      👥 {vehicle.capacity} {t.vehicle.passengers}
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">
+                      <Users className="w-3 h-3" /> {vehicle.capacity} {t.vehicle.passengers}
                     </span>
-                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-50 text-green-700 text-xs font-medium">
-                      🧳 {vehicle.baggageCapacity} {t.vehicle.pieces}
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 text-green-700 text-xs font-medium">
+                      <Luggage className="w-3 h-3" /> {vehicle.baggageCapacity} {t.vehicle.pieces}
                     </span>
                     {vehicle.availableCount !== undefined && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-orange-50 text-orange-700 text-xs font-medium">
-                        🚗 {vehicle.availableCount} {t.vehicle.availableVehicles}
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-orange-50 text-orange-700 text-xs font-medium">
+                        <Car className="w-3 h-3" /> {vehicle.availableCount} {t.vehicle.availableVehicles}
                       </span>
                     )}
                   </div>

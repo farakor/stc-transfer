@@ -16,6 +16,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp';
+import { SlideToStart } from '@/components/SlideToStart';
 
 interface Driver {
   id: number;
@@ -99,6 +100,19 @@ const DriverApp: React.FC = () => {
     }
   }, [webApp, isReady, user, isInTelegram]);
 
+  // Автоматическое обновление данных водителя и рейсов каждые 10 секунд
+  useEffect(() => {
+    if (!driver) return;
+
+    // Запускаем периодическое обновление
+    const interval = setInterval(() => {
+      refreshDriverData(driver.id);
+      loadDriverTrips(driver.id);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [driver?.id]);
+
   const authenticateDriver = async (telegramId: string) => {
     try {
       setLoading(true);
@@ -134,6 +148,24 @@ const DriverApp: React.FC = () => {
       console.error('❌ Ошибка аутентификации водителя:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshDriverData = async (driverId: number) => {
+    try {
+      console.log('🔄 Обновляем данные водителя:', driverId);
+
+      const response = await fetch(`/api/drivers/${driverId}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setDriver(data.data);
+          console.log('✅ Данные водителя обновлены:', data.data.vehicle);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Ошибка обновления данных водителя:', error);
     }
   };
 
@@ -495,7 +527,7 @@ const DriverApp: React.FC = () => {
 
               <button
                 onClick={completeTrip}
-                className="w-full flex items-center justify-center space-x-2 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="w-full flex items-center justify-center space-x-2 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 <CheckCircle className="w-5 h-5" />
                 <span className="font-medium">Завершить рейс</span>
@@ -576,13 +608,10 @@ const DriverApp: React.FC = () => {
                     <span className="font-medium">Принять заказ</span>
                   </button>
                 ) : (
-                  <button
-                    onClick={() => startTrip(trip.id)}
-                    className="w-full flex items-center justify-center space-x-2 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Play className="w-4 h-4" />
-                    <span className="font-medium">Начать рейс</span>
-                  </button>
+                  <SlideToStart
+                    onComplete={() => startTrip(trip.id)}
+                    text="Свайп для начала рейса"
+                  />
                 )}
               </div>
             ))}

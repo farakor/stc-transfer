@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { ClientLayout } from './ClientLayout'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useAuth } from '@/hooks/useAuth'
 import { Phone, Send, Mail, MessageCircle, FileEdit, CreditCard, Car, HelpCircle, CheckCircle, Clock, Loader2, ChevronDown } from 'lucide-react'
@@ -132,8 +131,7 @@ export function Support() {
   }
 
   return (
-    <ClientLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -281,8 +279,7 @@ export function Support() {
             </div>
           </div>
         </div>
-      </div>
-    </ClientLayout>
+    </div>
   )
 }
 

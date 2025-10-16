@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ClientLayout } from './ClientLayout'
 import { useTranslation } from '@/hooks/useTranslation'
 import { useTelegramWebApp } from '@/hooks/useTelegramWebApp'
 import { BookingService } from '@/services/bookingService'
 import { Booking } from '@/types'
-import { Car, Bus, ClipboardList, Calendar, Clock, Ruler, Loader2 } from 'lucide-react'
+import { Car, Bus, ClipboardList, Calendar, Clock, Ruler, Loader2, Banknote } from 'lucide-react'
 
 export function BookingHistory() {
   const navigate = useNavigate()
@@ -118,8 +117,7 @@ export function BookingHistory() {
   ]
 
   return (
-    <ClientLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -225,7 +223,7 @@ export function BookingHistory() {
                       </div>
                     )}
                     <div className="flex items-center space-x-2 font-semibold text-gray-900">
-                      <span>💰</span>
+                      <Banknote className="w-4 h-4 text-green-600" />
                       <span>{booking.price.toLocaleString()} сум</span>
                     </div>
                   </div>
@@ -244,8 +242,7 @@ export function BookingHistory() {
             })}
           </div>
         )}
-      </div>
-    </ClientLayout>
+    </div>
   )
 }
 

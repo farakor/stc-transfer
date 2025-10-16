@@ -14,6 +14,7 @@ import DriverApp from '@/pages/DriverApp'
 import DriverLogin from '@/pages/driver/DriverLogin'
 import DriverDashboard from '@/pages/driver/DriverDashboard'
 import DriverTelegramAuth from '@/pages/driver/DriverTelegramAuth'
+import { ClientLayout } from '@/pages/client/ClientLayout'
 import { ClientDashboard } from '@/pages/client/ClientDashboard'
 import { BookingHistory } from '@/pages/client/BookingHistory'
 import { Support } from '@/pages/client/Support'
@@ -83,10 +84,12 @@ export function AppRoutes() {
       <Route path="/driver/telegram" element={<DriverApp />} />
 
       {/* Client dashboard routes */}
-      <Route path="/client/dashboard" element={<ClientDashboard />} />
-      <Route path="/client/history" element={<BookingHistory />} />
-      <Route path="/client/support" element={<Support />} />
-      <Route path="/client/tariffs" element={<Tariffs />} />
+      <Route path="/client" element={<ClientLayout />}>
+        <Route path="dashboard" element={<ClientDashboard />} />
+        <Route path="history" element={<BookingHistory />} />
+        <Route path="support" element={<Support />} />
+        <Route path="tariffs" element={<Tariffs />} />
+      </Route>
 
       {/* Main booking flow */}
       <Route path="/vehicles" element={<VehicleSelection />} />

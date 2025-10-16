@@ -243,6 +243,22 @@ export class DriverController {
 
       console.log(`✅ Заказ ${bookingId} принят водителем ${driverId}, статус изменен на CONFIRMED`)
 
+      // Отправить уведомление клиенту о том, что водитель принял заказ
+      try {
+        if (updatedBooking.user.telegram_id) {
+          const { TelegramBotService } = await import('@/services/telegramBot')
+          const telegramBot = TelegramBotService.getInstance()
+          await telegramBot.sendDriverAcceptedNotification(
+            Number(updatedBooking.user.telegram_id),
+            updatedBooking,
+            updatedBooking.driver
+          )
+          console.log(`📱 Уведомление о принятии заказа отправлено клиенту ${updatedBooking.user.telegram_id}`)
+        }
+      } catch (error) {
+        console.error('❌ Failed to send driver accepted notification to client:', error)
+      }
+
       res.json({
         success: true,
         data: {
@@ -301,6 +317,8 @@ export class DriverController {
           updated_at: new Date()
         },
         include: {
+          user: true,
+          driver: true,
           vehicle: true
         }
       })
@@ -318,6 +336,22 @@ export class DriverController {
       }
 
       console.log(`✅ Рейс ${bookingId} начат, статус изменен на IN_PROGRESS`)
+
+      // Отправить уведомление клиенту о том, что рейс начался
+      try {
+        if (updatedBooking.user.telegram_id) {
+          const { TelegramBotService } = await import('@/services/telegramBot')
+          const telegramBot = TelegramBotService.getInstance()
+          await telegramBot.sendTripStartedNotification(
+            Number(updatedBooking.user.telegram_id),
+            updatedBooking,
+            updatedBooking.driver
+          )
+          console.log(`📱 Уведомление о начале рейса отправлено клиенту ${updatedBooking.user.telegram_id}`)
+        }
+      } catch (error) {
+        console.error('❌ Failed to send trip started notification to client:', error)
+      }
 
       res.json({
         success: true,
@@ -377,6 +411,8 @@ export class DriverController {
           updated_at: new Date()
         },
         include: {
+          user: true,
+          driver: true,
           vehicle: true
         }
       })
@@ -415,6 +451,21 @@ export class DriverController {
       }
 
       console.log(`✅ Заказ ${bookingId} завершен, статус изменен на COMPLETED`)
+
+      // Отправить уведомление клиенту о том, что поездка завершена
+      try {
+        if (updatedBooking.user.telegram_id) {
+          const { TelegramBotService } = await import('@/services/telegramBot')
+          const telegramBot = TelegramBotService.getInstance()
+          await telegramBot.sendTripCompletedNotification(
+            Number(updatedBooking.user.telegram_id),
+            updatedBooking
+          )
+          console.log(`📱 Уведомление о завершении поездки отправлено клиенту ${updatedBooking.user.telegram_id}`)
+        }
+      } catch (error) {
+        console.error('❌ Failed to send trip completed notification to client:', error)
+      }
 
       res.json({
         success: true,

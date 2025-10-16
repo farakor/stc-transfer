@@ -13,6 +13,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { useDriverNotifications } from '@/hooks/useDriverNotifications';
+import { SlideToStart } from '@/components/SlideToStart';
 
 interface Driver {
   id: number;
@@ -73,6 +74,8 @@ const DriverDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const navigate = useNavigate();
 
   // Хук для уведомлений
@@ -83,6 +86,7 @@ const DriverDashboard: React.FC = () => {
     requestNotificationPermission
   } = useDriverNotifications(driver?.id || null, bookings);
 
+  // Инициализация водителя
   useEffect(() => {
     const savedDriver = localStorage.getItem('driver');
     const driverAuthToken = localStorage.getItem('driverAuthToken');
@@ -101,15 +105,35 @@ const DriverDashboard: React.FC = () => {
     
     // Запрашиваем разрешение на уведомления
     requestNotificationPermission();
-    
-    // Запускаем периодическое обновление
-    const interval = setInterval(fetchActiveBookings, 30000); // каждые 30 секунд
-    
-    return () => clearInterval(interval);
-  }, [navigate]);
+  }, [navigate, requestNotificationPermission]);
 
-  const fetchActiveBookings = async () => {
+  // Функция для получения актуальных данных водителя (включая информацию о машине)
+  const fetchDriverData = async () => {
     if (!driver) return;
+
+    try {
+      const response = await fetch(`/api/drivers/${driver.id}`);
+      const data = await response.json();
+
+      if (data.success) {
+        // Обновляем данные водителя в state
+        setDriver(data.data);
+        // Обновляем также в localStorage
+        localStorage.setItem('driver', JSON.stringify(data.data));
+        console.log('✅ Данные водителя обновлены:', data.data.vehicle);
+      }
+    } catch (err) {
+      console.error('Ошибка загрузки данных водителя:', err);
+    }
+  };
+
+  // Функция для получения активных заказов
+  const fetchActiveBookings = async (showIndicator = false) => {
+    if (!driver) return;
+
+    if (showIndicator) {
+      setIsAutoRefreshing(true);
+    }
 
     try {
       const response = await fetch(`/api/drivers/${driver.id}/active-bookings`);
@@ -117,11 +141,33 @@ const DriverDashboard: React.FC = () => {
 
       if (data.success) {
         setBookings(data.data);
+        setLastUpdateTime(new Date());
       }
     } catch (err) {
-      console.error('Error fetching bookings:', err);
+      console.error('Ошибка загрузки заказов:', err);
+    } finally {
+      if (showIndicator) {
+        setTimeout(() => setIsAutoRefreshing(false), 500);
+      }
     }
   };
+
+  // Автоматическое обновление каждые 10 секунд
+  useEffect(() => {
+    if (!driver) return;
+
+    // Первое обновление сразу после загрузки
+    fetchActiveBookings(false);
+    fetchDriverData(); // Обновляем данные водителя
+
+    // Запускаем периодическое обновление каждые 10 секунд
+    const interval = setInterval(() => {
+      fetchActiveBookings(true);
+      fetchDriverData(); // Обновляем данные водителя вместе с заказами
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [driver?.id]); // Используем только id для зависимости, чтобы избежать лишних перезапусков
 
   const handleBookingAction = async (bookingId: string, action: string) => {
     if (!driver) return;
@@ -209,13 +255,11 @@ const DriverDashboard: React.FC = () => {
       
       case 'CONFIRMED':
         return (
-          <button
-            onClick={() => handleBookingAction(booking.id, 'start')}
+          <SlideToStart
+            onComplete={() => handleBookingAction(booking.id, 'start')}
             disabled={isLoading}
-            className="w-full bg-gray-900 text-white py-3 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
-          >
-            {isLoading ? 'Обработка...' : 'Начать рейс'}
-          </button>
+            text={isLoading ? 'Обработка...' : 'Свайп для начала рейса'}
+          />
         );
       
       case 'IN_PROGRESS':
@@ -223,7 +267,7 @@ const DriverDashboard: React.FC = () => {
           <button
             onClick={() => handleBookingAction(booking.id, 'complete')}
             disabled={isLoading}
-            className="w-full bg-white border-2 border-gray-300 text-gray-900 py-3 rounded-lg font-medium hover:border-gray-400 disabled:opacity-50 transition-colors"
+            className="w-full bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
           >
             {isLoading ? 'Обработка...' : 'Завершить поездку'}
           </button>
@@ -270,6 +314,19 @@ const DriverDashboard: React.FC = () => {
             </div>
             
             <div className="flex items-center space-x-2">
+              {/* Индикатор автообновления */}
+              <div className="flex items-center space-x-1.5">
+                <RefreshCw 
+                  className={`w-4 h-4 text-gray-400 ${isAutoRefreshing ? 'animate-spin text-blue-600' : ''}`} 
+                />
+                {isAutoRefreshing && (
+                  <span className="text-xs text-blue-600 font-medium">Обновление...</span>
+                )}
+                {!isAutoRefreshing && (
+                  <span className="text-xs text-gray-400">авто</span>
+                )}
+              </div>
+              
               {hasNewBookings && (
                 <button
                   onClick={clearNotifications}
@@ -321,14 +378,6 @@ const DriverDashboard: React.FC = () => {
                   <h3 className="text-base font-semibold text-gray-900">
                     {booking.status === 'IN_PROGRESS' ? 'Активная поездка' : 'Новый заказ'}
                   </h3>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={fetchActiveBookings}
-                      className="p-1.5 text-gray-400 hover:text-gray-600"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                    </button>
-                  </div>
                 </div>
 
                 {/* Информация о клиенте и действия */}
