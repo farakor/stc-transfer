@@ -13,10 +13,8 @@ import { WialonConfig } from '../services/wialonJsonpService';
 // Используем JSONP подключение для обхода CORS ограничений
 export const wialonConfig: WialonConfig = {
   // URL вашего сервера Wialon (gps.ent-en.com через JSONP)
-  // Используем HTTP вместо HTTPS из-за проблем с самоподписанным SSL сертификатом
-  // Если ваш фронтенд работает на HTTPS, браузер может блокировать HTTP запросы (mixed content)
-  // В этом случае, измените на HTTPS и добавьте исключение для сертификата в браузере
-  baseUrl: 'http://gps.ent-en.com/wialon',
+  // Используем HTTPS для production, чтобы избежать Mixed Content ошибок
+  baseUrl: 'https://gps.ent-en.com/wialon',
 
   // Токен доступа к API (72-символьный токен, работает через JSONP)
   token: '85991e5f06896e98fe3c0bd49d2fe6d825770468546E156C3088DF44EB44163B2A478841',
