@@ -170,8 +170,6 @@ nano .env
 # Database
 DATABASE_URL="postgresql://stc_user:eNL+i6wQ$56Kj?W@localhost:5432/stc_transfer"
 
-DATABASE_URL="postgresql://farrukhoripov:@localhost:5432/stc_transfer"
-
 # Клиентский бот (для пассажиров)
 TELEGRAM_BOT_TOKEN="8426106323:AAEVqK3k3CI9oLAXq8Rcr1id6mF7EfQY4Ns"
 TELEGRAM_WEBHOOK_URL="https://srs.faruk.io"
@@ -370,8 +368,8 @@ server {
         proxy_read_timeout 7d;
     }
 
-    # Telegram Webhook
-    location /api/telegram {
+    # Telegram Webhook для клиентского бота (для пассажиров)
+    location /webhook {
         proxy_pass http://backend;
         proxy_http_version 1.1;
 
@@ -381,10 +379,38 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
 
         # Ограничиваем доступ только для Telegram серверов
-        # Telegram IP ranges (можно добавить дополнительные)
+        # https://core.telegram.org/bots/webhooks#the-short-version
         allow 149.154.160.0/20;
         allow 91.108.4.0/22;
+        allow 195.158.23.0/24;  # Дополнительный диапазон Telegram
         deny all;
+
+        # Таймауты
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+
+    # Telegram Webhook для водительского бота
+    location /webhook/driver {
+        proxy_pass http://backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Ограничиваем доступ только для Telegram серверов
+        allow 149.154.160.0/20;
+        allow 91.108.4.0/22;
+        allow 195.158.23.0/24;  # Дополнительный диапазон Telegram
+        deny all;
+
+        # Таймауты
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
     }
 
     # Публичные файлы (если есть)
@@ -560,14 +586,14 @@ pm2 flush
 
 ## 8. Настройка Telegram Webhook
 
-### 8.1 Установка webhook для бота
+### 8.1 Установка webhook для клиентского бота
 
 ```bash
-# Установка webhook
-curl -X POST "https://api.telegram.org/bot<ВАШ_ТОКЕН_БОТА>/setWebhook" \
+# Установка webhook для клиентского бота (для пассажиров)
+curl -X POST "https://api.telegram.org/bot8426106323:AAEVqK3k3CI9oLAXq8Rcr1id6mF7EfQY4Ns/setWebhook" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://srs.faruk.io/api/telegram/webhook",
+    "url": "https://srs.faruk.io/webhook",
     "allowed_updates": ["message", "callback_query", "inline_query"]
   }'
 ```
@@ -575,8 +601,8 @@ curl -X POST "https://api.telegram.org/bot<ВАШ_ТОКЕН_БОТА>/setWebhoo
 ### 8.2 Проверка webhook
 
 ```bash
-# Получение информации о webhook
-curl "https://api.telegram.org/bot<ВАШ_ТОКЕН_БОТА>/getWebhookInfo"
+# Получение информации о webhook клиентского бота
+curl "https://api.telegram.org/bot8426106323:AAEVqK3k3CI9oLAXq8Rcr1id6mF7EfQY4Ns/getWebhookInfo"
 ```
 
 Ответ должен содержать:
@@ -585,23 +611,26 @@ curl "https://api.telegram.org/bot<ВАШ_ТОКЕН_БОТА>/getWebhookInfo"
 {
   "ok": true,
   "result": {
-    "url": "https://srs.faruk.io/api/telegram/webhook",
+    "url": "https://srs.faruk.io/webhook",
     "has_custom_certificate": false,
     "pending_update_count": 0
   }
 }
 ```
 
-### 8.3 Если есть водительский бот (отдельный токен)
+### 8.3 Установка webhook для водительского бота
 
 ```bash
-# Установка webhook для водительского бота
-curl -X POST "https://api.telegram.org/bot<ТОКЕН_ВОДИТЕЛЬСКОГО_БОТА>/setWebhook" \
+# Установка webhook для водительского бота (для водителей)
+curl -X POST "https://api.telegram.org/bot8201068723:AAEsIewzuzuQf3Uob9vcjMq78A-SXa4qOIc/setWebhook" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://srs.faruk.io/api/telegram/driver-webhook",
+    "url": "https://srs.faruk.io/webhook/driver",
     "allowed_updates": ["message", "callback_query"]
   }'
+
+# Проверка webhook водительского бота
+curl "https://api.telegram.org/bot8201068723:AAEsIewzuzuQf3Uob9vcjMq78A-SXa4qOIc/getWebhookInfo"
 ```
 
 ---
@@ -824,16 +853,17 @@ sudo certbot renew --force-renewal
 ### Проблема 4: Telegram webhook не работает
 
 ```bash
-# Проверьте webhook info
-curl "https://api.telegram.org/bot<ВАШ_ТОКЕН>/getWebhookInfo"
+# Проверьте webhook info (замените ТОКЕН_БОТА на ваш токен)
+curl "https://api.telegram.org/botТОКЕН_БОТА/getWebhookInfo"
 
 # Проверьте логи backend
 pm2 logs stc-backend | grep telegram
 
-# Переустановите webhook
-curl -X POST "https://api.telegram.org/bot<ВАШ_ТОКЕН>/deleteWebhook"
-curl -X POST "https://api.telegram.org/bot<ВАШ_ТОКЕН>/setWebhook" \
-  -d "url=https://srs.faruk.io/api/telegram/webhook"
+# Переустановите webhook (замените ТОКЕН_БОТА на ваш токен)
+curl -X POST "https://api.telegram.org/botТОКЕН_БОТА/deleteWebhook"
+curl -X POST "https://api.telegram.org/botТОКЕН_БОТА/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://srs.faruk.io/api/telegram/webhook"}'
 ```
 
 ---
