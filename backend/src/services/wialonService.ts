@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios'
+import axios from 'axios'
 import https from 'https'
 
 interface WialonConfig {
@@ -22,7 +22,7 @@ interface WialonUnit {
 export class WialonService {
   private config: WialonConfig
   private sessionId: string | null = null
-  private axiosInstance: AxiosInstance
+  private axiosInstance: ReturnType<typeof axios.create>
 
   constructor() {
     // Загружаем конфигурацию из переменных окружения
@@ -35,7 +35,7 @@ export class WialonService {
     this.axiosInstance = axios.create({
       httpsAgent: new https.Agent({
         rejectUnauthorized: false // Игнорируем ошибки SSL для самоподписанных сертификатов
-      }),
+      }) as any,
       timeout: 10000 // 10 секунд таймаут
     })
   }

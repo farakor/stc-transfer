@@ -112,7 +112,7 @@ sudo -u postgres psql
 
 ```sql
 -- Создаем пользователя
-CREATE USER stc_user WITH PASSWORD 'ваш_безопасный_пароль_здесь';
+CREATE USER stc_user WITH PASSWORD 'eNL+i6wQ$56Kj?W';
 
 -- Создаем базу данных
 CREATE DATABASE stc_transfer OWNER stc_user;
@@ -149,7 +149,7 @@ cd /home/stc/apps
 
 ```bash
 # Если используете Git
-git clone https://github.com/ваш-репозиторий/stc-transfer.git
+git clone https://github.com/farakor/stc-transfer.git
 cd stc-transfer
 
 # Или загрузите проект через scp/sftp
@@ -168,21 +168,37 @@ nano .env
 
 ```env
 # Database
-DATABASE_URL="postgresql://stc_user:ваш_безопасный_пароль_здесь@localhost:5432/stc_transfer"
+DATABASE_URL="postgresql://stc_user:eNL+i6wQ$56Kj?W@localhost:5432/stc_transfer"
 
-# Telegram Bot
-TELEGRAM_BOT_TOKEN="ваш_токен_бота_здесь"
+DATABASE_URL="postgresql://farrukhoripov:@localhost:5432/stc_transfer"
+
+# Клиентский бот (для пассажиров)
+TELEGRAM_BOT_TOKEN="8426106323:AAEVqK3k3CI9oLAXq8Rcr1id6mF7EfQY4Ns"
 TELEGRAM_WEBHOOK_URL="https://srs.faruk.io"
+TELEGRAM_WEBAPP_URL="https://srs.faruk.io"
+
+# Водительский бот (для водителей)
+TELEGRAM_DRIVER_BOT_TOKEN="8201068723:AAEsIewzuzuQf3Uob9vcjMq78A-SXa4qOIc"
+TELEGRAM_DRIVER_WEBHOOK_URL="https://srs.faruk.io"
+TELEGRAM_DRIVER_WEBAPP_URL="https://srs.faruk.io/driver"
+
+PORT=3001
+NODE_ENV=development
+
+JWT_SECRET="lUwe2pwd7AtaQjl+7l+ljoyn8xMMkDIOtT3/TM8DDJe9W/rjjUq4z3GPaGaHYl1ol9DBWcVV/pFFZcbcNA/RDQ=="
+
+ALLOWED_ORIGINS="http://localhost:3000,http://localhost:3003,https://srs.faruk.io,https://finer-legal-hedgehog.ngrok-free.app"
+
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=500
+
+# Wialon API Configuration
+WIALON_BASE_URL="https://gps.ent-en.com/wialon"
+WIALON_TOKEN="85991e5f06896e98fe3c0bd49d2fe6d825770468546E156C3088DF44EB44163B2A478841"
 
 # Server Configuration
 PORT=3001
 NODE_ENV=production
-
-# JWT Secret (сгенерируйте безопасный ключ)
-JWT_SECRET="сгенерируйте_длинный_случайный_ключ_здесь"
-
-# CORS
-ALLOWED_ORIGINS="https://srs.faruk.io"
 
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=900000
