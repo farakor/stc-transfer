@@ -18,18 +18,40 @@ export class DriverController {
       }
 
       // Ищем водителя по номеру телефона
-      // Пробуем разные варианты формата номера
+      // Нормализуем номер (только цифры) для корректного сравнения
       const cleanPhone = phone.replace(/\D/g, ''); // Только цифры
-      const formattedPhone = `+${cleanPhone}`; // С плюсом
       
-      const driver = await prisma.driver.findFirst({
-        where: { 
-          OR: [
-            { phone: cleanPhone },
-            { phone: formattedPhone },
-            { phone: phone } // Исходный формат
-          ]
-        },
+      console.log('🔍 Поиск водителя по номеру телефона:', {
+        original: phone,
+        clean: cleanPhone
+      })
+
+      // Сначала ищем всех водителей
+      const allDrivers = await prisma.driver.findMany({
+        select: {
+          id: true,
+          phone: true
+        }
+      })
+
+      // Находим водителя, сравнивая только цифры в номерах
+      const matchedDriver = allDrivers.find(d => {
+        if (!d.phone) return false
+        const dbPhoneClean = d.phone.replace(/\D/g, '')
+        return dbPhoneClean === cleanPhone
+      })
+
+      if (!matchedDriver) {
+        res.status(404).json({
+          success: false,
+          error: 'Driver not found with this phone number'
+        })
+        return
+      }
+
+      // Загружаем полные данные найденного водителя
+      const driver = await prisma.driver.findUnique({
+        where: { id: matchedDriver.id },
         include: {
           vehicle: true,
           bookings: {

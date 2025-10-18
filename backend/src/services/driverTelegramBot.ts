@@ -130,17 +130,36 @@ export class DriverTelegramBotService {
       const cleanPhone = contact.phone_number.replace(/\D/g, '')
       const formattedPhone = `+${cleanPhone}`
 
-      const driver = await prisma.driver.findFirst({
-        where: {
-          OR: [
-            { phone: cleanPhone },
-            { phone: formattedPhone },
-            { phone: contact.phone_number }
-          ]
+      console.log('🔍 Поиск водителя по номеру телефона:', {
+        original: contact.phone_number,
+        clean: cleanPhone,
+        formatted: formattedPhone
+      })
+
+      // Сначала ищем всех водителей
+      const allDrivers = await prisma.driver.findMany({
+        select: {
+          id: true,
+          phone: true,
+          name: true
         }
       })
 
-      if (!driver) {
+      // Находим водителя, сравнивая только цифры в номерах
+      const driver = allDrivers.find(d => {
+        if (!d.phone) return false
+        const dbPhoneClean = d.phone.replace(/\D/g, '')
+        const match = dbPhoneClean === cleanPhone
+        console.log(`  Сравнение: ${d.phone} (${dbPhoneClean}) === ${contact.phone_number} (${cleanPhone}): ${match}`)
+        return match
+      })
+
+      // Если нашли водителя, загружаем полные данные
+      const fullDriver = driver ? await prisma.driver.findUnique({
+        where: { id: driver.id }
+      }) : null
+
+      if (!fullDriver) {
         await this.bot!.sendMessage(
           chatId,
           '❌ Водитель с таким номером телефона не найден в системе.\n\nОбратитесь к администратору для добавления вашего профиля.'
@@ -148,9 +167,11 @@ export class DriverTelegramBotService {
         return
       }
 
+      console.log('✅ Водитель найден:', fullDriver.name)
+
       // Обновляем telegram_id водителя
       await prisma.driver.update({
-        where: { id: driver.id },
+        where: { id: fullDriver.id },
         data: {
           telegram_id: telegramId
         }
