@@ -35,6 +35,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy - важно для работы за Nginx
+app.set('trust proxy', true);
+
 // Security middleware - отключаем строгий CSP для development
 app.use(helmet({
   contentSecurityPolicy: {
