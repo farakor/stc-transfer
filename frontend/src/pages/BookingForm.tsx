@@ -149,7 +149,7 @@ export function BookingForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-[35px] z-20 safe-area-top">
+      <header className="bg-white shadow-sm safe-area-top">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <button
@@ -375,6 +375,9 @@ export function BookingForm() {
         isVisible={showNotification}
         onClose={() => setShowNotification(false)}
       />
+      
+      {/* Bottom fade/overlay for status bar */}
+      <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-primary-50 via-primary-50/80 to-transparent pointer-events-none z-5 safe-area-bottom"></div>
     </div>
   )
 }
