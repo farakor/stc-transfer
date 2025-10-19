@@ -13,6 +13,7 @@ import { formatPrice, isSamarkandTrip } from '@/utils/formatting'
 import { useSamarkandTariffs } from '@/hooks/useTariffs'
 import { useVehicleTypes } from '@/hooks/useVehicles'
 import { VehicleIcon } from '@/components/VehicleIcon'
+import { ArrowLeft } from 'lucide-react'
 import FarukBadge from '@/assets/faruk-badge.svg'
 import STCLogo from '@/assets/STC-transfer.png'
 
@@ -150,15 +151,22 @@ export function BookingForm() {
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-20 safe-area-top">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => navigate('/route')}
+              className="text-gray-700 hover:text-blue-600 transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
             <img 
               src={STCLogo} 
               alt="STC Transfer" 
-              className="h-8 w-auto select-none" 
+              className="h-8 w-auto select-none absolute left-1/2 transform -translate-x-1/2" 
               style={{
                 imageRendering: 'auto'
               }}
             />
+            <div className="w-6"></div>
           </div>
         </div>
       </header>
