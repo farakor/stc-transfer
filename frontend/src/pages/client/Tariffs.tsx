@@ -144,8 +144,8 @@ export function Tariffs() {
         </div>
 
         {/* Vehicle Type Tabs - Horizontal Scrollable */}
-        <div className="relative -mx-4 px-4">
-          <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
+        <div className="relative -mx-4 px-4 py-2">
+          <div className="flex space-x-3 overflow-x-auto py-2 scrollbar-hide snap-x snap-mandatory">
             {vehicleTypes.map((vehicle) => {
               const models = vehicleTypeGroups[vehicle.id] || []
               const hasModels = models.length > 0
