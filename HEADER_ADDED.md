@@ -6,59 +6,48 @@
 
 ## Решение
 
-Добавлены header с safe area на три ключевые страницы процесса бронирования:
+Добавлены header с safe area на три ключевые страницы процесса бронирования. Header содержит только логотип STC Transfer по центру, без кнопок навигации, чтобы избежать дублирования с нативной кнопкой "Назад" Telegram.
 
 ### 1. RouteSelection (Выбор маршрута) - frontend/src/pages/RouteSelection.tsx
 
-- ✅ Добавлен header с логотипом STC Transfer
-- ✅ Добавлена кнопка "Назад к машинам" с иконкой ArrowLeft
+- ✅ Добавлен header с логотипом STC Transfer по центру
 - ✅ Применен класс `safe-area-top` для корректного отображения под status bar
-- ✅ Убрана старая кнопка "Назад" снизу страницы
 - ✅ Header закреплен (sticky) вверху страницы
+- ✅ Навигация осуществляется через нативную кнопку Telegram
 
-**Навигация:**
+**Структура:**
 
-- Кнопка слева: Назад к выбору машин (navigate('/vehicles'))
-- Логотип справа: Брендинг
+- Логотип по центру: Брендинг
 
 ### 2. BookingForm (Оформление заказа) - frontend/src/pages/BookingForm.tsx
 
-- ✅ Добавлен header с логотипом STC Transfer
-- ✅ Добавлена кнопка "Назад к маршруту" с иконкой ArrowLeft
+- ✅ Добавлен header с логотипом STC Transfer по центру
 - ✅ Применен класс `safe-area-top` для корректного отображения под status bar
 - ✅ Применен класс `safe-area-bottom` к fixed кнопке отправки
-- ✅ Убрана старая кнопка "Назад" снизу страницы
 - ✅ Header закреплен (sticky) вверху страницы
+- ✅ Навигация осуществляется через нативную кнопку Telegram
 
-**Навигация:**
+**Структура:**
 
-- Кнопка слева: Назад к маршруту (navigate('/route'))
-- Логотип справа: Брендинг
+- Логотип по центру: Брендинг
 - Fixed кнопка внизу: Отправка заказа
 
 ### 3. BookingConfirmation (Подтверждение заказа) - frontend/src/pages/BookingConfirmation.tsx
 
-- ✅ Добавлен header с логотипом STC Transfer
-- ✅ Добавлена кнопка "Новый заказ" с иконкой Home
+- ✅ Добавлен header с логотипом STC Transfer по центру
 - ✅ Применен класс `safe-area-top` для корректного отображения под status bar
 - ✅ Header закреплен (sticky) вверху страницы
+- ✅ Навигация осуществляется через нативную кнопку Telegram
 
-**Навигация:**
+**Структура:**
 
-- Кнопка слева: Новый заказ (navigate('/vehicles') + resetBookingFlow())
-- Логотип справа: Брендинг
+- Логотип по центру: Брендинг
 
 ## Технические детали
 
 ### Добавленные импорты
 
 ```typescript
-// Для RouteSelection и BookingForm
-import { ArrowLeft } from "lucide-react";
-import STCLogo from "@/assets/STC-transfer.png";
-
-// Для BookingConfirmation
-import { Home } from "lucide-react";
 import STCLogo from "@/assets/STC-transfer.png";
 ```
 
@@ -67,15 +56,14 @@ import STCLogo from "@/assets/STC-transfer.png";
 ```jsx
 <header className="bg-white shadow-sm sticky top-0 z-20 safe-area-top">
   <div className="max-w-7xl mx-auto px-4 py-3">
-    <div className="flex items-center justify-between">
-      {/* Левая кнопка навигации */}
-      <button onClick={handleBack}>
-        <Icon className="w-5 h-5" />
-        <span className="text-sm font-medium">{text}</span>
-      </button>
-
-      {/* Логотип справа */}
-      <img src={STCLogo} alt="STC Transfer" className="h-8 w-auto" />
+    <div className="flex items-center justify-center">
+      {/* Логотип по центру */}
+      <img
+        src={STCLogo}
+        alt="STC Transfer"
+        className="h-8 w-auto select-none"
+        style={{ imageRendering: "auto" }}
+      />
     </div>
   </div>
 </header>
@@ -105,10 +93,15 @@ import STCLogo from "@/assets/STC-transfer.png";
 ## Преимущества
 
 1. **Консистентный UX**: Все страницы теперь имеют единообразный header
-2. **Улучшенная навигация**: Кнопки назад всегда доступны в предсказуемом месте
+2. **Чистый интерфейс**: Логотип по центру без дублирования кнопок навигации
 3. **Брендинг**: Логотип STC Transfer виден на всех этапах бронирования
 4. **Safe Area**: Header корректно отображается на устройствах с notch/Dynamic Island
 5. **Sticky позиционирование**: Header остается видимым при прокрутке
+6. **Нативная навигация**: Используется встроенная кнопка "Назад" Telegram для лучшего UX
+
+## Важно
+
+⚠️ **Навигация "Назад"** осуществляется через нативную кнопку Telegram (BackButton), которая автоматически отображается в левом верхнем углу. Дублирование кнопок навигации в header было убрано для улучшения пользовательского опыта.
 
 ## Тестирование
 

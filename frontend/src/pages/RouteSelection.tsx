@@ -10,7 +10,6 @@ import { NotificationToast } from '@/components/NotificationToast'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { CustomSelect } from '@/components/CustomSelect'
 import { LocationData } from '@/services/routeService'
-import { ArrowLeft } from 'lucide-react'
 import FarukBadge from '@/assets/faruk-badge.svg'
 import STCLogo from '@/assets/STC-transfer.png'
 
@@ -222,14 +221,7 @@ export function RouteSelection() {
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-20 safe-area-top">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate('/vehicles')}
-              className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="text-sm font-medium">{t.route.backToVehicles}</span>
-            </button>
+          <div className="flex items-center justify-center">
             <img 
               src={STCLogo} 
               alt="STC Transfer" 
