@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Safe Area Test - STC Transfer</title>
+  
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    
+    /* Header with safe area */
+    .header {
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding-top: max(env(safe-area-inset-top), 8px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .header-content {
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+    
+    .header-icon {
+      width: 40px;
+      height: 40px;
+      background: #667eea;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+    
+    /* Main content */
+    .content {
+      padding: 20px;
+      padding-bottom: max(env(safe-area-inset-bottom), 20px);
+      min-height: calc(100vh - 80px);
+    }
+    
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #1a1a1a;
+    }
+    
+    .card-text {
+      color: #666;
+      line-height: 1.6;
+    }
+    
+    .status-bar-info {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 12px;
+      margin-bottom: 16px;
+      border-radius: 4px;
+    }
+    
+    .safe-area-visual {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    
+    .safe-area-top {
+      top: 0;
+      left: 0;
+      right: 0;
+      height: env(safe-area-inset-top);
+      background: rgba(255, 0, 0, 0.3);
+      border-bottom: 2px dashed red;
+    }
+    
+    .safe-area-bottom {
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: env(safe-area-inset-bottom);
+      background: rgba(0, 0, 255, 0.3);
+      border-top: 2px dashed blue;
+    }
+    
+    .info-badge {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin: 4px;
+    }
+    
+    .footer-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      padding: 12px 20px;
+      padding-bottom: max(env(safe-area-inset-bottom), 12px);
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-around;
+    }
+    
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #666;
+      text-decoration: none;
+      font-size: 12px;
+    }
+    
+    .nav-icon {
+      width: 24px;
+      height: 24px;
+      background: #667eea;
+      border-radius: 50%;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Safe area visual indicators -->
+  <div class="safe-area-visual safe-area-top"></div>
+  <div class="safe-area-visual safe-area-bottom"></div>
+  
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <div class="header-title">Safe Area Test</div>
+      <div class="header-icon">ST</div>
+    </div>
+  </header>
+  
+  <!-- Main content -->
+  <main class="content">
+    <div class="status-bar-info">
+      <strong>ℹ️ Тест Safe Area</strong><br>
+      Красная зона сверху - status bar (safe-area-inset-top)<br>
+      Синяя зона снизу - home indicator (safe-area-inset-bottom)
+    </div>
+    
+    <div class="card">
+      <div class="card-title">Информация о viewport</div>
+      <div class="card-text" id="viewport-info">
+        Загрузка...
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">Safe Area Insets</div>
+      <div class="card-text" id="safe-area-info">
+        Загрузка...
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">Telegram Web App</div>
+      <div class="card-text" id="telegram-info">
+        Загрузка...
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">Тестовый контент</div>
+      <div class="card-text">
+        Это тестовая страница для проверки правильной работы safe area в Telegram Web App.
+        Header должен быть видимым и не заезжать под status bar.
+        Нижняя навигация должна учитывать home indicator на iOS.
+      </div>
+    </div>
+  </main>
+  
+  <!-- Footer navigation -->
+  <nav class="footer-nav">
+    <a href="#" class="nav-item">
+      <div class="nav-icon"></div>
+      <span>Главная</span>
+    </a>
+    <a href="#" class="nav-item">
+      <div class="nav-icon"></div>
+      <span>Заказы</span>
+    </a>
+    <a href="#" class="nav-item">
+      <div class="nav-icon"></div>
+      <span>Профиль</span>
+    </a>
+  </nav>
+  
+  <script>
+    // Initialize Telegram Web App
+    if (window.Telegram && window.Telegram.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      tg.expand();
+      
+      // Update Telegram info
+      document.getElementById('telegram-info').innerHTML = `
+        <div class="info-badge">Версия: ${tg.version}</div>
+        <div class="info-badge">Платформа: ${tg.platform}</div>
+        <div class="info-badge">Высота: ${tg.viewportHeight}px</div>
+        <div class="info-badge">Расширен: ${tg.isExpanded ? 'Да' : 'Нет'}</div>
+      `;
+    } else {
+      document.getElementById('telegram-info').innerHTML = `
+        <div style="color: #dc2626;">⚠️ Telegram Web App не обнаружен. Откройте в Telegram.</div>
+      `;
+    }
+    
+    // Update viewport info
+    document.getElementById('viewport-info').innerHTML = `
+      <div class="info-badge">Ширина: ${window.innerWidth}px</div>
+      <div class="info-badge">Высота: ${window.innerHeight}px</div>
+      <div class="info-badge">Pixel Ratio: ${window.devicePixelRatio}</div>
+    `;
+    
+    // Get safe area insets
+    function getSafeAreaInsets() {
+      const root = document.documentElement;
+      const computedStyle = getComputedStyle(root);
+      
+      const top = computedStyle.getPropertyValue('--sat') || 
+                  getComputedStyle(document.querySelector('.safe-area-top')).height;
+      const bottom = computedStyle.getPropertyValue('--sab') || 
+                     getComputedStyle(document.querySelector('.safe-area-bottom')).height;
+      
+      return { top, bottom };
+    }
+    
+    const insets = getSafeAreaInsets();
+    document.getElementById('safe-area-info').innerHTML = `
+      <div class="info-badge">Сверху: ${insets.top}</div>
+      <div class="info-badge">Снизу: ${insets.bottom}</div>
+      <div style="margin-top: 12px; color: #666; font-size: 14px;">
+        ${insets.top === '0px' && insets.bottom === '0px' 
+          ? '⚠️ Safe area не обнаружен. Возможно, viewport-fit не установлен.' 
+          : '✅ Safe area правильно настроен!'}
+      </div>
+    `;
+    
+    // Log info to console
+    console.log('📱 Safe Area Test');
+    console.log('Viewport:', window.innerWidth, 'x', window.innerHeight);
+    console.log('Safe Area Insets:', insets);
+    if (window.Telegram && window.Telegram.WebApp) {
+      console.log('Telegram WebApp:', {
+        version: window.Telegram.WebApp.version,
+        platform: window.Telegram.WebApp.platform,
+        isExpanded: window.Telegram.WebApp.isExpanded,
+        viewportHeight: window.Telegram.WebApp.viewportHeight
+      });
+    }
+  </script>
+</body>
+</html>
+

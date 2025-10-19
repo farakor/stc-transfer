@@ -59,7 +59,7 @@ export function ClientLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-20">
+      <header className="bg-white shadow-sm sticky top-0 z-20 safe-area-top">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -86,12 +86,12 @@ export function ClientLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 pb-24 sm:px-6 lg:px-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 pb-24 safe-area-bottom sm:px-6 lg:px-8">
         <Outlet />
       </main>
 
       {/* Bottom Navigation Bar - Liquid Glass Effect */}
-      <nav className="fixed bottom-8 left-0 right-0 z-10 px-4">
+      <nav className="fixed bottom-8 left-0 right-0 z-10 px-4 safe-area-bottom">
         <div className="max-w-7xl mx-auto">
           <div 
             className="relative overflow-hidden rounded-3xl shadow-2xl"

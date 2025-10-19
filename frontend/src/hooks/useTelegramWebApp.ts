@@ -89,6 +89,11 @@ export function useTelegramWebApp() {
     // Check if Telegram WebApp is available
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
       const tgWebApp = window.Telegram.WebApp
+      
+      // Expand to full height and set ready
+      tgWebApp.ready()
+      tgWebApp.expand()
+      
       setWebApp(tgWebApp)
       setUser(tgWebApp.initDataUnsafe.user || null)
       setIsReady(true)
@@ -96,6 +101,8 @@ export function useTelegramWebApp() {
       console.log('🤖 Telegram WebApp detected:', {
         version: tgWebApp.version,
         platform: tgWebApp.platform,
+        isExpanded: tgWebApp.isExpanded,
+        viewportHeight: tgWebApp.viewportHeight,
         user: tgWebApp.initDataUnsafe.user,
         themeParams: tgWebApp.themeParams
       })
