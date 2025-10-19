@@ -101,7 +101,7 @@ export function BookingConfirmation() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-success-50 to-primary-50">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-[30px] z-20 safe-area-top">
+      <header className="bg-white shadow-sm sticky top-[35px] z-20 safe-area-top">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <button
@@ -123,7 +123,7 @@ export function BookingConfirmation() {
         </div>
       </header>
 
-      <div className="px-4 py-8">
+      <div className="px-4 py-8 pb-24 safe-area-bottom">
         <motion.div
           className="max-w-lg mx-auto"
           initial={{ opacity: 0, y: 20 }}
