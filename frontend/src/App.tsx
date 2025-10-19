@@ -67,7 +67,7 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
-        <div className="min-h-screen telegram-viewport safe-area-top safe-area-bottom">
+        <div className="min-h-screen telegram-viewport">
           <AppRoutes />
         </div>
       </Router>
