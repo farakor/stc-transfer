@@ -5,6 +5,7 @@ interface VehicleIconProps {
   type: VehicleType
   brand?: string
   model?: string
+  imageUrl?: string
   size?: 'sm' | 'md' | 'lg' | 'xl'
   className?: string
 }
@@ -32,10 +33,11 @@ export function VehicleIcon({
   type,
   brand,
   model,
+  imageUrl,
   size = 'md',
   className = ''
 }: VehicleIconProps) {
-  const displayElement = getVehicleDisplayElement(type, brand, model)
+  const displayElement = getVehicleDisplayElement(type, brand, model, imageUrl)
   const sizeClass = sizeClasses[size]
 
   return (

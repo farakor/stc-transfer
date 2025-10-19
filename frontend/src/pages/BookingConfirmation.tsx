@@ -194,6 +194,7 @@ export function BookingConfirmation() {
               type={currentBooking.vehicle?.type || selectedVehicleType!}
               brand={currentBooking.vehicle?.brand || selectedVehicle?.name?.split(' ')[0] || ''}
               model={currentBooking.vehicle?.model || selectedVehicle?.name?.split(' ').slice(1).join(' ') || ''}
+              imageUrl={currentBooking.vehicle?.imageUrl || selectedVehicle?.imageUrl}
               size="lg"
             />
             <div>

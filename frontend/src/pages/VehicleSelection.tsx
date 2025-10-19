@@ -141,6 +141,7 @@ export function VehicleSelection() {
                         type={vehicle.type}
                         brand={vehicle.name?.split(' ')[0]}
                         model={vehicle.name?.split(' ').slice(1).join(' ')}
+                        imageUrl={vehicle.imageUrl}
                         size="xl"
                       />
                     )}

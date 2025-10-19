@@ -34,6 +34,7 @@ export interface Vehicle {
   baggageCapacity: number
   licensePlate: string
   status: VehicleStatus
+  imageUrl?: string
   createdAt: string
   updatedAt: string
   driver?: Driver

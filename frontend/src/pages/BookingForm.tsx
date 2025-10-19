@@ -222,6 +222,7 @@ export function BookingForm() {
               type={selectedVehicleType!}
               brand={selectedVehicle?.brand || ''}
               model={selectedVehicle?.model || ''}
+              imageUrl={selectedVehicle?.imageUrl}
               size="lg"
             />
             <div>

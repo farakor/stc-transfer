@@ -142,13 +142,20 @@ export function getVehicleImage(brand?: string, model?: string): string | null {
 }
 
 // Получить компонент иконки или изображения для автомобиля
-export function getVehicleDisplayElement(type: VehicleType, brand?: string, model?: string): { type: 'emoji' | 'image', content: string } {
+export function getVehicleDisplayElement(type: VehicleType, brand?: string, model?: string, imageUrl?: string): { type: 'emoji' | 'image', content: string } {
+  // Приоритет отдаем imageUrl из базы данных
+  if (imageUrl) {
+    return { type: 'image', content: imageUrl }
+  }
+
+  // Затем пытаемся найти по brand и model в hardcoded списке
   const image = getVehicleImage(brand, model)
 
   if (image) {
     return { type: 'image', content: image }
   }
 
+  // Fallback на иконку по типу
   return { type: 'emoji', content: getVehicleTypeIcon(type) }
 }
 

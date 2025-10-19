@@ -38,6 +38,7 @@ export interface BookingDetails {
     brand: string
     model: string
     licensePlate: string
+    imageUrl?: string | null
     wialonUnitId?: string | null
   }
   driver?: {
@@ -541,6 +542,7 @@ export class BookingService {
         brand: booking.vehicle.brand || booking.vehicle.name,
         model: booking.vehicle.model || '',
         licensePlate: booking.vehicle.license_plate || '',
+        imageUrl: booking.vehicle.image_url || null,
         wialonUnitId: booking.vehicle.wialon_unit_id || null
       } : undefined,
       driver: booking.driver ? {

@@ -36,6 +36,7 @@ export function BookingCard({ booking, onClick, className }: BookingCardProps) {
             type={booking.vehicle?.type || VehicleType.SEDAN}
             brand={booking.vehicle?.brand}
             model={booking.vehicle?.model}
+            imageUrl={booking.vehicle?.imageUrl}
             size="md"
           />
           <span className="text-xs text-gray-500 font-mono">
