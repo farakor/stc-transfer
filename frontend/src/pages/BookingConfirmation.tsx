@@ -101,7 +101,7 @@ export function BookingConfirmation() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-success-50 to-primary-50">
       {/* Header */}
-      <header className="bg-white shadow-sm safe-area-top">
+      <header className="bg-white shadow-sm sticky top-[35px] z-20 safe-area-top">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <button
@@ -123,7 +123,7 @@ export function BookingConfirmation() {
         </div>
       </header>
 
-      <div className="px-4 py-8 pb-24 safe-area-bottom">
+      <div className="px-4 py-8 pb-24 safe-area-bottom mt-20">
         <motion.div
           className="max-w-lg mx-auto"
           initial={{ opacity: 0, y: 20 }}
@@ -364,9 +364,6 @@ export function BookingConfirmation() {
         onClose={() => setShowNotification(false)}
         duration={4000}
       />
-      
-      {/* Bottom fade/overlay for status bar */}
-      <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-success-50 via-success-50/80 to-transparent pointer-events-none z-5 safe-area-bottom"></div>
     </div>
   )
 }

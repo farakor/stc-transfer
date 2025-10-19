@@ -59,7 +59,7 @@ export function ClientLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm safe-area-top">
+      <header className="bg-white shadow-sm sticky top-[35px] z-20 safe-area-top">
         <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -193,9 +193,6 @@ export function ClientLayout() {
           </div>
         </div>
       </nav>
-      
-      {/* Bottom fade/overlay for status bar */}
-      <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-gray-50 via-gray-50/80 to-transparent pointer-events-none z-5 safe-area-bottom"></div>
     </div>
   )
 }
