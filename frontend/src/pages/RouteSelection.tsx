@@ -294,6 +294,7 @@ export function RouteSelection() {
                 label: loc.label
               }))}
               placeholder={t.route.selectFrom}
+              searchable={false}
             />
             {showCustomFromInput && (
               <motion.input
@@ -324,6 +325,7 @@ export function RouteSelection() {
                 }
               })}
               placeholder={t.route.selectTo}
+              searchable={false}
             />
             {showCustomToInput && (
               <motion.input

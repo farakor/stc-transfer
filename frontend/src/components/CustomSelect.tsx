@@ -16,6 +16,7 @@ interface CustomSelectProps {
   label?: string
   className?: string
   disabled?: boolean
+  searchable?: boolean
 }
 
 export function CustomSelect({
@@ -25,7 +26,8 @@ export function CustomSelect({
   placeholder,
   label,
   className = '',
-  disabled = false
+  disabled = false,
+  searchable = true
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -122,7 +124,7 @@ export function CustomSelect({
             className="absolute z-50 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-hidden"
           >
             {/* Поле поиска */}
-            {options.length > 5 && (
+            {searchable && options.length > 5 && (
               <div className="p-3 border-b border-gray-100">
                 <input
                   ref={searchInputRef}
