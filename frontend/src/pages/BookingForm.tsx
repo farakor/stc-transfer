@@ -51,6 +51,7 @@ export function BookingForm() {
   const [showNotification, setShowNotification] = useState(false)
   const [notificationMessage, setNotificationMessage] = useState('')
   const [notificationType, setNotificationType] = useState<'success' | 'error'>('error')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const createBookingMutation = useCreateBooking()
   const { handleSubmit } = useForm<BookingFormData>()
@@ -95,6 +96,12 @@ export function BookingForm() {
     console.log('🔍 Pickup time:', pickupTime)
     console.log('🔍 Notes:', notes)
 
+    // Если уже отправляется, игнорируем повторное нажатие
+    if (isSubmitting) {
+      console.log('⚠️ Already submitting, ignoring duplicate submission')
+      return
+    }
+
     if (!selectedVehicleType || !priceCalculation || !fromLocation || !toLocation) {
       console.error('❌ Missing required data for booking')
       setNotificationMessage(t.booking.insufficientData)
@@ -107,6 +114,8 @@ export function BookingForm() {
     const userId = user?.id || 12345
 
     try {
+      setIsSubmitting(true)
+      
       await createBookingMutation.mutateAsync({
         telegramId: userId,
         fromLocation,
@@ -132,6 +141,8 @@ export function BookingForm() {
         webApp.HapticFeedback.notificationOccurred('success')
       }
     } catch (error) {
+      setIsSubmitting(false)
+      
       setNotificationMessage(t.booking.orderError)
       setNotificationType('error')
       setShowNotification(true)
@@ -338,10 +349,10 @@ export function BookingForm() {
             <button
               type="submit"
               form="booking-form"
-              disabled={createBookingMutation.isPending}
+              disabled={createBookingMutation.isPending || isSubmitting}
               className="btn-primary w-full py-4 text-base shadow-xl"
             >
-              {createBookingMutation.isPending ? (
+              {createBookingMutation.isPending || isSubmitting ? (
                 <div className="flex items-center justify-center space-x-2">
                   <div className="loading-spinner"></div>
                   <span>{t.booking.submitting}</span>
