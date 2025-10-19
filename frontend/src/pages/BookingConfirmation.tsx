@@ -14,7 +14,9 @@ import {
 } from '@/utils/formatting'
 import { useVehicleTypes } from '@/hooks/useVehicles'
 import { VehicleIcon } from '@/components/VehicleIcon'
+import { Home } from 'lucide-react'
 import FarukBadge from '@/assets/faruk-badge.svg'
+import STCLogo from '@/assets/STC-transfer.png'
 
 export function BookingConfirmation() {
   const navigate = useNavigate()
@@ -97,27 +99,51 @@ export function BookingConfirmation() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-success-50 to-primary-50 px-4 py-8">
-      <motion.div
-        className="max-w-lg mx-auto"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* Progress Bar */}
-        <ProgressBar
-          steps={BOOKING_STEPS}
-          currentStep={4}
-          className="mb-8"
-        />
+    <div className="min-h-screen bg-gradient-to-br from-success-50 to-primary-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-20 safe-area-top">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handleNewOrder}
+              className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors"
+            >
+              <Home className="w-5 h-5" />
+              <span className="text-sm font-medium">{t.confirmation.newOrder}</span>
+            </button>
+            <img 
+              src={STCLogo} 
+              alt="STC Transfer" 
+              className="h-8 w-auto select-none" 
+              style={{
+                imageRendering: 'auto'
+              }}
+            />
+          </div>
+        </div>
+      </header>
 
-        {/* Success Header */}
+      <div className="px-4 py-8">
         <motion.div
-          className="text-center mb-8"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
+          className="max-w-lg mx-auto"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
+          {/* Progress Bar */}
+          <ProgressBar
+            steps={BOOKING_STEPS}
+            currentStep={4}
+            className="mb-8"
+          />
+
+          {/* Success Header */}
+          <motion.div
+            className="text-center mb-8"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+          >
           <div className="w-20 h-20 bg-success-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-10 h-10 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -316,7 +342,7 @@ export function BookingConfirmation() {
 
         {/* Footer */}
         <motion.div
-          className="text-center mt-8 space-y-4"
+          className="text-center mt-8 space-y-4 pb-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2 }}
@@ -326,7 +352,8 @@ export function BookingConfirmation() {
             <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
           </div>
         </motion.div>
-      </motion.div>
+        </motion.div>
+      </div>
 
       {/* Success Notification */}
       <NotificationToast

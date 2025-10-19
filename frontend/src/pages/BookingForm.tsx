@@ -13,7 +13,9 @@ import { formatPrice, isSamarkandTrip } from '@/utils/formatting'
 import { useSamarkandTariffs } from '@/hooks/useTariffs'
 import { useVehicleTypes } from '@/hooks/useVehicles'
 import { VehicleIcon } from '@/components/VehicleIcon'
+import { ArrowLeft } from 'lucide-react'
 import FarukBadge from '@/assets/faruk-badge.svg'
+import STCLogo from '@/assets/STC-transfer.png'
 
 interface BookingFormData {
   pickupTime: string
@@ -145,22 +147,46 @@ export function BookingForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50 px-4 py-8">
-      <motion.div
-        className="max-w-lg mx-auto"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* Progress Bar */}
-        <ProgressBar
-          steps={BOOKING_STEPS}
-          currentStep={currentStep}
-          className="mb-8"
-        />
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-accent-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-20 safe-area-top">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => navigate('/route')}
+              className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm font-medium">{t.booking.backToRoute}</span>
+            </button>
+            <img 
+              src={STCLogo} 
+              alt="STC Transfer" 
+              className="h-8 w-auto select-none" 
+              style={{
+                imageRendering: 'auto'
+              }}
+            />
+          </div>
+        </div>
+      </header>
 
-        {/* Header */}
-        <div className="text-center mb-8">
+      <div className="px-4 py-8">
+        <motion.div
+          className="max-w-lg mx-auto"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* Progress Bar */}
+          <ProgressBar
+            steps={BOOKING_STEPS}
+            currentStep={currentStep}
+            className="mb-8"
+          />
+
+          {/* Header */}
+          <div className="text-center mb-8">
           <motion.h1
             className="text-3xl font-bold text-gray-900 mb-2"
             initial={{ opacity: 0, y: 10 }}
@@ -305,23 +331,8 @@ export function BookingForm() {
           </div>
         </motion.form>
 
-        {/* Back Button */}
-        <motion.div
-          className="text-center mb-32"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-        >
-          <button
-            onClick={() => navigate('/route')}
-            className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
-          >
-            {t.booking.backToRoute}
-          </button>
-        </motion.div>
-
         {/* Fixed Submit Button */}
-        <div className="fixed bottom-8 left-0 right-0 px-4 z-10">
+        <div className="fixed bottom-8 left-0 right-0 px-4 z-10 safe-area-bottom">
           <div className="max-w-lg mx-auto">
             <button
               type="submit"
@@ -343,7 +354,7 @@ export function BookingForm() {
 
         {/* Footer */}
         <motion.div
-          className="text-center mt-8 space-y-4"
+          className="text-center mt-32 space-y-4 pb-24"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.0 }}
@@ -353,7 +364,8 @@ export function BookingForm() {
             <img src={FarukBadge} alt="Faruk" className="h-6 w-auto" />
           </div>
         </motion.div>
-      </motion.div>
+        </motion.div>
+      </div>
 
       {/* Notification Toast */}
       <NotificationToast
