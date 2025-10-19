@@ -86,7 +86,7 @@ export function ClientLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 pb-24 safe-area-bottom sm:px-6 lg:px-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 pb-32 safe-area-bottom sm:px-6 lg:px-8">
         <Outlet />
       </main>
 
