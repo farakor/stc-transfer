@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '@/hooks/useTranslation'
 import { VehicleType } from '@/types'
-import { Lightbulb, Loader2, ArrowRight } from 'lucide-react'
+import { Lightbulb, Loader2, ArrowRight, Users, Luggage } from 'lucide-react'
 import { useTariffMatrix } from '@/hooks/useTariffs'
 import SuvIcon from '@/assets/SUV.svg'
 import SedanIcon from '@/assets/sedan-2.svg'
@@ -140,29 +140,129 @@ export function Tariffs() {
           <h1 className="text-2xl font-bold text-gray-900">
             {t.tariffs.title}
           </h1>
+          <p className="text-gray-600 mt-2">{t.tariffs.selectVehicle}</p>
         </div>
 
-        {/* Vehicle Type Selector */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            {t.tariffs.selectVehicle}
-          </h2>
-          <div className="grid grid-cols-1 gap-3">
+        {/* Vehicle Type Tabs - Horizontal Scrollable */}
+        <div className="relative -mx-4 px-4">
+          <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
             {vehicleTypes.map((vehicle) => {
               const models = vehicleTypeGroups[vehicle.id] || []
               const hasModels = models.length > 0
+              const isSelected = selectedVehicle === vehicle.id
               
-              // Получаем средние цены для этого типа транспорта
+              return (
+                <button
+                  key={vehicle.id}
+                  onClick={() => hasModels && setSelectedVehicle(vehicle.id)}
+                  disabled={!hasModels}
+                  className={`
+                    flex-shrink-0 snap-start transition-all duration-300
+                    ${isSelected 
+                      ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-xl scale-105' 
+                      : hasModels 
+                        ? 'bg-white text-gray-900 shadow-md hover:shadow-lg hover:scale-102' 
+                        : 'bg-gray-100 text-gray-400 opacity-60 cursor-not-allowed'
+                    }
+                    rounded-2xl p-4 min-w-[140px] w-[140px]
+                  `}
+                >
+                  <div className="flex flex-col items-center space-y-2">
+                    {/* Icon with background */}
+                    <div className={`
+                      p-3 rounded-xl transition-colors
+                      ${isSelected ? 'bg-white/20' : 'bg-blue-50'}
+                    `}>
+                      <img 
+                        src={vehicle.icon} 
+                        alt={vehicle.name} 
+                        className={`w-10 h-10 ${isSelected ? 'brightness-0 invert' : ''}`}
+                      />
+                    </div>
+                    
+                    {/* Name */}
+                    <h3 className={`
+                      font-semibold text-sm text-center
+                      ${isSelected ? 'text-white' : 'text-gray-900'}
+                    `}>
+                      {vehicle.name}
+                    </h3>
+                    
+                    {/* Capacity */}
+                    <div className={`
+                      flex items-center space-x-1 text-xs
+                      ${isSelected ? 'text-white/90' : 'text-gray-600'}
+                    `}>
+                      <Users className="w-3 h-3" />
+                      <span>{vehicle.capacity}</span>
+                    </div>
+
+                    {/* Status indicator */}
+                    {isSelected && (
+                      <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Selected Vehicle Details Card */}
+        {selectedVehicleData && selectedVehicleModels.length > 0 && (
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl p-5 border border-blue-200 shadow-sm">
+            <div className="flex items-start space-x-4 mb-4">
+              <div className="p-3 bg-white rounded-xl shadow-sm">
+                <img 
+                  src={selectedVehicleData.icon} 
+                  alt={selectedVehicleData.name} 
+                  className="w-12 h-12"
+                />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-gray-900 mb-1">
+                  {selectedVehicleData.name}
+                </h3>
+                <p className="text-sm text-gray-600 mb-2">
+                  {selectedVehicleData.description}
+                </p>
+                <div className="flex items-center space-x-4 text-sm">
+                  <div className="flex items-center space-x-1 text-blue-700">
+                    <Users className="w-4 h-4" />
+                    <span className="font-medium">{selectedVehicleData.capacity} мест</span>
+                  </div>
+                  <div className="flex items-center space-x-1 text-blue-700">
+                    <Luggage className="w-4 h-4" />
+                    <span className="font-medium">{selectedVehicleModels.length} моделей</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Features */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {selectedVehicleData.features.map((feature, index) => (
+                <span 
+                  key={index} 
+                  className="px-3 py-1.5 bg-white text-blue-700 text-xs font-medium rounded-full border border-blue-200"
+                >
+                  {feature}
+                </span>
+              ))}
+            </div>
+
+            {/* Average Pricing */}
+            {(() => {
               let avgBasePrice = 0
               let avgPricePerKm = 0
               
-              if (hasModels && tariffMatrix?.tariffs) {
+              if (tariffMatrix?.tariffs) {
                 let totalBase = 0
                 let totalPerKm = 0
                 let count = 0
                 
                 Object.values(tariffMatrix.tariffs).forEach(routeTariffs => {
-                  models.forEach(model => {
+                  selectedVehicleModels.forEach(model => {
                     const vehicleKey = `${model.brand}-${model.model}`
                     const tariff = routeTariffs[vehicleKey]
                     if (tariff) {
@@ -178,72 +278,38 @@ export function Tariffs() {
                   avgPricePerKm = Math.round(totalPerKm / count)
                 }
               }
-              
-              return (
-                <button
-                  key={vehicle.id}
-                  onClick={() => setSelectedVehicle(vehicle.id)}
-                  disabled={!hasModels}
-                  className={`
-                    bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all text-left
-                    ${selectedVehicle === vehicle.id ? 'ring-2 ring-blue-600' : ''}
-                    ${!hasModels ? 'opacity-50 cursor-not-allowed' : ''}
-                  `}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-start space-x-3">
-                      <div className="p-3 bg-blue-50 rounded-xl">
-                        <img src={vehicle.icon} alt={vehicle.name} className="w-8 h-8" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{vehicle.name}</h3>
-                        <p className="text-sm text-gray-600">{vehicle.description}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {hasModels ? `${models.length} моделей доступно` : 'Нет доступных моделей'}
-                        </p>
-                      </div>
-                    </div>
-                    {selectedVehicle === vehicle.id && hasModels && (
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600">
-                        <span className="text-white text-sm">✓</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {vehicle.features.map((feature, index) => (
-                      <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                        {feature}
-                      </span>
-                    ))}
-                  </div>
 
-                  {hasModels && avgBasePrice > 0 && (
-                    <div className="bg-blue-50 rounded-lg p-3 text-sm">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <p className="text-gray-600 text-xs">{t.tariffs.basePrice} (средн.)</p>
-                          <p className="font-semibold text-gray-900">{avgBasePrice.toLocaleString()} сум</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600 text-xs">{t.tariffs.perKm} (средн.)</p>
-                          <p className="font-semibold text-gray-900">{avgPricePerKm.toLocaleString()} сум</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </button>
-              )
-            })}
+              return avgBasePrice > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white rounded-xl p-3 border border-blue-200">
+                    <p className="text-xs text-gray-600 mb-1">{t.tariffs.basePrice}</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {avgBasePrice.toLocaleString()} <span className="text-sm font-normal text-gray-500">сум</span>
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl p-3 border border-blue-200">
+                    <p className="text-xs text-gray-600 mb-1">{t.tariffs.perKm}</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {avgPricePerKm.toLocaleString()} <span className="text-sm font-normal text-gray-500">сум</span>
+                    </p>
+                  </div>
+                </div>
+              ) : null
+            })()}
           </div>
-        </div>
+        )}
 
-        {/* Popular Routes */}
+        {/* Popular Routes Section */}
         {selectedVehicleData && selectedVehicleModels.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {t.tariffs.popularRoutes} ({selectedVehicleData.name})
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">
+                {t.tariffs.popularRoutes}
+              </h2>
+              <span className="text-sm text-blue-600 font-medium">
+                {selectedVehicleData.name}
+              </span>
+            </div>
             
             {tariffsLoading ? (
               <div className="bg-white rounded-xl p-8 shadow-sm text-center">
@@ -267,31 +333,43 @@ export function Tariffs() {
                   return (
                     <div
                       key={route.id}
-                      className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
+                      className="bg-white rounded-xl p-4 shadow-sm hover:shadow-lg transition-all hover:scale-[1.02] border border-gray-100"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 mb-1">
+                          <h3 className="font-semibold text-gray-900 mb-2">
                             {route.from_location.name} → {route.to_location.name}
                           </h3>
                           <div className="flex items-center space-x-4 text-sm text-gray-600">
-                            {distanceKm > 0 && <span>📏 {distanceKm} км</span>}
-                            {route.estimated_duration_minutes && <span>⏱ {duration}</span>}
+                            {distanceKm > 0 && (
+                              <span className="flex items-center space-x-1">
+                                <span>📏</span>
+                                <span>{distanceKm} км</span>
+                              </span>
+                            )}
+                            {route.estimated_duration_minutes && (
+                              <span className="flex items-center space-x-1">
+                                <span>⏱</span>
+                                <span>{duration}</span>
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm text-gray-500">{t.tariffs.from}</p>
-                          <p className="text-xl font-bold text-blue-600">
-                            {price > 0 ? `${price.toLocaleString()} сум` : 'Уточняется'}
+                          <p className="text-xs text-gray-500 mb-1">{t.tariffs.from}</p>
+                          <p className="text-2xl font-bold text-blue-600">
+                            {price > 0 ? `${price.toLocaleString()}` : '—'}
                           </p>
+                          {price > 0 && <p className="text-xs text-gray-500">сум</p>}
                         </div>
                       </div>
                       
                       <button
                         onClick={() => navigate('/vehicles')}
-                        className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                        className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all text-sm font-semibold shadow-md hover:shadow-lg flex items-center justify-center space-x-2"
                       >
-                        {t.tariffs.book}
+                        <span>{t.tariffs.book}</span>
+                        <ArrowRight className="w-4 h-4" />
                       </button>
                     </div>
                   )

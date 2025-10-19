@@ -123,6 +123,21 @@
     height: var(--tg-viewport-height, 100vh);
     overflow-y: auto;
   }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+
+  /* Smooth scale animation */
+  .hover\:scale-102:hover {
+    transform: scale(1.02);
+  }
 }
 
 @keyframes pulse-subtle {
