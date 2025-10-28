@@ -27,7 +27,7 @@ export class WialonService {
   constructor() {
     // Загружаем конфигурацию из переменных окружения
     this.config = {
-      baseUrl: process.env.WIALON_BASE_URL || 'https://gps.ent-en.com/wialon',
+      baseUrl: process.env.WIALON_BASE_URL || 'http://176.74.220.111/wialon',
       token: process.env.WIALON_TOKEN || '85991e5f06896e98fe3c0bd49d2fe6d825770468546E156C3088DF44EB44163B2A478841'
     }
 

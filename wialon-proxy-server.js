@@ -1,104 +1,120 @@
 /**
  * Простой прокси-сервер для обхода CORS при подключении к Wialon
- * 
+ *
  * Установка:
  * npm install express http-proxy-middleware cors
- * 
+ *
  * Запуск:
  * node wialon-proxy-server.js
- * 
+ *
  * Использование:
  * Вместо http://176.74.220.111/wialon/ajax.html
  * Используйте http://localhost:3001/wialon/ajax.html
  */
 
-const express = require('express');
-const { createProxyMiddleware } = require('http-proxy-middleware');
-const cors = require('cors');
-const path = require('path');
+const express = require("express");
+const { createProxyMiddleware } = require("http-proxy-middleware");
+const cors = require("cors");
+const path = require("path");
 
 const app = express();
-const PORT = 3001;
-const WIALON_SERVER = '176.74.220.111';
+const PORT = 3005; // Изменен порт чтобы не конфликтовать с другими сервисами
+const WIALON_SERVER = "gps.ent-en.com"; // Обновлен адрес сервера
 
 // Включаем CORS для всех запросов
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    credentials: true,
+  })
+);
 
 // Логирование запросов
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   if (req.body && Object.keys(req.body).length > 0) {
-    console.log('Body:', req.body);
+    console.log("Body:", req.body);
   }
   next();
 });
 
 // Прокси для Wialon API
-app.use('/wialon', createProxyMiddleware({
-  target: `http://${WIALON_SERVER}`,
-  changeOrigin: true,
-  secure: false,
-  logLevel: 'debug',
-  onProxyReq: (proxyReq, req, res) => {
-    console.log(`Проксирование запроса к: http://${WIALON_SERVER}${req.url}`);
-  },
-  onProxyRes: (proxyRes, req, res) => {
-    console.log(`Ответ от сервера: ${proxyRes.statusCode}`);
-    
-    // Добавляем CORS заголовки к ответу
-    proxyRes.headers['Access-Control-Allow-Origin'] = '*';
-    proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-    proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With';
-  },
-  onError: (err, req, res) => {
-    console.error('Ошибка прокси:', err.message);
-    res.status(500).json({
-      error: 'Proxy Error',
-      message: err.message,
-      target: `http://${WIALON_SERVER}${req.url}`
-    });
-  }
-}));
+app.use(
+  "/wialon",
+  createProxyMiddleware({
+    target: `http://${WIALON_SERVER}`,
+    changeOrigin: true,
+    secure: false,
+    logLevel: "debug",
+    onProxyReq: (proxyReq, req, res) => {
+      console.log(`Проксирование запроса к: http://${WIALON_SERVER}${req.url}`);
+    },
+    onProxyRes: (proxyRes, req, res) => {
+      console.log(`Ответ от сервера: ${proxyRes.statusCode}`);
+
+      // Добавляем CORS заголовки к ответу
+      proxyRes.headers["Access-Control-Allow-Origin"] = "*";
+      proxyRes.headers["Access-Control-Allow-Methods"] =
+        "GET, POST, PUT, DELETE, OPTIONS";
+      proxyRes.headers["Access-Control-Allow-Headers"] =
+        "Content-Type, Authorization, X-Requested-With";
+    },
+    onError: (err, req, res) => {
+      console.error("Ошибка прокси:", err.message);
+      res.status(500).json({
+        error: "Proxy Error",
+        message: err.message,
+        target: `http://${WIALON_SERVER}${req.url}`,
+      });
+    },
+  })
+);
 
 // Альтернативный прокси через другие порты
-app.use('/wialon8080', createProxyMiddleware({
-  target: `http://${WIALON_SERVER}:8080`,
-  changeOrigin: true,
-  secure: false,
-  pathRewrite: {
-    '^/wialon8080': '/wialon'
-  }
-}));
+app.use(
+  "/wialon8080",
+  createProxyMiddleware({
+    target: `http://${WIALON_SERVER}:8080`,
+    changeOrigin: true,
+    secure: false,
+    pathRewrite: {
+      "^/wialon8080": "/wialon",
+    },
+  })
+);
 
-app.use('/wialon443', createProxyMiddleware({
-  target: `http://${WIALON_SERVER}:443`,
-  changeOrigin: true,
-  secure: false,
-  pathRewrite: {
-    '^/wialon443': '/wialon'
-  }
-}));
+app.use(
+  "/wialon443",
+  createProxyMiddleware({
+    target: `http://${WIALON_SERVER}:443`,
+    changeOrigin: true,
+    secure: false,
+    pathRewrite: {
+      "^/wialon443": "/wialon",
+    },
+  })
+);
 
 // HTTPS прокси
-app.use('/wialons', createProxyMiddleware({
-  target: `https://${WIALON_SERVER}`,
-  changeOrigin: true,
-  secure: false,
-  pathRewrite: {
-    '^/wialons': '/wialon'
-  }
-}));
+app.use(
+  "/wialons",
+  createProxyMiddleware({
+    target: `https://${WIALON_SERVER}`,
+    changeOrigin: true,
+    secure: false,
+    pathRewrite: {
+      "^/wialons": "/wialon",
+    },
+  })
+);
 
 // Статические файлы для тестирования
-app.use('/test', express.static(path.join(__dirname)));
+app.use("/test", express.static(path.join(__dirname)));
 
 // Тестовая страница
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -174,46 +190,46 @@ app.get('/', (req, res) => {
 });
 
 // Информация о сервере
-app.get('/info', (req, res) => {
+app.get("/info", (req, res) => {
   res.json({
-    server: 'Wialon Proxy Server',
+    server: "Wialon Proxy Server",
     port: PORT,
     target: WIALON_SERVER,
     endpoints: {
       main: `http://localhost:${PORT}/wialon/ajax.html`,
       port8080: `http://localhost:${PORT}/wialon8080/ajax.html`,
       port443: `http://localhost:${PORT}/wialon443/ajax.html`,
-      https: `http://localhost:${PORT}/wialons/ajax.html`
+      https: `http://localhost:${PORT}/wialons/ajax.html`,
     },
-    status: 'running'
+    status: "running",
   });
 });
 
 // Запуск сервера
 app.listen(PORT, () => {
-  console.log('🚀 Wialon Proxy Server запущен!');
+  console.log("🚀 Wialon Proxy Server запущен!");
   console.log(`📍 URL: http://localhost:${PORT}`);
   console.log(`🎯 Цель: ${WIALON_SERVER}`);
-  console.log('');
-  console.log('📋 Доступные эндпоинты:');
+  console.log("");
+  console.log("📋 Доступные эндпоинты:");
   console.log(`   • Основной: http://localhost:${PORT}/wialon/ajax.html`);
   console.log(`   • Порт 8080: http://localhost:${PORT}/wialon8080/ajax.html`);
   console.log(`   • Порт 443: http://localhost:${PORT}/wialon443/ajax.html`);
   console.log(`   • HTTPS: http://localhost:${PORT}/wialons/ajax.html`);
-  console.log('');
-  console.log('🔧 Для использования в приложении измените baseUrl на:');
+  console.log("");
+  console.log("🔧 Для использования в приложении измените baseUrl на:");
   console.log(`   http://localhost:${PORT}/wialon`);
-  console.log('');
-  console.log('⏹️  Для остановки нажмите Ctrl+C');
+  console.log("");
+  console.log("⏹️  Для остановки нажмите Ctrl+C");
 });
 
 // Обработка завершения
-process.on('SIGINT', () => {
-  console.log('\n🛑 Остановка прокси-сервера...');
+process.on("SIGINT", () => {
+  console.log("\n🛑 Остановка прокси-сервера...");
   process.exit(0);
 });
 
-process.on('SIGTERM', () => {
-  console.log('\n🛑 Остановка прокси-сервера...');
+process.on("SIGTERM", () => {
+  console.log("\n🛑 Остановка прокси-сервера...");
   process.exit(0);
 });
